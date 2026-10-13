@@ -10,6 +10,7 @@ import { FEED } from '../../src/data/feed';
 import { exById } from '../../src/data/exercises';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/utils/stats';
+import { HomeProjectCard } from '../../src/components/body/HomeProjectCard';
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -110,6 +111,9 @@ export default function HomeScreen() {
             <Text style={s.startBtnTxt}>▶  운동 시작</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 내 변화 프로젝트 — 분석 · 진행 · 체크인 */}
+        <HomeProjectCard />
 
         {/* Streak — 탭하면 운동 기록으로 */}
         <TouchableOpacity

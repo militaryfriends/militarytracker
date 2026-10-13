@@ -41,6 +41,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "test": "node scripts/engine-sync.mjs --check && node scripts/test.mjs",
+    "engine:sync": "node scripts/engine-sync.mjs",
     "check:theme": "node scripts/check-theme.mjs",
     "media:report": "node scripts/media-report.mjs",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",

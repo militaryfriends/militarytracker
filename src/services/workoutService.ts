@@ -32,7 +32,7 @@ export class SaveTimeout extends Error {}
 const SAVE_TIMEOUT_MS = 8_000;
 
 /** 쓰기를 timeoutMs 까지만 기다린다 — 넘기면 SaveTimeout. SDK 의 쓰기는 큐에 남아 재접속 때 커밋될 수 있다 */
-function withTimeout<T>(write: Promise<T>, timeoutMs = SAVE_TIMEOUT_MS): Promise<T> {
+export function withTimeout<T>(write: Promise<T>, timeoutMs = SAVE_TIMEOUT_MS): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new SaveTimeout('save timeout')), timeoutMs);

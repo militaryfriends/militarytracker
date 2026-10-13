@@ -15,13 +15,14 @@ import { HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 if (!getApps().length) initializeApp();
 export const db = getFirestore();
 
-export type Feature = 'ai_plan' | 'ai_coach' | 'ai_diet' | 'routine_reco';
+export type Feature = 'ai_plan' | 'ai_coach' | 'ai_diet' | 'routine_reco' | 'body_project';
 
 export const FEATURE_LABEL: Record<Feature, string> = {
   ai_plan: 'AI 개인화 플랜',
   ai_coach: 'AI 코치',
   ai_diet: 'AI 식단',
   routine_reco: '루틴 추천',
+  body_project: '내 변화 프로젝트',
 };
 
 export type PlanTier = 'free' | 'pro';
@@ -113,6 +114,13 @@ export async function loadAccount(uid: string, adminClaim = false): Promise<Acco
   return { sub, isAdmin, pro: isAdmin || isProSub(sub) };
 }
 
+/** '코치' → '코치는', '플랜' → '플랜은' — 받침 유무로 조사를 고른다 (앱 subscribe.tsx 의 eun 과 같은 규칙) */
+function eun(word: string): string {
+  const ch = word.charCodeAt(word.length - 1);
+  if (ch < 0xac00 || ch > 0xd7a3) return `${word}은(는)`;
+  return (ch - 0xac00) % 28 === 0 ? `${word}는` : `${word}은`;
+}
+
 /**
  * 유료 기능 진입 관문. 권한이 없으면 permission-denied 로 끊는다.
  * 앱은 이 코드를 보고 구독 화면을 연다.
@@ -123,7 +131,7 @@ export async function requirePro(req: CallableRequest, feature: Feature): Promis
   if (acc.pro) return { ...acc, uid };
   throw new HttpsError(
     'permission-denied',
-    `${FEATURE_LABEL[feature]}은 구독 기능입니다.`,
+    `${eun(FEATURE_LABEL[feature])} 구독 기능입니다.`,
     { reason: 'subscription_required', feature }
   );
 }

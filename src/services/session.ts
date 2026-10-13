@@ -25,6 +25,7 @@ import {
 import { getWorkoutLogs, getWorkoutLogsSince, getWeights, getWeightsSince } from './workoutService';
 import { refreshSub } from './billingService';
 import { flushPendingLogs, mergePendingIntoLogs } from './sync';
+import { fetchActiveProject, fetchCheckins, fetchLatestAnalysis, saveAnalysis } from './bodyService';
 import { useAuthStore } from '../stores/authStore';
 import { useAppStore, waitForHydration } from '../stores/appStore';
 import { isProSub } from '../utils/subscription';
@@ -317,6 +318,7 @@ export function refreshData(uid: string, opts: { force?: boolean } = {}): Promis
         fetchPlan(uid),
         syncLogs(uid, g),
         syncWeights(uid, g),
+        syncBody(uid, g),
       ]);
       if (g !== gen) return;
       if (planR.status === 'fulfilled') useAppStore.getState().setPlan(planR.value);
@@ -333,6 +335,40 @@ export function refreshData(uid: string, opts: { force?: boolean } = {}): Promis
     flushPendingLogs(uid).catch(() => {});
   })();
   return entry.done;
+}
+
+/**
+ * 내 변화 프로젝트 — 기기 캐시가 원본처럼 쓰인다(분석은 이 기기에서 만들고, 프로젝트 · 판정은 콜러블 응답으로 받는다).
+ * 서버에서 다시 받는 건 새 기기 · 재설치이거나 사흘이 지났을 때뿐 — 열 때마다 읽기를 쓰지 않는다.
+ * 저장에 실패해 pending 으로 남은 분석은 여기서 다시 올린다.
+ */
+async function syncBody(uid: string, g: number): Promise<void> {
+  const st0 = useAppStore.getState();
+  if (st0.analysis?.pending && st0.analysis.userId === uid) {
+    const a = st0.analysis;
+    if (await saveAnalysis(a).catch(() => false)) {
+      const cur = useAppStore.getState().analysis;
+      if (g === gen && cur?.id === a.id) {
+        const { pending: _p, ...rest } = cur;
+        useAppStore.getState().setAnalysis(rest);
+      }
+    }
+  }
+  const { analysis, project, syncMarks } = useAppStore.getState();
+  const stale = Date.now() - (syncMarks.bodyAt ?? 0) > FULL_SYNC_EVERY_MS;
+  if (!stale && (analysis || project)) return;
+  if (!stale && syncMarks.bodyAt) return; // 이미 받아 봤는데 없었다
+  const [a, p] = await Promise.all([fetchLatestAnalysis(uid), fetchActiveProject(uid)]);
+  if (g !== gen) return;
+  const st = useAppStore.getState();
+  // 기기에서 막 만든(아직 안 올라간) 분석은 서버 것으로 덮지 않는다
+  if (a && !(st.analysis?.pending && st.analysis.createdAt > a.createdAt)) st.setAnalysis(a);
+  st.setProject(p);
+  if (p) {
+    const cs = await fetchCheckins(uid, p.id);
+    if (g === gen) useAppStore.getState().setCheckins(cs);
+  }
+  useAppStore.getState().setSyncMark('bodyAt', Date.now());
 }
 
 async function syncLogs(uid: string, g: number): Promise<void> {

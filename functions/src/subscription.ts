@@ -262,12 +262,17 @@ export const accountDelete = onCall({ ...opts, timeoutSeconds: 120 }, async (req
   const logs = await deleteByQuery(db.collection('workoutLogs').where('userId', '==', uid));
   const weights = await deleteByQuery(db.collection('weights').where('userId', '==', uid));
   const promos = await deleteByQuery(db.collection('promoRedemptions').where('uid', '==', uid));
+  // 내 변화 프로젝트 — 체형 수치가 들어 있는 개인정보라 전부 지운다
+  const body = (await Promise.all(
+    ['bodyAnalyses', 'bodyProjects', 'checkins', 'bodyReports']
+      .map((c) => deleteByQuery(db.collection(c).where('userId', '==', uid)))
+  )).reduce((a, b) => a + b, 0);
   await db.collection('promoAttempts').doc(uid).delete();
   await db.collection('plans').doc(uid).delete();
   await db.collection('users').doc(uid).delete();
   // subEvents 는 감사 로그라 남긴다 (uid 만 있고 개인정보는 없다)
 
   await getAuth().deleteUser(uid);
-  logger.info('accountDelete', { uid, logs, weights, promos });
+  logger.info('accountDelete', { uid, logs, weights, promos, body });
   return { ok: true };
 });

@@ -19,6 +19,8 @@ export default function ProfileEditScreen() {
   const patchUser = useAuthStore((s) => s.patchUser);
   const profile = useAppStore((s) => s.profile);
   const weights = useAppStore((s) => s.weights);
+  // 진행 중인 내 변화 프로젝트가 있으면 칼로리 · 단백질은 지금 단계 값(엔진)
+  const bodyProject = useAppStore((s) => s.project);
   const setProfile = useAppStore((s) => s.setProfile);
   const [p, setP] = useState<UserProfile | null>(profile);
   const [saving, setSaving] = useState(false);
@@ -40,7 +42,7 @@ export default function ProfileEditScreen() {
   const update = <K extends keyof UserProfile>(k: K, v: UserProfile[K]) =>
     setP((prev) => (prev ? { ...prev, [k]: v } : prev));
 
-  const st = calcBodyStats(p, weights);
+  const st = calcBodyStats(p, weights, bodyProject);
   const eff = effectiveWeight(p, weights);
   const changed = JSON.stringify(p) !== JSON.stringify(profile);
   const validationError = validateProfile(p);

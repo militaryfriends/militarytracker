@@ -1,4 +1,7 @@
 import type { Part, Place } from '../data/exercises';
+import type { BodyComp, Coord, InbodyInput } from '../utils/bodyComp';
+import type { MonthPoint, Nutrition, Phase, PhaseSpan, Project } from '../utils/projection';
+import type { AnalysisGap, AnalysisGoal, AnalysisInput } from '../utils/bodyAnalysis';
 
 // ─── Auth / User ───────────────────────────────────────────────────────────
 export type Role = 'user' | 'admin';
@@ -72,6 +75,10 @@ export interface UserProfile {
   level: Level;
   food: FoodEnv;
   allergy: string;
+  /** 허리둘레(cm) — O3 권장 입력. 체성분 추정 정확도를 '좋음'으로 올린다 */
+  waistCm?: number;
+  /** O2 에서 고른 목표 체형 카드 id ('m_lean' 등). 습관 경로·추천받기면 없음 */
+  goalArchetypeId?: string;
 }
 
 // ─── Plan ──────────────────────────────────────────────────────────────────
@@ -168,6 +175,8 @@ export interface DietPlan {
   src?: 'AI' | 'LOCAL';
   /** 생성 시점 — 오래된 식단인지 표시하는 데 사용 */
   createdAt?: string;
+  /** 내 변화 프로젝트 식단 — 서버가 지금 단계로 정한 하루 목표(엔진 값). 끼니별 k 도 서버가 쓴다 */
+  target?: { kcal: number; protein: number; carb: number; fat: number; phase: Phase };
 }
 
 // ─── Body Stats (computed) ────────────────────────────────────────────────
@@ -190,3 +199,143 @@ export interface BodyStats {
 
 // ─── Report ────────────────────────────────────────────────────────────────
 export type PartVolume = Record<Part, number>;
+
+// ─── 내 변화 프로젝트 (체형 예측) ─────────────────────────────────────────────
+// 숫자는 전부 결정론적 엔진(src/utils/bodyComp.ts · projection.ts · bodyAnalysis.ts)이 계산한다.
+// AI 는 이 숫자를 받아 루틴·식단·설명 글로 바꾸기만 한다.
+
+/** 결제 전 분석 결과를 보고 고른 것 */
+export type AnalysisDecision = 'pending' | 'started' | 'declined';
+
+/** 저장용 프로젝트 — 트랙은 빼고(같은 입력으로 다시 계산된다) */
+export type StoredProject = Omit<Project, 'track'>;
+
+/** bodyAnalyses/{id} — 온보딩 O6 결과. 재분석할 때마다 새 문서. 본인이 쓴다 */
+export interface BodyAnalysis {
+  id: string;
+  userId: string;
+  createdAt: string;
+  engineVersion: string;
+  input: AnalysisInput;
+  comp: BodyComp;
+  coord: Coord;
+  cell: string;
+  goal: AnalysisGoal;
+  gap: AnalysisGap;
+  order: string;
+  /** 0~24개월 */
+  track: MonthPoint[];
+  reachedAt: number | null;
+  projects: StoredProject[];
+  decision: AnalysisDecision;
+  /** 기기에만 — 서버 저장이 아직 안 됐다 (재시도 대상) */
+  pending?: boolean;
+}
+
+export type ProjectStatus = 'active' | 'paused' | 'done' | 'abandoned';
+
+/** bodyProjects/{id} — 결제 후 시작된 프로젝트. 서버(projectStart)만 만들고 바꾼다 */
+export interface BodyProject {
+  id: string;
+  userId: string;
+  analysisId: string;
+  /** 분석의 p1 · p2 */
+  projectRefId: string;
+  status: ProjectStatus;
+  startedAt: string;
+  name: string;
+  months: number;
+  kind: Project['kind'];
+  goal: AnalysisGoal;
+  /** 시작 체성분 */
+  baseline: BodyComp;
+  input: AnalysisInput;
+  /** 예측 트랙 — trackOffset 개월째부터의 값 (재계산하면 바뀐다) */
+  track: MonthPoint[];
+  trackOffset: number;
+  trackHistory: { at: string; offset: number; track: MonthPoint[] }[];
+  end: StoredProject['end'];
+  phases: PhaseSpan[];
+  nutrition: Nutrition;
+  lastCheckinId?: string | null;
+  engineVersion: string;
+}
+
+export type CheckinStatus = 'ahead' | 'on' | 'behind';
+
+/** checkins/{id} — 4주마다. 본인이 쓰고, 상태 판정은 서버(aiReport)가 다시 한다 */
+export interface Checkin {
+  id: string;
+  userId: string;
+  projectId: string;
+  /** YYYY-MM-DD */
+  date: string;
+  createdAt: string;
+  /** 프로젝트 시작 후 몇 개월째 체크인인지 (1, 2, …) */
+  monthIndex: number;
+  weightKg: number;
+  waistCm?: number;
+  inbody?: InbodyInput;
+  comp: BodyComp;
+  coord: Coord;
+  cell: string;
+  expectedProgressPct: number;
+  measuredProgressPct: number;
+  status: CheckinStatus;
+  reportId?: string | null;
+}
+
+/** AI 월간 리포트 — functions 에서 형식 검증, 실패 시 1회 재시도 후 템플릿 */
+export interface BodyReportBody {
+  headline: string;
+  wins: string[];
+  adjust: string[];
+  nextFocus: string;
+  planChange: 'none' | 'suggest';
+}
+
+/**
+ * 서버(aiReport)가 다시 판정한 값. 체크인 문서는 본인이 고칠 수 있으므로
+ * 다음 체크인의 "직전 값"(체성분 · 연속 뒤처짐)은 이쪽을 읽는다.
+ */
+export interface CheckinJudgement {
+  status: CheckinStatus;
+  expectedProgressPct: number;
+  measuredProgressPct: number;
+  comp: BodyComp;
+  coord: Coord;
+  cell: string;
+  weightKg: number;
+  /** 직전 판정의 체중(첫 체크인이면 시작 체중) */
+  prevWeightKg: number;
+  monthIndex: number;
+  /** 이 체크인에서 완료 예상을 다시 계산했다 */
+  recalculated: { delayMonths: number; months: number } | null;
+}
+
+/** bodyReports/{checkinId}_r — 서버만 쓴다 */
+export interface BodyReport {
+  id: string;
+  userId: string;
+  projectId: string;
+  checkinId: string;
+  createdAt: string;
+  /** AI 모델명, 템플릿이면 'template' */
+  model: string;
+  report: BodyReportBody;
+  /** AI 실패 · 한도 초과로 템플릿 문구 (다시 요청하면 AI 를 다시 시도한다) */
+  fallback?: boolean;
+  judged?: CheckinJudgement;
+}
+
+/** aiReport 응답 — 서버가 다시 판정한 상태와 재계산 결과 */
+export interface CheckinResult {
+  report: BodyReportBody;
+  reportId: string;
+  status: CheckinStatus;
+  expectedProgressPct: number;
+  measuredProgressPct: number;
+  /** 두 번 연속 뒤처져 완료 예상을 다시 계산했다 — 몇 개월 늦어졌는지 */
+  recalculated?: { delayMonths: number; months: number } | null;
+  fallback?: boolean;
+}

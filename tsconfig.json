@@ -14,5 +14,9 @@
     "src/**/*.ts",
     ".expo/types/**/*.d.ts",
     "index.ts"
+  ],
+  "exclude": [
+    "**/__tests__/**",
+    "node_modules"
   ]
 }

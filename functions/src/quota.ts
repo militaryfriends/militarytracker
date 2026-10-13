@@ -4,6 +4,7 @@
  * 왜 필요한가: AI 호출은 호출당 원가가 붙는데 구독료는 정액이다.
  * 무제한으로 두면 극소수 헤비 유저(또는 봇)가 구독 매출을 전부 상쇄한다.
  * (월 구독 ₩4,900 → 수수료 제하면 약 ₩4,165. 코치 500회면 원가가 그걸 넘는다.)
+ * 코치는 "하루 10회" 가 구독 혜택 문구다 — 월 한도로 두면 첫 며칠에 몰아 쓰고 나머지 날이 막힌다.
  *
  * 한도는 반드시 서버에서 센다. 앱에 남은 횟수를 내려 주긴 하지만
  * 그건 표시용이고, 실제 차단은 여기서 한다.
@@ -17,7 +18,7 @@
 import { HttpsError } from 'firebase-functions/v2/https';
 import { db } from './entitlement';
 
-export type QuotaKind = 'coach' | 'plan' | 'diet';
+export type QuotaKind = 'coach' | 'plan' | 'diet' | 'report';
 
 interface QuotaRule {
   limit: number;
@@ -29,13 +30,15 @@ interface QuotaRule {
 }
 
 export const QUOTA: Record<QuotaKind, QuotaRule> = {
-  coach: { limit: 100, period: 'month', reason: 'coach_quota_exceeded', label: '이번 달 코치 대화' },
+  coach: { limit: 10, period: 'day', reason: 'coach_quota_exceeded', label: '오늘의 코치 대화' },
   plan: { limit: 5, period: 'day', reason: 'plan_quota_exceeded', label: '오늘의 AI 플랜 생성' },
   diet: { limit: 5, period: 'day', reason: 'diet_quota_exceeded', label: '오늘의 AI 식단 생성' },
+  // 체크인은 4주마다라 달력 한 달에 두 번 들 수 있다. 다 써도 체크인은 템플릿 리포트로 끝난다(aiReport)
+  report: { limit: 2, period: 'month', reason: 'report_quota_exceeded', label: '이번 달 리포트' },
 };
 
-/** 앱과 공유하는 값 — 코치 화면이 남은 횟수를 표시한다 */
-export const COACH_MONTHLY_LIMIT = QUOTA.coach.limit;
+/** 앱과 공유하는 값 — 코치 화면이 남은 횟수를 표시한다 (하루 기준) */
+export const COACH_DAILY_LIMIT = QUOTA.coach.limit;
 
 export interface Quota {
   used: number;

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   UserProfile, Plan, ExerciseSession, WorkoutLog, WeightRecord,
   DietPlan, LoggedExercise, SetDetail, SessionSummary, User,
+  BodyAnalysis, BodyProject, Checkin,
 } from '../types';
 import { exById } from '../data/exercises';
 import { localDate } from '../services/workoutService';
@@ -34,9 +35,11 @@ const CHAT_KEEP = 40;
 export interface SyncMarks {
   logsFullAt: number;
   weightsFullAt: number;
+  /** 내 변화 프로젝트(분석 · 프로젝트 · 체크인)를 서버에서 마지막으로 받은 시각 — 저장본에 없으면 0 */
+  bodyAt?: number;
 }
 
-const NO_SYNC: SyncMarks = { logsFullAt: 0, weightsFullAt: 0 };
+const NO_SYNC: SyncMarks = { logsFullAt: 0, weightsFullAt: 0, bodyAt: 0 };
 
 interface AppState {
   /** 기기에 저장된 데이터의 소유자 — 다른 계정으로 로그인하면 폐기한다 */
@@ -61,6 +64,13 @@ interface AppState {
 
   chat: CoachMessage[];
   chatBusy: boolean;
+
+  /** 내 변화 프로젝트 — 마지막 분석(O6 결과). 거절해도 남아 홈 카드에서 다시 본다 */
+  analysis: BodyAnalysis | null;
+  /** 결제 후 진행 중인 프로젝트 (서버가 만든 문서의 기기 사본) */
+  project: BodyProject | null;
+  /** 이 프로젝트의 체크인 — 최신이 앞 */
+  checkins: Checkin[];
 
   /**
    * 마지막으로 기록·체중을 "통째로" 받은 시각(epoch ms). 그 사이에는 기기 캐시보다 새 것만 받는다
@@ -109,6 +119,10 @@ interface AppState {
   addChat: (msg: CoachMessage) => void;
   clearChat: () => void;
   setChatBusy: (v: boolean) => void;
+
+  setAnalysis: (a: BodyAnalysis | null) => void;
+  setProject: (p: BodyProject | null) => void;
+  setCheckins: (list: Checkin[]) => void;
 
   resetAll: () => void;
 }
@@ -168,6 +182,9 @@ export const useAppStore = create<AppState>()(
       dietLoading: false,
       chat: [],
       chatBusy: false,
+      analysis: null,
+      project: null,
+      checkins: [],
       syncMarks: NO_SYNC,
 
       setOwner: (uid) => {
@@ -177,6 +194,7 @@ export const useAppStore = create<AppState>()(
           set({
             cachedUser: null, profile: null, plan: null, logs: [], weights: [],
             session: null, summary: null, diet: null, chat: [], syncMarks: NO_SYNC,
+            analysis: null, project: null, checkins: [],
           });
         }
         set({ ownerUid: uid });
@@ -354,6 +372,14 @@ export const useAppStore = create<AppState>()(
       clearChat: () => set({ chat: [] }),
       setChatBusy: (v) => set({ chatBusy: v }),
 
+      setAnalysis: (a) => set({ analysis: a }),
+      setProject: (p) => set((s) => ({
+        project: p,
+        // 다른 프로젝트로 바뀌면 이전 체크인은 화면에 남기지 않는다
+        checkins: p && s.project?.id === p.id ? s.checkins : [],
+      })),
+      setCheckins: (list) => set({ checkins: list.slice(0, 12) }),
+
       // 로그아웃. pendingLogs 는 userId 가 붙어 있으니 남긴다 — 다시 로그인하면 올라간다.
       resetAll: () =>
         set({
@@ -362,6 +388,7 @@ export const useAppStore = create<AppState>()(
           logs: [], weights: [],
           diet: null, dietLoading: false,
           chat: [], chatBusy: false,
+          analysis: null, project: null, checkins: [],
           syncMarks: NO_SYNC,
         }),
     }),
@@ -383,6 +410,9 @@ export const useAppStore = create<AppState>()(
         diet: s.diet,
         chat: s.chat,
         syncMarks: s.syncMarks,
+        analysis: s.analysis,
+        project: s.project,
+        checkins: s.checkins,
       }),
       version: 3,
       migrate: (persisted, version) => {

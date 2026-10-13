@@ -8,6 +8,7 @@ Expo SDK 57 · React Native 0.86 · expo-router · TypeScript(strict) · Zustand
 npx tsc --noEmit                  # 앱
 npm run check:theme               # 두 모드 색 대비 (palette.json 을 바꾸면)
 cd functions && npm run build     # Cloud Functions
+npm test                          # 엔진(체형 예측) 예시 A~E + 서버 복사본 동기 확인
 npx expo export --platform web    # 번들 스모크 테스트
 npm run deploy:rules              # firestore + storage 규칙, 인덱스
 npm run deploy:functions
@@ -57,6 +58,27 @@ npm run deploy:hosting            # 웹 export + hosting
 - **로그아웃 · 계정 삭제는 `logoutUser` · `deleteUserAccount`.** 구독을 먼저 끊어야 권한 오류가 안 나고,
   서버가 지운 users 문서를 "없음"으로 보고 다시 만들지 않는다.
 - 구독(PRO) 판정은 문서의 `sub` + `isProSub`. `subStatus` 콜러블은 만료됐는데 문서가 아직 pro 일 때만 부른다.
+
+## 내 변화 프로젝트 (체형 예측 → 결제)
+
+명세: "아바타 체형 변화 예측 기능 — 개발 인수인계 명세 v1". 흐름: 온보딩 O1 기본 → O2 원하는 체형 → O3 현재 체형
+(허리 권장 · 인바디 선택 · 정확도 미터) → O4 환경 → O5 식사 → O6 분석 `/project/analysis` → O7 "분석이 완료되었습니다"
+`/project/compare` → O8 프로젝트 2개 `/project` → 결제 `/subscribe?f=body_project&project=p1|p2` → `/project/start` →
+홈 카드 · 4주 체크인 `/project/checkin`. 습관 경로(O2 "체형보다 운동 습관이 먼저예요")는 O3 · O6~O8 없이 예전 루틴 선택.
+O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 연다(라우팅 가드가 온보딩 중에도 `/project` 를 허용).
+
+- **숫자는 엔진만 만든다** — `src/utils/bodyComp.ts` · `projection.ts` · `bodyAnalysis.ts` · `src/data/archetypes.ts`(결정론적,
+  `ENGINE_VERSION` 기록). 서버 복사본 `functions/src/engine/` — 고치면 `npm run engine:sync` 후 `npm test`
+  (명세 3-6 예시 A~E 가 소수 1자리까지 같아야 한다). 표시 반올림은 `roundTo`(검산표와 같은 "딱 절반이면 짝수 쪽").
+- **AI 는 숫자를 못 바꾼다** — 온보딩(O1~O8)에서는 AI 호출 0회. `projectStart` 는 AI 없이 저장된 입력으로 서버가 다시 계산,
+  `aiPlan`/`aiDiet` 에 projectId 를 주면 서버가 숫자를 정하고 식단 끼니별 kcal 은 서버가 덮어쓴다. 프롬프트 공통 규칙 `GUARD`.
+- 결제 전에도 예상 몸 · 숫자는 전부 보인다(블러 금지, `예상` 배지, 고지 문구). 18개월 안에 못 가면 "목표의 N% 지점".
+- 저장: `bodyAnalyses`(본인) · `checkins`(본인, 판정은 `aiReport` 가 다시) · `bodyProjects` · `bodyReports`(서버만).
+  기기 캐시가 원본처럼 쓰이고 서버에서는 사흘마다 · 새 기기에서만 받는다(`session.ts` syncBody). 계정 삭제가 네 컬렉션을 지운다.
+- 진행 중인 프로젝트가 있으면 `calcBodyStats(p, weights, project)` 의 칼로리 · 단백질은 지금 단계(감량/린벌크/유지) 값.
+- 아바타: 칸(F1~5 × M1~5) 프리셋 `src/data/avatarGrid.ts`(`node scripts/avatar-grid.mjs` 가 만든다). 없는 칸은 회색 실루엣
+  (`src/components/body/Silhouette`). 50장 렌더는 `scripts/AVATARS.md`(.blend 에 `fat` · `muscle` 셰이프 키 필요).
+- 프로 혜택 문구(O8 "이 몸을 만드는 도구": 코치 하루 10회)는 서버 한도(`functions/src/quota.ts`)와 같아야 한다.
 
 ## git push (Claude 세션용)
 

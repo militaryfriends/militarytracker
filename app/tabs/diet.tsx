@@ -32,6 +32,8 @@ export default function DietScreen() {
   const hydrating = useAuthStore((s) => s.hydrating);
   const profile = useAppStore((s) => s.profile);
   const weights = useAppStore((s) => s.weights);
+  // 진행 중인 내 변화 프로젝트가 있으면 칼로리 · 단백질은 지금 단계 값(엔진)
+  const bodyProject = useAppStore((s) => s.project);
   const diet = useAppStore((s) => s.diet);
   const dietLoading = useAppStore((s) => s.dietLoading);
   const setDiet = useAppStore((s) => s.setDiet);
@@ -41,7 +43,7 @@ export default function DietScreen() {
   // 목표 칼로리·매크로는 계속 무료다. 구독으로 열리는 건 '하루 식단 구성'.
   const canDiet = can('ai_diet');
 
-  const st = calcBodyStats(profile, weights);
+  const st = calcBodyStats(profile, weights, bodyProject);
   const eff = effectiveWeight(profile, weights);
   const age = daysSince(diet?.createdAt);
   const stale = age !== null && age >= DIET_STALE_DAYS;
@@ -54,7 +56,8 @@ export default function DietScreen() {
     }
     setDietLoading(true);
     try {
-      const next = await generateDiet(profile, st ?? undefined);
+      // 진행 중인 프로젝트가 있으면 서버가 지금 단계의 칼로리 · 끼니별 숫자를 정한다
+      const next = await generateDiet(profile, st ?? undefined, bodyProject?.status === 'active' ? { projectId: bodyProject.id } : undefined);
       if (next.src === 'AI' || !diet) setDiet({ ...next, createdAt: new Date().toISOString() });
       else showAlert('연결 실패', '식단을 새로 구성하지 못했습니다. 기존 식단을 유지합니다.');
     } catch (e) {

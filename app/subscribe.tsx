@@ -19,6 +19,8 @@ import {
 import { resendVerification } from '../src/services/authService';
 import { SUB_STATUS_LABEL } from '../src/utils/subscription';
 import type { Subscription } from '../src/types';
+import { useAppStore } from '../src/stores/appStore';
+import { ProjectCard } from '../src/components/body/ProjectCard';
 
 /** '코치' → '코치는', '플랜' → '플랜은' — 받침 유무로 조사를 고른다 */
 function eun(word: string): string {
@@ -33,7 +35,10 @@ export default function SubscribeScreen() {
   useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
-  const { f } = useLocalSearchParams<{ f?: string }>();
+  const { f, project } = useLocalSearchParams<{ f?: string; project?: string }>();
+  const analysis = useAppStore((st) => st.analysis);
+  // O8 에서 고른 프로젝트 — 위에 요약을 보여 주고, 구독이 되면 바로 프로젝트를 시작한다
+  const chosen = f === 'body_project' && project ? analysis?.projects.find((p) => p.id === project) ?? null : null;
   const patchUser = useAuthStore((s) => s.patchUser);
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const { sub, pro, left } = useEntitlement();
@@ -41,7 +46,12 @@ export default function SubscribeScreen() {
   const storeReady = STORE_BILLING_READY && Platform.OS !== 'web';
 
   const focus = PRO_FEATURES.includes(f as Feature) ? (f as Feature) : null;
-  const [picked, setPicked] = useState(PRODUCTS.find((p) => p.best)?.id ?? PRODUCTS[0].id);
+  // 기본 요금제: 프로젝트가 9개월 이상이면 연간(월간 합계가 더 비싸다), 6개월 이하면 월간. 둘 다 보여 준다
+  const [picked, setPicked] = useState(
+    chosen
+      ? (chosen.months >= 9 ? 'mt_pro_yearly' : 'mt_pro_monthly')
+      : PRODUCTS.find((p) => p.best)?.id ?? PRODUCTS[0].id,
+  );
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
 
@@ -71,6 +81,11 @@ export default function SubscribeScreen() {
       const next = await fn();
       if (next) {
         patchUser({ sub: next });
+        if (chosen) {
+          // 결제(체험)되면 바로 맞춤형 프로젝트 진행
+          router.replace(`/project/start?project=${chosen.id}`);
+          return;
+        }
         showAlert('완료', done, [{ text: '확인', onPress: () => router.back() }]);
       } else if (none) {
         // 예전엔 복원 실패가 무반응이었다 — 버튼이 눌리지 않았다고 느낀다
@@ -87,6 +102,15 @@ export default function SubscribeScreen() {
     <Screen>
       <TopBar title={PRO_NAME} meta="SUBSCRIPTION" onBack={goBack} />
       <Body>
+        {chosen && analysis ? (
+          <View style={s.chosen}>
+            <Text style={s.chosenLabel}>선택한 프로젝트</Text>
+            <ProjectCard sex={analysis.input.sex} project={chosen} fromCell={analysis.cell} selected={false} days={analysis.input.days} compact />
+            {pro ? (
+              <PrimaryBtn label="맞춤형 프로젝트 바로 시작하기" onPress={() => router.replace(`/project/start?project=${chosen.id}`)} style={{ marginTop: 10 }} />
+            ) : null}
+          </View>
+        ) : null}
         {pro ? (
           <View style={s.activeBox}>
             <Text style={s.activeLabel}>{isAdmin && sub.status === 'none' ? '관리자 계정' : SUB_STATUS_LABEL[sub.status]}</Text>
@@ -170,7 +194,7 @@ export default function SubscribeScreen() {
           >
             {busy === 'trial'
               ? <ActivityIndicator color={storeReady ? colors.ink : colors.bg} />
-              : <Text style={[s.trialTxt, !storeReady && s.trialTxtPrimary]}>{TRIAL_DAYS}일 무료로 먼저 써보기</Text>}
+              : <Text style={[s.trialTxt, !storeReady && s.trialTxtPrimary]}>{chosen ? `${TRIAL_DAYS}일 무료로 프로젝트 시작하기` : `${TRIAL_DAYS}일 무료로 먼저 써보기`}</Text>}
           </TouchableOpacity>
         )}
 
@@ -242,6 +266,8 @@ export default function SubscribeScreen() {
 }
 
 const s = themed(() => StyleSheet.create({
+  chosen: { marginTop: 4, marginBottom: 6 },
+  chosenLabel: { fontSize: 10, fontWeight: '800', color: colors.muted, letterSpacing: 2, marginBottom: 8 },
   lead: { fontSize: 14, color: colors.ink, lineHeight: 22, marginTop: 4, marginBottom: 4 },
 
   activeBox: {

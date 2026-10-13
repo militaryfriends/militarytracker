@@ -15,7 +15,9 @@ export type Feature =
   /** 식단 탭의 하루 식단 구성 */
   | 'ai_diet'
   /** 내 조건에 맞는 루틴 자동 추천 */
-  | 'routine_reco';
+  | 'routine_reco'
+  /** 내 변화 프로젝트 — 목표 체형까지의 맞춤 루틴·단계별 식단·4주 체크인 리포트 */
+  | 'body_project';
 
 /**
  * 유료 기능 목록. 여기서 빼면 즉시 무료가 된다(서버도 같이 고칠 것).
@@ -30,6 +32,7 @@ export const PRO_FEATURES: readonly Feature[] = [
   'ai_coach',
   'ai_diet',
   'routine_reco',
+  'body_project',
 ];
 
 export const isProFeature = (f: Feature): boolean => PRO_FEATURES.includes(f);
@@ -39,13 +42,15 @@ export const FEATURE_LABEL: Record<Feature, string> = {
   ai_coach: 'AI 코치',
   ai_diet: 'AI 식단',
   routine_reco: '루틴 추천',
+  body_project: '내 변화 프로젝트',
 };
 
 export const FEATURE_DESC: Record<Feature, string> = {
   ai_plan: '신체 정보·목표·환경을 반영해 분할과 종목을 직접 구성합니다.',
-  ai_coach: '내 기록을 읽고 답하는 코치에게 무제한으로 물어봅니다.',
+  ai_coach: '내 기록을 읽고 답하는 코치에게 하루 10회까지 물어봅니다.',
   ai_diet: '목표 칼로리와 식사 환경에 맞춘 하루 식단을 구성합니다.',
   routine_reco: '7개 루틴 중 지금 조건에 가장 맞는 것을 골라 줍니다.',
+  body_project: '목표 몸까지의 맞춤 루틴·단계별 식단·4주 체크인을 진행합니다.',
 };
 
 /** 잠금 화면에서 "무료로도 됩니다" 를 보여 주기 위한 목록 */

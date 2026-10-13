@@ -1,4 +1,5 @@
-import { UserProfile, BodyStats, WeightRecord } from '../types';
+import { UserProfile, BodyStats, WeightRecord, BodyProject } from '../types';
+import { expectedPoint, phaseNutrition } from './projection';
 
 // ─── 추세 체중 ──────────────────────────────────────────────────────────────
 /** 추세 계산에 사용할 기간과 표본 수 */
@@ -111,6 +112,37 @@ export function validateProfile(p: Pick<UserProfile, 'age' | 'height' | 'weight'
   return validateField('age', p.age) ?? validateField('height', p.height) ?? validateField('weight', p.weight);
 }
 
+// ─── 현재 체형 상세 (온보딩 O3 · 체크인) ─────────────────────────────────────
+/** 허리둘레 50~200cm, 그리고 키의 30~90% — 인치를 그대로 넣은 경우(32 → 32cm)를 걸러낸다 */
+export function validateWaist(v: string, heightCm: number): string | null {
+  const n = parseNum(v);
+  if (!Number.isFinite(n) || n < 50 || n > 200 || (heightCm > 0 && (n < heightCm * 0.3 || n > heightCm * 0.9))) {
+    return '허리둘레를 다시 확인해주세요 (cm 단위)';
+  }
+  return null;
+}
+
+export function validateBodyFat(v: string): string | null {
+  const n = parseNum(v);
+  return Number.isFinite(n) && n >= 3 && n <= 60 ? null : '체지방률은 3~60% 사이로 입력해주세요';
+}
+
+/** 골격근량 10~70kg, 그리고 체중의 60% 이하 */
+export function validateSmm(v: string, weightKg: number): string | null {
+  const n = parseNum(v);
+  return Number.isFinite(n) && n >= 10 && n <= 70 && (!weightKg || n <= weightKg * 0.6) ? null : '골격근량을 다시 확인해주세요';
+}
+
+/** 측정일: 오늘 이전만. 60일이 넘었으면 경고만(진행은 된다) */
+export function checkInbodyDate(v: string, today = new Date()): { error: string | null; stale: boolean } {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return { error: '측정일을 YYYY-MM-DD 로 입력해주세요', stale: false };
+  const t = new Date(`${v}T00:00:00`).getTime();
+  if (!Number.isFinite(t)) return { error: '측정일을 다시 확인해주세요', stale: false };
+  const now = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  if (t > now) return { error: '측정일은 오늘 이전이어야 해요', stale: false };
+  return { error: null, stale: now - t > 60 * 86_400_000 };
+}
+
 /** 주 운동 일수 → 활동계수 (Mifflin-St Jeor 관행값) */
 export function activityFactor(days: number): number {
   if (days <= 2) return 1.375;
@@ -121,9 +153,17 @@ export function activityFactor(days: number): number {
 /** 감량 시 하한 — 이 아래로 내려가면 식단 제안이 위험해진다 */
 const KCAL_FLOOR = { male: 1500, female: 1200 } as const;
 
+/** 단계 이름 — 칼로리 줄에 붙인다 */
+const PHASE_WORD = { cut: '감량', gain: '린벌크', keep: '유지' } as const;
+
+/**
+ * project: 진행 중인 내 변화 프로젝트가 있으면 목표 ± 고정값 대신 지금 단계(감량 · 린벌크 · 유지)의 칼로리 ·
+ * 단백질을 엔진(phaseNutrition)으로 쓴다 — 같은 TDEE 에서 출발한다. 없으면 예전 그대로.
+ */
 export function calcBodyStats(
   p: UserProfile | null | undefined,
-  weights: WeightRecord[] = []
+  weights: WeightRecord[] = [],
+  project?: BodyProject | null,
 ): BodyStats | null {
   if (!p) return null;
   // 범위 밖 프로필로는 계산하지 않는다 (키 1.75 → BMI 235102 같은 값이 화면에 나가면 안 된다)
@@ -159,7 +199,17 @@ export function calcBodyStats(
     }
   }
 
-  const protein = Math.round(W * (p.goal === 'cut' ? 2.0 : 1.8));
+  let protein = Math.round(W * (p.goal === 'cut' ? 2.0 : 1.8));
+
+  if (project && project.status === 'active') {
+    const monthIndex = Math.round((Date.now() - Date.parse(project.startedAt)) / (30.44 * 86_400_000));
+    const pt = expectedPoint(project.track, project.trackOffset, monthIndex);
+    const n = phaseNutrition(pt.phase, { sex: p.sex, age: A, heightCm: H, weightKg: W, days: p.days, level: p.level });
+    kcal = n.kcal;
+    protein = n.proteinG;
+    tagline = `${PHASE_WORD[pt.phase]} 단계 · 내 변화 프로젝트`;
+  }
+
   const fat = Math.round((kcal * 0.25) / 9);
   const carb = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
 

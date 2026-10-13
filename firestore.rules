@@ -64,7 +64,10 @@ service cloud.firestore {
     // 온보딩 프로필 — 화면 입력 그대로의 작은 문자열·숫자만
     function validProfile(p) {
       return p is map
-        && p.keys().hasOnly(['sex', 'age', 'height', 'weight', 'goal', 'env', 'days', 'level', 'food', 'allergy'])
+        && p.keys().hasOnly([
+          'sex', 'age', 'height', 'weight', 'goal', 'env', 'days', 'level', 'food', 'allergy',
+          'waistCm', 'goalArchetypeId'
+        ])
         && p.sex in ['male', 'female']
         && p.age is string && p.age.size() <= 4
         && p.height is string && p.height.size() <= 6
@@ -74,7 +77,10 @@ service cloud.firestore {
         && p.days is int && p.days >= 2 && p.days <= 6
         && p.level is int && p.level >= 1 && p.level <= 3
         && p.food in ['convenience', 'self', 'family', 'out']
-        && p.allergy is string && p.allergy.size() <= 200;
+        && p.allergy is string && p.allergy.size() <= 200
+        // 내 변화 프로젝트 온보딩(O3 허리둘레 · O2 목표 체형 카드) — 둘 다 선택
+        && (!('waistCm' in p) || (p.waistCm is number && p.waistCm >= 50 && p.waistCm <= 200))
+        && (!('goalArchetypeId' in p) || (p.goalArchetypeId is string && p.goalArchetypeId.size() <= 20));
     }
 
     // users 문서의 허용 키. update 의 request.resource.data 는 쓰기 후 문서 전체라
@@ -162,6 +168,74 @@ service cloud.firestore {
       allow create: if (ownsIncoming() && validWeight(request.resource.data)) || isAdmin();
       allow update: if (ownsExisting() && ownsIncoming() && validWeight(request.resource.data)) || isAdmin();
       allow delete: if ownsExisting() || isAdmin();
+    }
+
+    // ── bodyAnalyses ──────────────────────────────────────────────────────
+    // 온보딩 분석 결과(재분석마다 새 문서). 본인이 쓰지만 서버(projectStart)는 여기 적힌 계산 결과를
+    // 믿지 않고 input · goal 만 꺼내 엔진으로 다시 계산한다 — 그래서 여기선 키 · 크기 · 형식만 막는다.
+    function validAnalysis(d) {
+      return d.keys().hasOnly([
+        'userId', 'createdAt', 'engineVersion', 'input', 'comp', 'coord', 'cell', 'goal', 'gap',
+        'order', 'track', 'reachedAt', 'projects', 'decision'
+      ])
+        && d.decision in ['pending', 'started', 'declined']
+        && d.engineVersion is string && d.engineVersion.size() <= 20
+        && d.input is map
+        && d.track is list && d.track.size() <= 25
+        && d.projects is list && d.projects.size() <= 2
+        && isIso(d.createdAt);
+    }
+
+    match /bodyAnalyses/{analysisId} {
+      allow read: if ownsExisting() || isAdmin();
+      allow create: if (ownsIncoming() && validAnalysis(request.resource.data)) || isAdmin();
+      allow update: if (ownsExisting() && ownsIncoming() && validAnalysis(request.resource.data)) || isAdmin();
+      allow delete: if ownsExisting() || isAdmin();
+    }
+
+    // ── checkins ──────────────────────────────────────────────────────────
+    // 4주 체크인. 본인이 쓰지만 체성분 · 진행률 · 상태는 서버(aiReport)가 다시 판정해 덮어쓰고,
+    // 다음 판정도 서버가 쓴 리포트(bodyReports)의 값을 읽는다 — 여기 값을 고쳐도 판정은 바뀌지 않는다.
+    function validCheckin(d) {
+      return d.keys().hasOnly([
+        'userId', 'projectId', 'date', 'createdAt', 'monthIndex', 'weightKg', 'waistCm', 'inbody',
+        'comp', 'coord', 'cell', 'expectedProgressPct', 'measuredProgressPct', 'status', 'reportId'
+      ])
+        && d.projectId is string && d.projectId.size() <= 200
+        && isDate(d.date)
+        && isIso(d.createdAt)
+        && d.monthIndex is int && d.monthIndex >= 0 && d.monthIndex <= 36
+        && d.weightKg is number && d.weightKg >= 25 && d.weightKg <= 300
+        && (!('waistCm' in d) || d.waistCm == null || (d.waistCm is number && d.waistCm >= 50 && d.waistCm <= 200))
+        && (!('inbody' in d) || d.inbody == null || d.inbody is map)
+        && d.status in ['ahead', 'on', 'behind'];
+    }
+
+    match /checkins/{checkinId} {
+      allow read: if ownsExisting() || isAdmin();
+      // reportId = 서버가 판정을 마쳤다는 표시. 클라이언트는 넣지도 바꾸지도 지우지도 못한다
+      allow create: if (ownsIncoming()
+                        && validCheckin(request.resource.data)
+                        && (!('reportId' in request.resource.data) || request.resource.data.reportId == null))
+                    || isAdmin();
+      allow update: if (ownsExisting() && ownsIncoming()
+                        && validCheckin(request.resource.data)
+                        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reportId']))
+                    || isAdmin();
+      allow delete: if ownsExisting() || isAdmin();
+    }
+
+    // ── bodyProjects · bodyReports ────────────────────────────────────────
+    // 서버(projectStart · aiReport, Admin SDK)만 만들고 바꾼다. 본인은 읽기만 한다.
+    // list 는 where('userId','==',uid) 로 필터된 쿼리만 통과한다.
+    match /bodyProjects/{projectId} {
+      allow read: if ownsExisting() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /bodyReports/{reportId} {
+      allow read: if ownsExisting() || isAdmin();
+      allow write: if isAdmin();
     }
 
     // ── 구독 관련 컬렉션 ──────────────────────────────────────────────────

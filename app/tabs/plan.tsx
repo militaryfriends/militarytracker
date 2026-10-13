@@ -76,7 +76,9 @@ export default function PlanScreen() {
       let next = buildLocalPlan(profile, Date.now());
       let fallbackReason: string | null = null;
       if (mode === 'ai') {
-        const r = await generatePlan(profile);
+        // 진행 중인 프로젝트가 있으면 서버가 프로젝트 단계 타임라인으로 루틴을 짠다
+        const proj = useAppStore.getState().project;
+        const r = await generatePlan(profile, proj?.status === 'active' ? { projectId: proj.id } : undefined);
         next = r.plan;
         if (r.fallback) fallbackReason = r.reason ?? 'AI 서버에 연결하지 못했습니다.';
       }

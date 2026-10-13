@@ -37,6 +37,8 @@ export default function MyScreen() {
   const profile = useAppStore((s) => s.profile);
   const logs = useAppStore((s) => s.logs);
   const weights = useAppStore((s) => s.weights);
+  // 진행 중인 내 변화 프로젝트가 있으면 칼로리 · 단백질은 지금 단계 값(엔진)
+  const bodyProject = useAppStore((s) => s.project);
   const pendingCount = useAppStore((s) => s.pendingLogs.filter((l) => l.userId === user?.uid).length);
   const addWeight = useAppStore((s) => s.addWeight);
   const resetAll = useAppStore((s) => s.resetAll);
@@ -46,7 +48,7 @@ export default function MyScreen() {
   const [weightInput, setWeightInput] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const st = calcBodyStats(profile, weights);
+  const st = calcBodyStats(profile, weights, bodyProject);
   const eff = effectiveWeight(profile, weights);
   const vol = setsByPart(logs, { weekOnly: true });
   const maxVol = Math.max(4, ...PART_ORDER.map((p) => vol[p]));

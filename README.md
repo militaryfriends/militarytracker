@@ -111,7 +111,8 @@ node -e "require('firebase-admin').initializeApp();require('firebase-admin').aut
 
 ### Cloud Functions (AI 프록시)
 
-AI: `aiPlan` · `aiDiet` · `aiCoach` — 구독(`requirePro`) + 사용 한도(플랜·식단 일 5회, 코치 월 100회, 트랜잭션 선점) 를 서버가 강제한다.
+AI: `aiPlan` · `aiDiet` · `aiCoach` · `aiReport` — 구독(`requirePro`) + 사용 한도(플랜·식단 일 5회, 코치 일 10회, 체크인 리포트 월 2회, 트랜잭션 선점) 를 서버가 강제한다.
+내 변화 프로젝트: `projectStart`(AI 없음) · `aiReport`(체크인 판정 + 리포트) — 숫자는 `functions/src/engine/`(앱 엔진 복사본, `npm run engine:sync`)이 서버에서 다시 계산한다.
 구독·계정: `subStatus` · `subStartTrial`(이메일 인증 필수) · `subRedeemPromo`(하루 10회 시도 제한) · `subGrant`(관리자) · `subApplyReceipt`(미구현) · `accountDelete`.
 프로모 코드는 `promoCodes/{CODE}` 문서로 콘솔에서 만든다 — `{ days, maxUses, uses: 0, active: true, validUntil? }`, CODE 는 대문자·숫자·하이픈 6~40자.
 

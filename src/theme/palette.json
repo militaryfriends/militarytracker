@@ -34,7 +34,9 @@
     "mediaBadge": "rgba(0,0,0,0.6)",
     "mediaBadgeLine": "rgba(255,255,255,0.15)",
     "bgDeep": "#050506",
-    "frame": "#1C1C20"
+    "frame": "#1C1C20",
+    "clay": "#5E5E66",
+    "clayShade": "#3B3B42"
   },
   "light": {
     "bg": "#F4F4F5",
@@ -71,6 +73,8 @@
     "mediaBadge": "rgba(0,0,0,0.6)",
     "mediaBadgeLine": "rgba(255,255,255,0.15)",
     "bgDeep": "#E4E4E7",
-    "frame": "#D4D4D8"
+    "frame": "#D4D4D8",
+    "clay": "#AEAEB6",
+    "clayShade": "#80808A"
   }
 }

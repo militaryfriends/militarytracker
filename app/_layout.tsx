@@ -97,8 +97,8 @@ export default function RootLayout() {
       return;
     }
     if (!user.onboardingDone) {
-      // 온보딩 마지막 단계에서 구독 화면을 띄울 수 있어야 하므로 예외로 둔다
-      if (root !== 'onboard' && root !== 'subscribe') router.replace('/onboard');
+      // 온보딩 중에 구독 화면 · 내 변화 프로젝트(분석 O6~O8, 시작)를 띄울 수 있어야 하므로 예외로 둔다
+      if (root !== 'onboard' && root !== 'subscribe' && root !== 'project') router.replace('/onboard');
       return;
     }
     // 로그인 + 온보딩 완료 상태에서 진입점/인증/온보딩 화면에 있으면 홈으로
@@ -125,6 +125,7 @@ export default function RootLayout() {
         <Stack.Screen name="history" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="coach" />
+        <Stack.Screen name="project" />
         <Stack.Screen name="subscribe" options={{ presentation: 'modal' }} />
       </Stack>
       </MobileFrame>

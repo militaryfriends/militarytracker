@@ -40,6 +40,8 @@ export default function CoachScreen() {
   const plan = useAppStore((s) => s.plan);
   const logs = useAppStore((s) => s.logs);
   const weights = useAppStore((s) => s.weights);
+  // 진행 중인 내 변화 프로젝트가 있으면 칼로리 · 단백질은 지금 단계 값(엔진)
+  const bodyProject = useAppStore((s) => s.project);
   const chat = useAppStore((s) => s.chat);
   const chatBusy = useAppStore((s) => s.chatBusy);
   const addChat = useAppStore((s) => s.addChat);
@@ -54,7 +56,7 @@ export default function CoachScreen() {
   const coachEmpty = !!quota && !quota.unlimited && quota.remaining <= 0;
 
   const context = useCallback((): string => {
-    const st = calcBodyStats(profile, weights);
+    const st = calcBodyStats(profile, weights, bodyProject);
     const vol = setsByPart(logs, { weekOnly: true });
     const planTxt = plan
       ? plan.days.map((d) => `${d.name}: ${d.ids.map((id) => exById(id)?.n ?? '').join(', ')}`).join(' / ')
@@ -71,8 +73,14 @@ export default function CoachScreen() {
       `현재 플랜: ${planTxt}`,
       `최근 기록: ${logTxt}`,
       `이번 주 부위별 세트: ${PART_ORDER.map((p) => `${PART_LABEL[p]} ${vol[p]}`).join(', ')}`,
+      // 내 변화 프로젝트 요약 한 단락 — 숫자는 엔진 값(서버 프롬프트 규칙: 바꾸거나 새로 만들지 않는다)
+      ...(bodyProject && bodyProject.status === 'active'
+        ? [`내 변화 프로젝트: ${bodyProject.name}(${bodyProject.months}개월, ${bodyProject.startedAt.slice(0, 10)} 시작). `
+          + `목표 ${bodyProject.goal.name} 체지방 ${Math.round(bodyProject.goal.bfPct)}%, 예상 끝 체중 ${Math.round(bodyProject.end.weightKg * 10) / 10}kg. `
+          + `단계: ${bodyProject.phases.map((x) => `${x.from}~${x.to}개월 ${x.phase === 'cut' ? '감량' : x.phase === 'gain' ? '린벌크' : '유지'}`).join(', ')}.`]
+        : []),
     ].join('\n');
-  }, [profile, weights, logs, plan]);
+  }, [profile, weights, logs, plan, bodyProject]);
 
   async function send() {
     const text = input.trim();
@@ -98,7 +106,7 @@ export default function CoachScreen() {
         setQuota({ used: e.limit, limit: e.limit, remaining: 0 });
         addChat({
           role: 'assistant',
-          content: `이번 달 코치 대화 ${e.limit}회를 모두 사용했습니다. 다음 달 1일에 다시 채워집니다.`,
+          content: `오늘 코치 대화 ${e.limit}회를 모두 사용했습니다. 내일 다시 채워집니다.`,
         });
         return;
       }
@@ -125,7 +133,7 @@ export default function CoachScreen() {
     : isAdmin || quota?.unlimited
     ? '제한 없음'
     : quota
-    ? `이번 달 ${quota.remaining}/${quota.limit}회 남음`
+    ? `오늘 ${quota.remaining}/${quota.limit}회 남음`
     : 'COACH';
 
   return (
