@@ -270,7 +270,8 @@ export async function askCoach(
  */
 export async function startProject(analysisId: string, projectId: string): Promise<BodyProject> {
   try {
-    const call = httpsCallable(functions, 'projectStart', { timeout: CALL_TIMEOUT_MS });
+    // 배포 이름 bodyProjectStart = 명세의 projectStart (functions/src/index.ts 주석)
+    const call = httpsCallable(functions, 'bodyProjectStart', { timeout: CALL_TIMEOUT_MS });
     const res = await call({ analysisId, projectId });
     const d = res.data as BodyProject | null;
     if (!d || typeof d.id !== 'string' || !Array.isArray(d.track)) {
@@ -292,7 +293,8 @@ export async function startProject(analysisId: string, projectId: string): Promi
  */
 export async function requestCheckinReport(checkinId: string): Promise<CheckinResult> {
   try {
-    const call = httpsCallable(functions, 'aiReport', { timeout: REPORT_TIMEOUT_MS });
+    // 배포 이름 bodyCheckinReport = 명세의 aiReport
+    const call = httpsCallable(functions, 'bodyCheckinReport', { timeout: REPORT_TIMEOUT_MS });
     const res = await call({ checkinId });
     const r = normalizeCheckinResult(res.data);
     if (!r) throw new Error('리포트를 받지 못했습니다. 잠시 후 다시 시도해주세요.');

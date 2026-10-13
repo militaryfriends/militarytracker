@@ -508,9 +508,13 @@ interface ProjectStartReq {
  * 원본 입력과 목표 선택만 꺼내 엔진으로 다시 계산한다.
  * 문서 id 가 (uid, 분석, p1/p2) 로 정해져 있어 두 번 눌러도 하나만 생긴다.
  */
-export const projectStart = onCall(
+/**
+ * 배포 이름은 bodyProjectStart (명세의 projectStart). 처음 배포 때 projectStart · aiReport 가 공개 호출 설정에
+ * 실패해 403 으로 남았고, 콜러블의 공개 설정은 "새로 만들 때"만 적용돼 재배포로 고쳐지지 않는다 — 새 이름으로 만들었다.
+ * 옛 두 함수는 쓰지 않는다: firebase functions:delete projectStart aiReport --region asia-northeast3 --force
+ */
+export const bodyProjectStart = onCall(
   // invoker 'public': 앱(로그인 사용자)이 부를 수 있게 — 인증 · 구독은 안에서 확인한다.
-  // 명시하지 않으면 처음 만들 때만 공개로 설정되는데, 그게 실패하면 이후 배포로는 고쳐지지 않는다(403).
   { timeoutSeconds: 30, memory: '256MiB', invoker: 'public' },
   async (req: CallableRequest<ProjectStartReq>) => {
     const acc = await requirePro(req, 'body_project');
@@ -758,7 +762,8 @@ async function judgeCheckin(uid: string, checkinId: string, reportId: string, no
  *     한도를 다 썼거나 AI 가 실패해도 판정 · 재계산 결과는 그대로 돌려준다(체크인 자체는 실패하지 않는다).
  * 이미 AI 리포트가 있으면 한도를 쓰지 않고 그대로 돌려준다. 템플릿이었다면 다시 부를 때 AI 를 다시 시도한다.
  */
-export const aiReport = onCall(
+/** 배포 이름은 bodyCheckinReport (명세의 aiReport) — 위 bodyProjectStart 주석 참고 */
+export const bodyCheckinReport = onCall(
   // AI 를 최대 두 번 부른다 (호출당 55초 상한)
   { secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120, memory: '256MiB', invoker: 'public' },
   async (req: CallableRequest<ReportReq>) => {

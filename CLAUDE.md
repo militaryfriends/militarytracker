@@ -79,6 +79,9 @@ O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 �
 - 아바타: 칸(F1~5 × M1~5) 프리셋 `src/data/avatarGrid.ts`(`node scripts/avatar-grid.mjs` 가 만든다). 없는 칸은 회색 실루엣
   (`src/components/body/Silhouette`). 50장 렌더는 `scripts/AVATARS.md`(.blend 에 `fat` · `muscle` 셰이프 키 필요).
 - 프로 혜택 문구(O8 "이 몸을 만드는 도구": 코치 하루 10회)는 서버 한도(`functions/src/quota.ts`)와 같아야 한다.
+- 콜러블 배포 이름은 `bodyProjectStart`(명세의 projectStart) · `bodyCheckinReport`(aiReport). **콜러블의 공개 호출 설정은
+  처음 만들 때만 적용된다** — 첫 생성에서 실패하면 재배포로 고쳐지지 않고 403 이 남는다(그래서 이름을 바꿔 새로 만들었다).
+  새 콜러블을 배포하면 `curl -X POST …/함수 -d '{"data":{}}'` 가 401(로그인 필요)인지 확인할 것 — 403 이면 그 상태다.
 
 ## git push (Claude 세션용)
 
