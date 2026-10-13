@@ -46,7 +46,8 @@
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
     "deploy:hosting": "npx expo export --platform web && firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
-    "media:upload": "node scripts/upload-videos.mjs"
+    "media:upload": "node scripts/upload-videos.mjs",
+    "media:r2": "node scripts/media-r2.mjs"
   },
   "private": true
 }

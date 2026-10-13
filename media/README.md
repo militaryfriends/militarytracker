@@ -7,7 +7,9 @@ media/
   originals/      원본 보관 — .gitignore 로 제외 (부위당 100~200MB)
     chest/        01.pushup.mp4 … 30.guillotine.mp4
     back/  legs/  shoulders/  biceps/  triceps/  abs/
-  cors.json       버킷 CORS 설정 (아래)
+  r2.env          R2 업로드 키 — .gitignore 로 제외 (r2.env.example 을 복사해 채운다)
+  r2-cors.json    R2 버킷 CORS 설정 (아래)
+  cors.json       옛 GCS 버킷 CORS 설정
 ```
 
 원본은 **절대 `assets/` 에 넣지 않는다.** `assets/` 는 저장소와 앱 번들에 들어간다.
@@ -22,10 +24,30 @@ npm run media:upload -- back         # 인코딩 · 업로드 · 매니페스트
 - 파일명 앞 번호 = `src/data/exercises.ts` 에서 그 부위의 순번.
   `7.Lat Pulldown (1).mp4` 처럼 받은 이름 그대로 넣으면 된다.
 - 업로드가 끝나면 원본 이름이 `07.latpull.mp4` 형식으로 정리된다.
-- 같은 종목을 다시 올리면 교체된다. URL 이 바뀌어 기기 캐시도 새 파일을 받는다.
-- 필요: `ffmpeg`, Node 22+, `firebase login` (또는 `GCS_TOKEN` 환경변수).
+- 같은 종목을 다시 올리면 교체된다. 내용이 바뀌면 URL 이 바뀌어 기기 캐시도 새 파일을 받는다.
+- 필요: `ffmpeg`, Node 22+, `media/r2.env` (R2 키).
 
-## 버킷
+## R2 버킷 `militarytracker` (Cloudflare 계정 militaryfriends.official)
+
+영상 저장소를 Firebase Storage(GCS)에서 Cloudflare R2 로 옮기는 중이다. R2 는 내려받기(이그레스) 요금이 없다.
+
+```bash
+npm run media:r2 -- check     # 키 확인 · 공개 주소 · CORS
+npm run media:r2 -- migrate   # 옛 버킷 exercise/** → R2 (다시 돌려도 됨)
+```
+
+전환 순서
+1. **키** — R2 › Manage API tokens › Create Account API token: Object Read & Write, 버킷 `militarytracker` 만, TTL Forever.
+   Access Key ID · Secret Access Key 를 `media/r2.env` 에 (`media/r2.env.example` 참조). 키는 이 스크립트만 쓴다 — 앱에 넣지 않는다.
+2. **공개 주소** — 버킷 Settings › Custom Domains(권장, Cloudflare CDN 캐시) 또는 Public Development URL(r2.dev — 속도 제한, 개발용).
+3. **CORS** — 버킷 Settings › CORS Policy 에 `media/r2-cors.json`. 없으면 웹 앱이 매니페스트를 못 읽는다(영상 재생은 무관).
+4. `npm run media:r2 -- migrate` → `src/data/media.ts` 의 `MEDIA_BASE` 를 공개 주소로 → `npm run media:r2 -- check`.
+   `MEDIA_BASE` 가 정해지기 전에는 `media:upload` 가 멈춘다(앱이 옛 버킷을 읽는 동안 R2 에 올리면 안 보인다).
+5. 옛 버킷 파일은 지우지 않는다 — 이미 설치된 옛 빌드가 읽는다.
+
+매니페스트 값은 파일 내용으로 정한 버전(숫자, `scripts/lib/r2.mjs` 의 `contentVersion`) — 옛 버킷에서 옮긴 30개는 GCS generation 그대로.
+
+## 옛 버킷 (GCS)
 
 `gs://military-tracker-96bdd` — **asia-northeast3 (서울)**
 

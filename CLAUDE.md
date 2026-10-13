@@ -66,19 +66,20 @@ git fetch origin        # origin/main 추적 참조 동기화 (위 push 는 갱�
 
 ## 운동 영상 (media/README.md)
 
-영상은 앱에 넣지 않는다. 서울 버킷 `gs://military-tracker-96bdd` 에 올리고 앱은
-실행 시 `exercise/manifest.json` 을 읽는다 — 영상 추가에 앱 업데이트가 필요 없다.
+영상은 앱에 넣지 않는다. 버킷에 올리고 앱은 실행 시 `exercise/manifest.json` 을 읽는다 —
+영상 추가에 앱 업데이트가 필요 없다. **저장소를 GCS(`gs://military-tracker-96bdd`)에서 Cloudflare R2(`militarytracker`)로
+옮기는 중** — 순서는 media/README.md "R2 버킷".
 
 ```bash
 npm run media:upload -- <부위> --dry   # 매칭표 먼저
-npm run media:upload -- <부위>         # 인코딩(1080, CRF 23) · 업로드 · 매니페스트
+npm run media:upload -- <부위>         # 인코딩(1080, CRF 23) · R2 업로드 · 매니페스트
+npm run media:r2 -- check              # R2 키 · 공개 주소 · CORS 확인
 ```
 
 - 원본은 `media/originals/<부위>/` (gitignored). **`assets/` 에 두면 git 에 들어간다.**
 - 업로드 후 바뀐 `src/data/mediaManifest.json` 은 커밋한다 (오프라인 스냅샷).
-- 버킷 CORS(`media/cors.json`)가 없으면 웹이 매니페스트를 못 읽는다. 버킷을 새로 만들면 재적용.
-- Firebase Storage URL 은 GCS 직통보다 첫 바이트가 약 0.35초 느리다(측정: 0.5초 vs 0.15초).
-  기기 캐시 덕에 첫 재생에만 해당한다.
+- R2 키는 `media/r2.env`(gitignored)에만 — 앱 코드 · `EXPO_PUBLIC_*` 에 넣지 않는다. 앱은 공개 주소(`MEDIA_BASE`)로 읽기만 한다.
+- 버킷 CORS(`media/r2-cors.json`)가 없으면 웹이 매니페스트를 못 읽는다. 버킷을 새로 만들면 재적용.
 
 ## 주의할 것
 

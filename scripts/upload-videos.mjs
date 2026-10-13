@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 운동 영상 인코딩 + 서울 버킷 업로드 + 매니페스트 갱신
+ * 운동 영상 인코딩 + R2 버킷(militarytracker) 업로드 + 매니페스트 갱신
  *
  *   npm run media:upload -- <부위> [--dry] [--crf 23]
  *   예) npm run media:upload -- back --dry     ← 매칭표만 확인
@@ -25,7 +25,10 @@
  *   앱은 실행할 때 버킷의 매니페스트를 읽으므로 앱 업데이트 없이 바로 반영된다.
  *   src/data/mediaManifest.json 은 커밋해 둘 것 (첫 실행·오프라인용 스냅샷).
  *
- * 인증: 환경변수 GCS_TOKEN, 없으면 firebase CLI 로그인 토큰(~/.config/configstore).
+ * 매니페스트 값은 파일 내용으로 정한 버전(숫자 문자열, contentVersion). 앱은 URL 에 ?v= 로 붙인다 —
+ * 같은 파일을 다시 올리면 URL 이 그대로라 캐시를 버리지 않고, 내용이 바뀌면 URL 이 바뀐다.
+ *
+ * 인증: media/r2.env 의 R2_ACCESS_KEY_ID · R2_SECRET_ACCESS_KEY (scripts/lib/r2.mjs)
  * 필요: ffmpeg, node 22+
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, renameSync } from 'node:fs';
@@ -33,12 +36,11 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname, basename, resolve } from 'node:path';
 import { homedir } from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { r2Client, loadR2Keys, contentVersion, R2_BUCKET } from './lib/r2.mjs';
 
-const BUCKET = 'military-tracker-96bdd'; // 서울(asia-northeast3)
 const PARTS = ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'abs'];
 const DEFAULT_CRF = 23;
-const IMMUTABLE = 'public, max-age=31536000, immutable'; // URL 에 generation 이 들어가므로 안전
+const IMMUTABLE = 'public, max-age=31536000, immutable'; // URL 에 내용 버전이 들어가므로 안전
 const NO_CACHE = 'no-cache, max-age=0';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,37 +116,23 @@ for (const p of plan) {
 }
 
 // ─── 인증 ──────────────────────────────────────────────────────────────────
-function token() {
-  if (process.env.GCS_TOKEN) return process.env.GCS_TOKEN;
-  const p = join(homedir(), '.config/configstore/firebase-tools.json');
-  const read = () => JSON.parse(readFileSync(p, 'utf8')).tokens ?? {};
-  let t = read();
-  // 만료 5분 전이면 firebase CLI 로 갱신시킨다 (아무 인증 명령이나 토큰을 새로 받는다)
-  if (!t.access_token || (t.expires_at ?? 0) < Date.now() + 5 * 60_000) {
-    spawnSync('npx', ['--yes', 'firebase-tools@latest', 'projects:list'], { stdio: 'ignore' });
-    t = read();
-  }
-  if (!t.access_token) throw new Error('토큰 없음 — firebase login 또는 GCS_TOKEN 설정');
-  return t.access_token;
+// 앱이 아직 옛 버킷(Firebase Storage)을 읽고 있으면 올려도 보이지 않는다 — 전환(MEDIA_BASE)부터
+if (!/export const MEDIA_BASE = 'https:\/\//.test(readFileSync(join(root, 'src/data/media.ts'), 'utf8'))) {
+  console.error('\n앱이 아직 R2 를 읽지 않는다 — src/data/media.ts 의 MEDIA_BASE(R2 공개 주소)를 먼저 정할 것 (media/README.md)\n');
+  process.exit(1);
 }
-const TOKEN = token();
-const auth = { Authorization: `Bearer ${TOKEN}` };
+let r2;
+try {
+  r2 = r2Client(loadR2Keys(root));
+} catch (e) {
+  console.error(`\n${e.message}\n`);
+  process.exit(1);
+}
 
+/** 올리고 버전을 돌려준다 */
 async function upload(name, buf, contentType, cacheControl) {
-  const boundary = `mt${randomUUID()}`;
-  const meta = JSON.stringify({ name, contentType, cacheControl });
-  const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${contentType}\r\n\r\n`),
-    buf,
-    Buffer.from(`\r\n--${boundary}--\r\n`),
-  ]);
-  const res = await fetch(`https://storage.googleapis.com/upload/storage/v1/b/${BUCKET}/o?uploadType=multipart`, {
-    method: 'POST',
-    headers: { ...auth, 'Content-Type': `multipart/related; boundary=${boundary}` },
-    body,
-  });
-  if (!res.ok) throw new Error(`${name} 업로드 실패 ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  return String((await res.json()).generation);
+  await r2.put(name, buf, { contentType, cacheControl });
+  return contentVersion(buf);
 }
 
 // ─── 인코딩 ────────────────────────────────────────────────────────────────
@@ -176,7 +164,7 @@ const kb = (n) => `${(n / 1024).toFixed(0)}KB`;
 const results = {};
 let before = 0, after = 0;
 
-console.log(`\n인코딩·업로드 (CRF ${CRF}) → gs://${BUCKET}\n`);
+console.log(`\n인코딩·업로드 (CRF ${CRF}) → R2 ${R2_BUCKET}\n`);
 for (const { file, ex } of plan) {
   const src = join(srcDir, file);
   const { mp4, jpg } = encode(src, ex.id);
@@ -192,9 +180,8 @@ for (const { file, ex } of plan) {
 // ─── 매니페스트 병합 ───────────────────────────────────────────────────────
 const MANIFEST = 'exercise/manifest.json';
 let manifest = { updatedAt: '', items: {} };
-const cur = await fetch(`https://storage.googleapis.com/storage/v1/b/${BUCKET}/o/${encodeURIComponent(MANIFEST)}?alt=media`, { headers: auth });
-if (cur.ok) manifest = await cur.json();
-else if (cur.status !== 404) throw new Error(`매니페스트 읽기 실패 ${cur.status}`);
+const cur = await r2.get(MANIFEST);
+if (cur) manifest = JSON.parse(cur.toString('utf8'));
 
 manifest.items = { ...manifest.items, ...results };
 manifest.updatedAt = new Date().toISOString();
