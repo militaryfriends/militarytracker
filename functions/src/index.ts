@@ -509,7 +509,9 @@ interface ProjectStartReq {
  * 문서 id 가 (uid, 분석, p1/p2) 로 정해져 있어 두 번 눌러도 하나만 생긴다.
  */
 export const projectStart = onCall(
-  { timeoutSeconds: 30, memory: '256MiB' },
+  // invoker 'public': 앱(로그인 사용자)이 부를 수 있게 — 인증 · 구독은 안에서 확인한다.
+  // 명시하지 않으면 처음 만들 때만 공개로 설정되는데, 그게 실패하면 이후 배포로는 고쳐지지 않는다(403).
+  { timeoutSeconds: 30, memory: '256MiB', invoker: 'public' },
   async (req: CallableRequest<ProjectStartReq>) => {
     const acc = await requirePro(req, 'body_project');
     const uid = acc.uid;
@@ -758,7 +760,7 @@ async function judgeCheckin(uid: string, checkinId: string, reportId: string, no
  */
 export const aiReport = onCall(
   // AI 를 최대 두 번 부른다 (호출당 55초 상한)
-  { secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120, memory: '256MiB' },
+  { secrets: [ANTHROPIC_API_KEY], timeoutSeconds: 120, memory: '256MiB', invoker: 'public' },
   async (req: CallableRequest<ReportReq>) => {
     const acc = await requirePro(req, 'body_project');
     const uid = acc.uid;
