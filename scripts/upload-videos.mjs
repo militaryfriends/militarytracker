@@ -2,7 +2,7 @@
 /**
  * 운동 영상 인코딩 + R2 버킷(militarytracker) 업로드 + 매니페스트 갱신
  *
- *   npm run media:upload -- <부위> [--dry] [--crf 23]
+ *   npm run media:upload -- <부위> [--dry] [--crf 18]
  *   예) npm run media:upload -- back --dry     ← 매칭표만 확인
  *       npm run media:upload -- back           ← 인코딩·업로드
  *
@@ -19,7 +19,7 @@
  *   업로드한 원본은 "21.svend.mp4" 형식으로 이름이 정리된다.
  *
  * 하는 일
- *   원본 → 1080x1080 H.264(무음, faststart) → exercise/video/{id}.mp4
+ *   원본 → 정사각형 최대 1280(원본보다 키우지 않음) H.264 CRF 18(무음, faststart) → exercise/video/{id}.mp4
  *        → 512x512 첫 프레임 JPEG          → exercise/poster/{id}.jpg
  *   업로드 후 exercise/manifest.json 과 src/data/mediaManifest.json 을 같은 내용으로 갱신.
  *   앱은 실행할 때 버킷의 매니페스트를 읽으므로 앱 업데이트 없이 바로 반영된다.
@@ -39,7 +39,13 @@ import { homedir } from 'node:os';
 import { r2Client, loadR2Keys, contentVersion, R2_BUCKET } from './lib/r2.mjs';
 
 const PARTS = ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'abs'];
-const DEFAULT_CRF = 23;
+/**
+ * 화질 — 2026-10-13 재조정. 원본(1280², 약 10Mbps)을 1080 · CRF 23 으로 줄였더니 근육 결 · 피부 음영이 뭉개졌다.
+ * 벤치프레스 기준 SSIM(원본 대비): 1080/23 0.990 → 1280/18 0.997, 클립 0.7MB → 2.0MB.
+ * R2 는 내려받기 요금이 없고 기기에 캐시되므로 해상도를 원본대로 두고 CRF 18 로 올렸다.
+ */
+const DEFAULT_CRF = 18;
+const MAX_SIDE = 1280;
 const IMMUTABLE = 'public, max-age=31536000, immutable'; // URL 에 내용 버전이 들어가므로 안전
 const NO_CACHE = 'no-cache, max-age=0';
 
@@ -141,13 +147,15 @@ function ffmpeg(argv) {
   if (r.status !== 0) throw new Error(`ffmpeg 실패: ${r.stderr}`);
 }
 
-// 가운데를 정사각형으로 자르고 1080 이하로 줄인다 (작은 원본은 키우지 않는다)
-const VF = "crop='min(iw,ih)':'min(iw,ih)',scale='trunc(min(1080,iw)/2)*2':-2:flags=lanczos";
+// 가운데를 정사각형으로 자르고 MAX_SIDE 이하로 줄인다 (작은 원본은 키우지 않는다)
+const VF = `crop='min(iw,ih)':'min(iw,ih)',scale='trunc(min(${MAX_SIDE},iw)/2)*2':-2:flags=lanczos`;
 
 function encode(src, id) {
   mkdirSync(work, { recursive: true });
-  const mp4 = join(work, `${id}.mp4`);
-  const jpg = join(work, `${id}.jpg`);
+  // 설정이 파일 이름에 들어간다 — 화질을 바꾸면 예전 결과를 재사용하지 않고 다시 인코딩한다
+  const tag = `${MAX_SIDE}-crf${CRF}`;
+  const mp4 = join(work, `${id}.${tag}.mp4`);
+  const jpg = join(work, `${id}.${tag}.jpg`);
   const fresh = (f) => existsSync(f) && statSync(f).mtimeMs > statSync(src).mtimeMs;
   if (!fresh(mp4)) {
     ffmpeg(['-i', src, '-vf', VF, '-c:v', 'libx264', '-profile:v', 'high', '-crf', String(CRF),
@@ -164,7 +172,7 @@ const kb = (n) => `${(n / 1024).toFixed(0)}KB`;
 const results = {};
 let before = 0, after = 0;
 
-console.log(`\n인코딩·업로드 (CRF ${CRF}) → R2 ${R2_BUCKET}\n`);
+console.log(`\n인코딩·업로드 (최대 ${MAX_SIDE}, CRF ${CRF}) → R2 ${R2_BUCKET}\n`);
 for (const { file, ex } of plan) {
   const src = join(srcDir, file);
   const { mp4, jpg } = encode(src, ex.id);

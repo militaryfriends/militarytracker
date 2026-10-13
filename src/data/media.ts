@@ -6,7 +6,7 @@
  * 영상을 추가·교체해도 앱 업데이트가 필요 없다 (src/stores/mediaStore.ts).
  *
  * 버킷 구조
- *   exercise/video/{id}.mp4    1080x1080 H.264, 무음, 루프용
+ *   exercise/video/{id}.mp4    정사각형 최대 1280, H.264, 무음, 루프용
  *   exercise/poster/{id}.jpg   512x512 첫 프레임
  *   exercise/manifest.json     { items: { [id]: { video, poster } } } — 값은 버전(숫자 문자열)
  *

@@ -58,7 +58,7 @@ npm run media:r2 -- migrate   # 옛 버킷 exercise/** → R2 (다시 돌려도 
 
 | 경로 | 내용 | Cache-Control |
 |---|---|---|
-| `exercise/video/{id}.mp4` | 1080×1080 H.264 High, CRF 23, 무음, faststart | `immutable` 1년 |
+| `exercise/video/{id}.mp4` | 정사각형 최대 1280 H.264 High, CRF 18, 무음, faststart | `immutable` 1년 |
 | `exercise/poster/{id}.jpg` | 512×512 첫 프레임 | `immutable` 1년 |
 | `exercise/manifest.json` | `{ updatedAt, items: { id: { video, poster } } }` | `no-cache` |
 

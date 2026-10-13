@@ -73,7 +73,7 @@ git fetch origin        # origin/main 추적 참조 동기화 (위 push 는 갱�
 
 ```bash
 npm run media:upload -- <부위> --dry   # 매칭표 먼저
-npm run media:upload -- <부위>         # 인코딩(1080, CRF 23) · R2 업로드 · 매니페스트
+npm run media:upload -- <부위>         # 인코딩(최대 1280, CRF 18) · R2 업로드 · 매니페스트
 npm run media:r2 -- check              # R2 키 · 공개 주소 · CORS 확인
 ```
 

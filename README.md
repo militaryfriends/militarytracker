@@ -73,7 +73,7 @@ functions/              Cloud Functions (AI 프록시)
    ```bash
    npm run media:upload -- back
    ```
-   1080×1080 H.264 (CRF 23) + 512px 썸네일을 올리고 매니페스트를 갱신한다.
+   최대 1280 정사각형 H.264 (CRF 18) + 512px 썸네일을 올리고 매니페스트를 갱신한다.
    `src/data/mediaManifest.json` 이 바뀌므로 **커밋할 것** (첫 실행·오프라인용 스냅샷).
 4. 진행 상황
    ```bash
