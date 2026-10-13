@@ -62,3 +62,6 @@ firestore-debug.log
 
 # 운동 영상 원본 — 부위당 100~200MB, 절대 커밋하지 않는다 (media/README.md)
 media/originals/
+
+# 폴더 연결(FUSE) 중 생기는 임시 파일 — 커밋하지 않는다
+.fuse_hidden*
