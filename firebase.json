@@ -40,6 +40,7 @@
     }
   },
   "hosting": {
+    "site": "military-tracker-96bdd",
     "public": "dist",
     "cleanUrls": true,
     "trailingSlash": false,
