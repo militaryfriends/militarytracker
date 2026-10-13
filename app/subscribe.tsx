@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors } from '../src/utils/colors';
+import { colors, themed, useThemeMode } from '../src/theme';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, useSafeBack } from '../src/components/ui';
 import { showAlert } from '../src/utils/alert';
 import { useAuthStore } from '../src/stores/authStore';
@@ -30,6 +30,7 @@ function eun(word: string): string {
 type Busy = null | 'buy' | 'trial' | 'promo' | 'restore';
 
 export default function SubscribeScreen() {
+  useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
   const { f } = useLocalSearchParams<{ f?: string }>();
@@ -240,7 +241,7 @@ export default function SubscribeScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   lead: { fontSize: 14, color: colors.ink, lineHeight: 22, marginTop: 4, marginBottom: 4 },
 
   activeBox: {
@@ -315,4 +316,4 @@ const s = StyleSheet.create({
   legalRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 10, minHeight: 32 },
   legalLink: { fontSize: 12, color: colors.mid, textDecorationLine: 'underline' },
   legalDot: { color: colors.muted },
-});
+}));

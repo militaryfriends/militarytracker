@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SectionList, LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, EmptyState, useSafeBack } from '../../src/components/ui';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -12,6 +12,7 @@ import {
 } from '../../src/utils/stats';
 
 export default function HistoryScreen() {
+  const mode = useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
   const logs = useAppStore((s) => s.logs);
@@ -70,6 +71,8 @@ export default function HistoryScreen() {
 
       <SectionList
         sections={sections}
+        // 모드가 바뀌면 줄도 다시 그린다 (renderItem 안에서 색을 읽는다)
+        extraData={`${mode}:${openId}`}
         keyExtractor={(l, i) => l.id ?? `${l.date}-${i}`}
         contentContainerStyle={s.listInner}
         showsVerticalScrollIndicator={false}
@@ -147,6 +150,7 @@ export default function HistoryScreen() {
 }
 
 function Summary({ value, label }: { value: string; label: string }) {
+  useThemeMode();
   return (
     <View style={s.summary}>
       <Text style={s.summaryVal}>{value}</Text>
@@ -155,7 +159,7 @@ function Summary({ value, label }: { value: string; label: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   pendingTag: { color: colors.muted, fontSize: 11, fontWeight: '400' },
   prLink: { fontSize: 12, color: colors.mid, fontWeight: '600' },
   summaryRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 6 },
@@ -191,4 +195,4 @@ const s = StyleSheet.create({
   exName: { fontSize: 13.5, fontWeight: '600', color: colors.ink },
   exPart: { fontSize: 10.5, color: colors.muted, marginTop: 2 },
   exSets: { fontSize: 11, color: colors.mid, textAlign: 'right', maxWidth: 140 },
-});
+}));

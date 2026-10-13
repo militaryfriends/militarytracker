@@ -3,7 +3,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { ThemeToggle, colors, themed, useThemeMode } from '../../src/theme';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { FEED } from '../../src/data/feed';
@@ -14,6 +14,7 @@ import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
 export default function HomeScreen() {
+  useThemeMode();
   const router = useRouter();
   const plan = useAppStore((s) => s.plan);
   const logs = useAppStore((s) => s.logs);
@@ -68,7 +69,10 @@ export default function HomeScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
         <Text style={s.logo}>MILITARYTRACKER</Text>
-        <Text style={s.meta}>{today}</Text>
+        <View style={s.topRight}>
+          <Text style={s.meta}>{today}</Text>
+          <ThemeToggle />
+        </View>
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
@@ -178,12 +182,13 @@ export default function HomeScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8,
+    paddingLeft: 20, paddingRight: 10, paddingTop: 6, paddingBottom: 2,
   },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   logo: { fontSize: 13, fontWeight: '800', color: colors.ink, letterSpacing: 2.5 },
   meta: { fontSize: 10, color: colors.muted, letterSpacing: 1 },
   scroll: { flex: 1 },
@@ -262,13 +267,13 @@ const s = StyleSheet.create({
     marginBottom: 8, overflow: 'hidden', justifyContent: 'flex-end', padding: 10,
   },
   gridThumbImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
-  gridThumbOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
+  gridThumbOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.mediaDim },
   gridBadge: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.62)',
+    alignSelf: 'flex-start', backgroundColor: colors.mediaBadge,
     borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 0.5, borderColor: colors.mediaBadgeLine,
   },
-  gridBadgeTxt: { fontSize: 10, color: colors.mid, fontWeight: '600' },
+  gridBadgeTxt: { fontSize: 10, color: colors.onMediaSub, fontWeight: '600' },
   gridName: { fontSize: 12.5, fontWeight: '600', color: colors.ink, lineHeight: 17, marginBottom: 3 },
   gridPart: { fontSize: 11, color: colors.muted },
-});
+}));

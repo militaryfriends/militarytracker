@@ -4,7 +4,7 @@ import {
   Vibration, Platform, ActivityIndicator, KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../utils/colors';
+import { colors, themed, useThemeMode } from '../theme';
 import { showAlert } from '../utils/alert';
 import { useAppStore } from '../stores/appStore';
 import { useAuthStore } from '../stores/authStore';
@@ -25,6 +25,7 @@ function buzz() {
 }
 
 export default function SessionPlayer() {
+  useThemeMode();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const session = useAppStore((s) => s.session);
@@ -398,6 +399,7 @@ function ExercisePicker({
   onClose: () => void;
   onPick: (id: string) => void;
 }) {
+  useThemeMode();
   const insets = useSafeAreaInsets();
   const cur = exById(currentId);
   const [sameOnly, setSameOnly] = useState(mode === 'swap');
@@ -466,6 +468,7 @@ function ExercisePicker({
 }
 
 function PickerRow({ ex, onPick }: { ex: Exercise; onPick: () => void }) {
+  useThemeMode();
   return (
     <TouchableOpacity style={p.row} activeOpacity={0.75} onPress={onPick}>
       <ExerciseMedia exId={ex.id} rounded={10} style={p.thumb} dim={0.3} />
@@ -478,7 +481,7 @@ function PickerRow({ ex, onPick }: { ex: Exercise; onPick: () => void }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bg, zIndex: 40, flexDirection: 'column',
@@ -598,9 +601,9 @@ const s = StyleSheet.create({
   navSolid: { backgroundColor: colors.ink },
   navSolidTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
   navOff: { opacity: 0.3 },
-});
+}));
 
-const p = StyleSheet.create({
+const p = themed(() => StyleSheet.create({
   root: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bg, zIndex: 60,
@@ -639,4 +642,4 @@ const p = StyleSheet.create({
   name: { fontSize: 14, fontWeight: '600', color: colors.ink },
   meta: { fontSize: 10.5, color: colors.muted, marginTop: 2 },
   pick: { fontSize: 12, color: colors.mid, fontWeight: '700' },
-});
+}));

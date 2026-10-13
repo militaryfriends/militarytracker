@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  TextInput, KeyboardAvoidingView, Platform,
+  TextInput, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref } from '../../src/theme';
+import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -19,7 +20,16 @@ import { PRO_NAME } from '../../src/config/entitlements';
 import { calcBodyStats, effectiveWeight, validateField } from '../../src/utils/body';
 import { setsByPart, weakestPart, totalSets, totalVolume, currentStreakDays, fmtDuration, fmtVolume } from '../../src/utils/stats';
 
+const THEME_OPTIONS = [
+  { value: 'system', label: '시스템' },
+  { value: 'light', label: '라이트' },
+  { value: 'dark', label: '다크' },
+] as const satisfies readonly { value: ThemePref; label: string }[];
+
 export default function MyScreen() {
+  useThemeMode();
+  const themePref = useThemePref();
+  const hapticsOn = useHapticsEnabled();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const patchUser = useAuthStore((s) => s.patchUser);
@@ -284,6 +294,40 @@ export default function MyScreen() {
           <Text style={s.subChev}>›</Text>
         </TouchableOpacity>
 
+        {/* 화면 · 진동 */}
+        <Text style={s.sectionLabel}>화면</Text>
+        <View style={s.card}>
+          <Text style={s.setTitle}>모드</Text>
+          <Segmented<ThemePref>
+            label="화면 모드"
+            options={THEME_OPTIONS}
+            value={themePref}
+            onChange={chooseTheme}
+          />
+          <Text style={s.setHint}>
+            {themePref === 'system' ? '기기 설정을 따라 바뀝니다.' : '기기 설정과 상관없이 이 모드로 봅니다.'}
+          </Text>
+          <View style={s.setRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.setTitle}>누를 때 진동</Text>
+              <Text style={s.setSub}>버튼 · 세트 체크 · 기록 갱신. 휴식 끝 알림은 항상 울립니다.</Text>
+            </View>
+            <Switch
+              value={hapticsOn}
+              onValueChange={(v) => {
+                setHapticsEnabled(v);
+                if (v) haptic.tap();
+              }}
+              // 모노: 켜면 글자색 판 위에 바탕색 손잡이 (iOS 기본 흰 손잡이는 다크에서 흰 판에 묻힌다)
+              trackColor={{ false: colors.panel3, true: colors.ink }}
+              thumbColor={hapticsOn ? colors.bg : '#FFFFFF'}
+              ios_backgroundColor={colors.panel3}
+              {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bg } as object) : null)}
+              accessibilityLabel="누를 때 진동"
+            />
+          </View>
+        </View>
+
         <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>
 
         <TouchableOpacity activeOpacity={0.7} style={s.logoutBtn} onPress={handleLogout} accessibilityRole="button">
@@ -299,6 +343,7 @@ export default function MyScreen() {
 }
 
 function Summary({ value, label }: { value: string; label: string }) {
+  useThemeMode();
   return (
     <View style={s.summary}>
       <Text style={s.summaryVal}>{value}</Text>
@@ -307,7 +352,7 @@ function Summary({ value, label }: { value: string; label: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -342,6 +387,13 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.line, marginBottom: 4,
   },
   emptyTxt: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  setTitle: { fontSize: 14, fontWeight: '700', color: colors.ink, marginBottom: 10 },
+  setHint: { fontSize: 11.5, color: colors.muted, marginTop: 8 },
+  setRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderTopWidth: 1, borderTopColor: colors.line, marginTop: 16, paddingTop: 14,
+  },
+  setSub: { fontSize: 11.5, color: colors.muted, lineHeight: 17, marginTop: -6 },
 
   barsRow: { flexDirection: 'row', gap: 6, height: 104, alignItems: 'flex-end', marginBottom: 14 },
   barCol: { flex: 1, alignItems: 'center' },
@@ -410,4 +462,4 @@ const s = StyleSheet.create({
   logoutTxt: { color: colors.muted, fontSize: 14, fontWeight: '600' },
   deleteBtn: { paddingVertical: 16, alignItems: 'center' },
   deleteTxt: { color: colors.wrong, fontSize: 12.5, fontWeight: '600' },
-});
+}));

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors } from '../../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../../src/theme';
 import { showAlert } from '../../../src/utils/alert';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState, useSafeBack } from '../../../src/components/ui';
 import ExerciseMedia from '../../../src/components/ExerciseMedia';
@@ -13,6 +13,7 @@ import { useAppStore } from '../../../src/stores/appStore';
 import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function RoutineDetailScreen() {
+  useThemeMode();
   const { routineId, onboard } = useLocalSearchParams<{ routineId: string; onboard?: string }>();
   const router = useRouter();
   const goBack = useSafeBack();
@@ -116,6 +117,7 @@ export default function RoutineDetailScreen() {
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
+  useThemeMode();
   return (
     <View style={s.stat}>
       <Text style={s.statVal}>{value}</Text>
@@ -124,7 +126,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   subtitle: { fontSize: 13, color: colors.mid, marginTop: 4 },
   desc: { fontSize: 13, color: colors.muted, lineHeight: 21, marginTop: 8 },
   statRow: { flexDirection: 'row', gap: 8, marginTop: 16, marginBottom: 4 },
@@ -155,4 +157,4 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   moreTxt: { fontSize: 12, fontWeight: '700', color: colors.muted },
-});
+}));

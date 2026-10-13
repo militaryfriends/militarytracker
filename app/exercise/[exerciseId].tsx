@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, EmptyState, Notice, useSafeBack } from '../../src/components/ui';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { exById, exByPart, EQUIP_LABEL, LEVEL_LABEL, PART_LABEL, PPL_LABEL } from '../../src/data/exercises';
@@ -12,6 +12,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { lastRecordOf, personalBest, e1rm, fmtSetDetail } from '../../src/utils/stats';
 
 export default function ExerciseDetailScreen() {
+  useThemeMode();
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
   const router = useRouter();
   const goBack = useSafeBack();
@@ -149,6 +150,7 @@ export default function ExerciseDetailScreen() {
 }
 
 function Spec({ value, unit, label }: { value: string; unit: string; label: string }) {
+  useThemeMode();
   return (
     <View style={s.spec}>
       <Text style={s.specVal}>
@@ -161,6 +163,7 @@ function Spec({ value, unit, label }: { value: string; unit: string; label: stri
 }
 
 function Point({ text, mode }: { text: string; mode: 'w' | 'c' }) {
+  useThemeMode();
   return (
     <View style={s.pointRow}>
       <View style={[s.pointIcon, mode === 'w' ? s.pIconW : s.pIconC]}>
@@ -173,7 +176,7 @@ function Point({ text, mode }: { text: string; mode: 'w' | 'c' }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   hero: { width: '100%', aspectRatio: 1 },
   pad: { paddingHorizontal: 16, paddingTop: 16 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -239,4 +242,4 @@ const s = StyleSheet.create({
   relCard: { width: '31%' },
   relThumb: { width: '100%', aspectRatio: 1, marginBottom: 6 },
   relName: { fontSize: 11, color: colors.mid, lineHeight: 15 },
-});
+}));

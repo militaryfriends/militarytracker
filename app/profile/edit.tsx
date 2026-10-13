@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { showAlert } from '../../src/utils/alert';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState } from '../../src/components/ui';
 import { useAppStore } from '../../src/stores/appStore';
@@ -13,6 +13,7 @@ import { calcBodyStats, effectiveWeight, validateProfile } from '../../src/utils
 import { UserProfile } from '../../src/types';
 
 export default function ProfileEditScreen() {
+  useThemeMode();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const patchUser = useAuthStore((s) => s.patchUser);
@@ -175,6 +176,7 @@ export default function ProfileEditScreen() {
 function Field({
   label, value, onChange, kb, placeholder,
 }: { label: string; value: string; onChange: (v: string) => void; kb: 'numeric' | 'decimal-pad'; placeholder?: string }) {
+  useThemeMode();
   return (
     <View style={{ flex: 1 }}>
       <Text style={s.label}>{label}</Text>
@@ -193,6 +195,7 @@ function Field({
 }
 
 function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boolean; onPress: () => void }) {
+  useThemeMode();
   return (
     <TouchableOpacity activeOpacity={0.7} style={[s.opt, on && s.optOn]} onPress={onPress}>
       <View style={{ flex: 1 }}>
@@ -204,7 +207,7 @@ function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boo
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   errTxt: { color: colors.wrong, fontSize: 12, marginTop: 8 },
 
   label: { fontSize: 12, color: colors.muted, marginTop: 14, marginBottom: 6 },
@@ -239,4 +242,4 @@ const s = StyleSheet.create({
   calcTxt: { fontSize: 13, color: colors.ink, fontWeight: '600' },
   calcSub: { fontSize: 11, color: colors.muted, marginTop: 5 },
   hint: { fontSize: 11.5, color: colors.muted, lineHeight: 18, textAlign: 'center', marginTop: 12 },
-});
+}));

@@ -5,9 +5,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../utils/colors';
+import { colors, themed, useThemeMode } from '../theme';
 
 export function Screen({ children }: { children: ReactNode }) {
+  useThemeMode();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       {children}
@@ -30,6 +31,7 @@ export function useSafeBack(fallback = '/tabs/home'): () => void {
 export function TopBar({
   title, meta, onBack, right,
 }: { title: string; meta?: string; onBack?: () => void; right?: ReactNode }) {
+  useThemeMode();
   return (
     <View style={s.topbar}>
       {onBack ? (
@@ -52,6 +54,7 @@ export function TopBar({
 }
 
 export function Body({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  useThemeMode();
   return (
     <ScrollView
       style={s.scroll}
@@ -65,16 +68,19 @@ export function Body({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  useThemeMode();
   return <View style={[s.card, style]}>{children}</View>;
 }
 
 export function SectionLabel({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  useThemeMode();
   return <Text style={[s.sectionLabel, style]} accessibilityRole="header">{children}</Text>;
 }
 
 export function PrimaryBtn({
   label, onPress, loading, disabled, style,
 }: { label: string; onPress: () => void; loading?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle> }) {
+  useThemeMode();
   const off = loading || disabled;
   return (
     <TouchableOpacity
@@ -94,6 +100,7 @@ export function PrimaryBtn({
 export function GhostBtn({
   label, onPress, loading, disabled, style,
 }: { label: string; onPress: () => void; loading?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle> }) {
+  useThemeMode();
   const off = loading || disabled;
   return (
     <TouchableOpacity
@@ -114,6 +121,7 @@ export function GhostBtn({
 export function EmptyState({
   text, cta, onCta,
 }: { text: string; cta?: string; onCta?: () => void }) {
+  useThemeMode();
   return (
     <View style={s.empty}>
       <Text style={s.emptyTxt}>{text}</Text>
@@ -127,10 +135,11 @@ export function EmptyState({
 }
 
 export function Notice({ children }: { children: ReactNode }) {
+  useThemeMode();
   return <Text style={s.notice}>{children}</Text>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -170,4 +179,4 @@ const s = StyleSheet.create({
   },
   emptyBtnTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
   notice: { fontSize: 11, color: colors.muted, lineHeight: 16, textAlign: 'center', marginTop: 4 },
-});
+}));

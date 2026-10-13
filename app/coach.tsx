@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../src/utils/colors';
+import { colors, themed, useThemeMode } from '../src/theme';
 import { Screen, TopBar, useSafeBack } from '../src/components/ui';
 import { ProLock } from '../src/components/ProLock';
 import { useAppStore } from '../src/stores/appStore';
@@ -31,6 +31,7 @@ const WELCOME: CoachMessage = {
 };
 
 export default function CoachScreen() {
+  const mode = useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
   const insets = useSafeAreaInsets();
@@ -145,6 +146,8 @@ export default function CoachScreen() {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <FlatList
             data={data}
+            // 모드가 바뀌면 줄도 다시 그린다 (renderItem 안에서 색을 읽는다)
+            extraData={mode}
             inverted
             keyExtractor={(_, i) => String(data.length - i)}
             contentContainerStyle={s.list}
@@ -190,7 +193,7 @@ export default function CoachScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   clearTxt: { fontSize: 12, color: colors.mid, fontWeight: '600' },
   lockWrap: { padding: 20 },
   list: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
@@ -225,4 +228,4 @@ const s = StyleSheet.create({
   sendOff: { opacity: 0.4 },
   sendTxt: { color: colors.bg, fontSize: 20, fontWeight: '700' },
   notice: { fontSize: 11, color: colors.muted, textAlign: 'center', paddingVertical: 8 },
-});
+}));

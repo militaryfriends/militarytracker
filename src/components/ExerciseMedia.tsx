@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useVideoPlayer, VideoView, VideoSource } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, partTint } from '../utils/colors';
+import { colors, partTint, themed, useThemeMode } from '../theme';
 import { exById, PART_LABEL } from '../data/exercises';
 import { videoSource, posterSource } from '../data/media';
 import { useMediaEntry } from '../stores/mediaStore';
@@ -29,6 +29,7 @@ interface Props {
  * 같은 컴포넌트를 쓰면 종목 수만큼 네이티브 플레이어가 생성된다.
  */
 export default function ExerciseMedia(props: Props) {
+  useThemeMode();
   const entry = useMediaEntry(props.exId);
   const poster = posterSource(props.exId, entry);
   const src = props.autoPlay && entry?.video ? videoSource(props.exId, entry.video) : null;
@@ -45,6 +46,7 @@ export default function ExerciseMedia(props: Props) {
 function VideoMedia({
   src, poster, rounded = 16, style, badge, badgeColor, showLabel, dim = 0.35, exId,
 }: Props & { src: VideoSource; poster: ImageSourcePropType | null }) {
+  useThemeMode();
   const ex = exById(exId);
   // 첫 프레임이 그려질 때까지 썸네일로 덮어 둔다 — 영상을 받는 동안 검은 화면 방지.
   // 오프라인이라 영상을 못 받으면 썸네일이 그대로 남는다.
@@ -83,6 +85,7 @@ function VideoMedia({
 function StaticMedia({
   exId, poster, rounded = 16, style, badge, badgeColor, showLabel, dim = 0.35,
 }: Props & { poster: ImageSourcePropType | null }) {
+  useThemeMode();
   const ex = exById(exId);
   const imageSrc = poster;
   const tint = ex ? partTint[ex.part] ?? colors.panel3 : colors.panel3;
@@ -95,7 +98,7 @@ function StaticMedia({
           {dim > 0 && <View style={[s.fill, { backgroundColor: `rgba(0,0,0,${dim})` }]} pointerEvents="none" />}
         </>
       ) : (
-        <LinearGradient colors={[tint, colors.panel2]} style={s.fill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={[tint, colors.mediaPh]} style={s.fill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={s.phCenter}>
             <Text style={s.phTxt}>{ex ? PART_LABEL[ex.part] : '?'}</Text>
             <Text style={s.phSub}>미디어 준비중</Text>
@@ -115,6 +118,7 @@ function Overlay({
   badgeColor?: string;
   showLabel?: boolean;
 }) {
+  useThemeMode();
   return (
     <>
       {badge ? (
@@ -132,20 +136,20 @@ function Overlay({
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   wrap: { overflow: 'hidden', backgroundColor: colors.panel2, position: 'relative' },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   phCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  phTxt: { fontSize: 15, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1 },
-  phSub: { fontSize: 11, color: 'rgba(255,255,255,0.78)', marginTop: 4, letterSpacing: 0.5 },
+  phTxt: { fontSize: 15, fontWeight: '800', color: colors.onMediaSub, letterSpacing: 1 },
+  phSub: { fontSize: 11, color: colors.onMediaSub, marginTop: 4, letterSpacing: 0.5 },
   badge: {
     position: 'absolute', top: 10, right: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 7,
+    backgroundColor: colors.mediaBadge, borderRadius: 7,
     paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 0.5, borderColor: colors.mediaBadgeLine,
   },
-  badgeTxt: { fontSize: 10, fontWeight: '800', color: colors.ink, letterSpacing: 0.5 },
+  badgeTxt: { fontSize: 10, fontWeight: '800', color: colors.onMedia, letterSpacing: 0.5 },
   label: { position: 'absolute', left: 12, right: 12, bottom: 12 },
-  labelName: { fontSize: 15, fontWeight: '800', color: colors.ink },
-  labelPart: { fontSize: 11, color: 'rgba(255,255,255,0.78)', marginTop: 2 },
-});
+  labelName: { fontSize: 15, fontWeight: '800', color: colors.onMedia },
+  labelPart: { fontSize: 11, color: colors.onMediaSub, marginTop: 2 },
+}));

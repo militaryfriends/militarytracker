@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Platform, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { onAuthChange, fetchUserProfile, fetchPlan, ensureUserDoc } from '../src/services/authService';
 import { getWorkoutLogs, getWeights } from '../src/services/workoutService';
 import { refreshSub } from '../src/services/billingService';
@@ -11,17 +12,33 @@ import { flushPendingLogs, mergePendingIntoLogs } from '../src/services/sync';
 import { useAuthStore } from '../src/stores/authStore';
 import { useAppStore, waitForHydration } from '../src/stores/appStore';
 import { useMediaStore } from '../src/stores/mediaStore';
-import { colors } from '../src/utils/colors';
+import { ThemeProvider, colors, restoreThemePref, useThemeMode } from '../src/theme';
+import { ConfettiLayer, FONT_ASSETS, restoreHaptics } from '../src/ui';
 import MobileFrame from '../src/components/MobileFrame';
 
 // 하이드레이션이 끝날 때까지 스플래시를 잡아둔다 (로그인 화면 깜빡임 방지)
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  useThemeMode();
   const user = useAuthStore((s) => s.user);
+  // 저장된 화면 모드 · 진동 설정 — 스플래시가 걷히기 전에 (다른 모드가 비쳤다 바뀌지 않게)
+  const [prefsReady, setPrefsReady] = useState(false);
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const router = useRouter();
   const segments = useSegments();
+
+  useEffect(() => {
+    Promise.allSettled([restoreThemePref(), restoreHaptics()]).finally(() => setPrefsReady(true));
+    // 숫자 글꼴 — 기다리지 않는다 (불러오기 전엔 시스템 글꼴). 파일 맨 위에서 부르면 웹 정적 렌더링이 깨진다
+    Font.loadAsync(FONT_ASSETS).catch(() => {});
+  }, []);
+
+  // 웹 — 제 모드로 그린 다음 프레임에 가려 둔 화면을 연다 (app/+html.tsx 의 mt-wait)
+  useEffect(() => {
+    if (!prefsReady || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    requestAnimationFrame(() => document.documentElement.classList.remove('mt-wait'));
+  }, [prefsReady]);
 
   // ─── 운동 영상 매니페스트 — 로그인과 무관하게 매 실행 갱신 ───────────────
   useEffect(() => {
@@ -124,8 +141,8 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (isInitialized) SplashScreen.hideAsync().catch(() => {});
-  }, [isInitialized]);
+    if (isInitialized && prefsReady) SplashScreen.hideAsync().catch(() => {});
+  }, [isInitialized, prefsReady]);
 
   // ─── 라우팅 가드 ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -148,9 +165,11 @@ export default function RootLayout() {
     }
   }, [user, isInitialized, segments]);
 
+  // 상태 표시줄 · 전환 막은 ThemeProvider 가 맡는다 (여기서 구독하면 테마를 바꿀 때 앱 전체가 한꺼번에 다시 그려진다)
   return (
+    <GestureHandlerRootView style={styles.fill}>
     <SafeAreaProvider>
-      <StatusBar style="light" />
+    <ThemeProvider>
       <MobileFrame>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="index" />
@@ -166,6 +185,13 @@ export default function RootLayout() {
         <Stack.Screen name="subscribe" options={{ presentation: 'modal' }} />
       </Stack>
       </MobileFrame>
+      <ConfettiLayer />
+    </ThemeProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});

@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import {
   EX, Exercise, Part, PART_LABEL, PART_ORDER, EQUIP_LABEL, LEVEL_LABEL,
 } from '../../src/data/exercises';
@@ -21,6 +21,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 ];
 
 export default function FormScreen() {
+  useThemeMode();
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>('전체');
   const [q, setQ] = useState('');
@@ -113,6 +114,7 @@ export default function FormScreen() {
 }
 
 const Card = memo(function Card({ ex, onPress }: { ex: Exercise; onPress: (id: string) => void }) {
+  useThemeMode();
   const form = formByExId(ex.id);
   const video = !!useMediaEntry(ex.id)?.video;
 
@@ -140,7 +142,7 @@ const Card = memo(function Card({ ex, onPress }: { ex: Exercise; onPress: (id: s
   );
 });
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -184,9 +186,9 @@ const s = StyleSheet.create({
   thumb: { width: '100%', aspectRatio: 1 },
   badgeRow: { flexDirection: 'row', gap: 4, marginTop: 8, flexWrap: 'wrap' },
   vBadge: {
-    backgroundColor: 'rgba(244,244,245,0.14)', borderRadius: 5,
+    backgroundColor: colors.inkSoft, borderRadius: 5,
     paddingHorizontal: 6, paddingVertical: 2,
-    borderWidth: 0.5, borderColor: 'rgba(244,244,245,0.25)',
+    borderWidth: 0.5, borderColor: colors.inkLine,
   },
   vBadgeTxt: { fontSize: 10, color: colors.ink, fontWeight: '700' },
   okBadge: {
@@ -204,4 +206,4 @@ const s = StyleSheet.create({
   name: { fontSize: 13, fontWeight: '700', color: colors.ink, marginTop: 7 },
   sub: { fontSize: 10.5, color: colors.mid, marginTop: 2 },
   meta2: { fontSize: 10, color: colors.muted, marginTop: 2 },
-});
+}));

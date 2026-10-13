@@ -3,7 +3,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -25,6 +25,7 @@ const daysSince = (iso?: string): number | null => {
 };
 
 export default function DietScreen() {
+  useThemeMode();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const patchUser = useAuthStore((s) => s.patchUser);
@@ -225,6 +226,7 @@ export default function DietScreen() {
 }
 
 function MacroCard({ value, unit, label }: { value: string; unit: string; label: string }) {
+  useThemeMode();
   return (
     <View style={s.mbox} accessible accessibilityLabel={`${label} ${value}${unit}`}>
       {/* 4열 타일에서 '2713kcal' 이 단어 중간에서 줄바꿈되던 것 — 한 줄로 고정하고 폭에 맞춰 줄인다 */}
@@ -236,7 +238,7 @@ function MacroCard({ value, unit, label }: { value: string; unit: string; label:
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -337,4 +339,4 @@ const s = StyleSheet.create({
   linkSub: { fontSize: 11, color: colors.muted, marginTop: 3 },
 
   notice: { fontSize: 10.5, color: colors.muted, lineHeight: 16, textAlign: 'center', marginTop: 14 },
-});
+}));

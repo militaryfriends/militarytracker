@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Platform, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { colors } from '../utils/colors';
+import { colors, themed, useThemeMode } from '../theme';
 
 /**
  * 프레임 안에서 쓸 가짜 세이프에리어. 웹은 env(safe-area-inset-*) 가 0 이라
@@ -19,6 +19,7 @@ const BREAKPOINT = 700;
  * 실제 기기 비율의 프레임 안에 앱을 넣는다. 네이티브에서는 그대로 통과.
  */
 export default function MobileFrame({ children }: { children: ReactNode }) {
+  useThemeMode();
   const { width, height } = useWindowDimensions();
 
   if (Platform.OS !== 'web' || width < BREAKPOINT) {
@@ -51,7 +52,7 @@ export default function MobileFrame({ children }: { children: ReactNode }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   page: {
     flex: 1,
     flexDirection: 'row',
@@ -73,7 +74,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     // 웹 전용 그림자
-    boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
+    boxShadow: `0 30px 80px ${colors.shadow}`,
   } as never,
   notch: {
     position: 'absolute',
@@ -82,7 +83,8 @@ const s = StyleSheet.create({
     width: 108,
     height: 24,
     borderRadius: 14,
-    backgroundColor: colors.bgDeep,
+    // 기기 노치 — 모드와 상관없이 검정
+    backgroundColor: '#050506',
     zIndex: 100,
   },
   homeBar: {
@@ -90,4 +92,4 @@ const s = StyleSheet.create({
     width: 120, height: 4, borderRadius: 2, backgroundColor: colors.line2, zIndex: 100,
   },
   screen: { flex: 1, overflow: 'hidden' },
-});
+}));

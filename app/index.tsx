@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { colors } from '../src/utils/colors';
+import { colors, useThemeMode } from '../src/theme';
 
 /**
  * 진입점. 실제 분기는 _layout.tsx 의 라우팅 가드가 처리한다.
@@ -7,5 +7,6 @@ import { colors } from '../src/utils/colors';
  * 스플래시와 같은 색 배경만 그린다.
  */
 export default function Index() {
+  useThemeMode();
   return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 }

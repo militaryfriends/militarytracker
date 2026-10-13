@@ -5,13 +5,13 @@
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "scheme": "militarytracker",
     "backgroundColor": "#09090A",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.militarytracker.app",
-      "userInterfaceStyle": "dark",
+      "userInterfaceStyle": "automatic",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -23,7 +23,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.militarytracker.app",
-      "userInterfaceStyle": "dark",
+      "userInterfaceStyle": "automatic",
       "edgeToEdgeEnabled": true
     },
     "web": {
@@ -36,10 +36,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/splash-icon-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#09090A"
+          "backgroundColor": "#F4F4F5",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#09090A"
+          }
         }
       ],
       "expo-font",

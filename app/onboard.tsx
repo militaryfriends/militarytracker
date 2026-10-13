@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../src/utils/colors';
+import { colors, themed, useThemeMode } from '../src/theme';
 import { showAlert } from '../src/utils/alert';
 import { UserProfile } from '../src/types';
 import { useAuthStore } from '../src/stores/authStore';
@@ -27,6 +27,7 @@ const defaultProfile: UserProfile = {
 };
 
 export default function OnboardScreen() {
+  useThemeMode();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, patchUser } = useAuthStore();
@@ -171,6 +172,7 @@ export default function OnboardScreen() {
 
 // ─── Step 1: 신체 정보 ──────────────────────────────────────────────────────
 function Step1({ p, update }: { p: UserProfile; update: <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void }) {
+  useThemeMode();
   return (
     <View>
       <Text style={s.stepNum}>STEP 1 / 5</Text>
@@ -201,6 +203,7 @@ function Step1({ p, update }: { p: UserProfile; update: <K extends keyof UserPro
 
 // ─── Step 2: 목표 ────────────────────────────────────────────────────────────
 function Step2({ p, update }: { p: UserProfile; update: <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void }) {
+  useThemeMode();
   return (
     <View>
       <Text style={s.stepNum}>STEP 2 / 5</Text>
@@ -215,6 +218,7 @@ function Step2({ p, update }: { p: UserProfile; update: <K extends keyof UserPro
 
 // ─── Step 3: 환경 & 경력 ─────────────────────────────────────────────────────
 function Step3({ p, update }: { p: UserProfile; update: <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void }) {
+  useThemeMode();
   return (
     <View>
       <Text style={s.stepNum}>STEP 3 / 5</Text>
@@ -243,6 +247,7 @@ function Step3({ p, update }: { p: UserProfile; update: <K extends keyof UserPro
 
 // ─── Step 4: 식사 환경 ──────────────────────────────────────────────────────
 function Step4({ p, update }: { p: UserProfile; update: <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void }) {
+  useThemeMode();
   return (
     <View>
       <Text style={s.stepNum}>STEP 4 / 5</Text>
@@ -271,6 +276,7 @@ function StepRoutine({
   onAI: () => void;
   onReco: () => void;
 }) {
+  useThemeMode();
   const list = [...ROUTINES].sort((a, b) => {
     if (recommendedId) {
       if (a.id === recommendedId) return -1;
@@ -350,6 +356,7 @@ function StepRoutine({
 
 // ─── Shared ─────────────────────────────────────────────────────────────────
 function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boolean; onPress: () => void }) {
+  useThemeMode();
   return (
     <TouchableOpacity activeOpacity={0.7} style={[s.opt, on && s.optOn]} onPress={onPress}>
       <View style={{ flex: 1 }}>
@@ -361,7 +368,7 @@ function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boo
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   progRow: { flexDirection: 'row', gap: 5, padding: 22, paddingBottom: 0 },
   progBar: { flex: 1, height: 3, borderRadius: 3, backgroundColor: colors.panel3 },
@@ -415,7 +422,7 @@ const s = StyleSheet.create({
   aiSubLocked: { fontSize: 12, color: colors.muted, marginTop: 4, lineHeight: 18 },
   aiHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   aiTitle: { fontSize: 16, fontWeight: '800', color: colors.bg },
-  aiSub: { fontSize: 12, color: 'rgba(9,9,10,0.65)', marginTop: 4, lineHeight: 18 },
+  aiSub: { fontSize: 12, color: colors.onAccentSub, marginTop: 4, lineHeight: 18 },
   recoLock: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
     backgroundColor: colors.panel2, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
@@ -436,4 +443,4 @@ const s = StyleSheet.create({
   rMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   rMeta: { fontSize: 11, color: colors.mid },
   rDot: { fontSize: 11, color: colors.muted },
-});
+}));

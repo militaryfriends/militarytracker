@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -20,6 +20,7 @@ import { PrimaryBtn, GhostBtn, Notice } from '../../src/components/ui';
 const SRC_LABEL: Record<string, string> = { AI: 'AI 구성', LOCAL: '자동 구성', PRESET: '프리셋 루틴' };
 
 export default function PlanScreen() {
+  useThemeMode();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const hydrating = useAuthStore((s) => s.hydrating);
@@ -219,7 +220,7 @@ export default function PlanScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -254,7 +255,7 @@ const s = StyleSheet.create({
   pillTxt: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.5 },
   pillTxtActive: { color: colors.bg },
   pillSub: { fontSize: 10.5, color: colors.muted, marginTop: 2 },
-  pillSubActive: { color: 'rgba(9,9,10,0.6)' },
+  pillSubActive: { color: colors.onAccentSub },
 
   scroll: { flex: 1 },
   scrollInner: { paddingHorizontal: 16, paddingBottom: 36 },
@@ -280,4 +281,4 @@ const s = StyleSheet.create({
   exRep: { fontSize: 11, color: colors.mid, marginTop: 2 },
 
   regenRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
-});
+}));

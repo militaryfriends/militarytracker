@@ -6,12 +6,33 @@ Expo SDK 57 · React Native 0.86 · expo-router · TypeScript(strict) · Zustand
 
 ```bash
 npx tsc --noEmit                  # 앱
+npm run check:theme               # 두 모드 색 대비 (palette.json 을 바꾸면)
 cd functions && npm run build     # Cloud Functions
 npx expo export --platform web    # 번들 스모크 테스트
 npm run deploy:rules              # firestore + storage 규칙, 인덱스
 npm run deploy:functions
 npm run deploy:hosting            # 웹 export + hosting
 ```
+
+## UI 규칙 (다크 · 라이트 · 모션)
+
+- **색은 `src/theme` 의 `colors.*` 로만, 렌더 중에 읽는다.** 값은 `src/theme/palette.json` 한 곳(두 모드).
+  파일 맨 위에서 값으로 저장하지 않는다(`const X = colors.ink` → 그 순간 모드에 묶임). 새 색이 필요하면 palette.json 에
+  두 모드 모두 넣고 `npm run check:theme`.
+- **스타일은 `const s = themed(() => StyleSheet.create({ … }))`.** 모드마다 한 번 만든다.
+- **색을 읽는 컴포넌트는 맨 위에서 `useThemeMode()`** 를 한 번 부른다(모드가 바뀌면 그 자리에서 다시 그려진다 — 화면을
+  새로 띄우지 않는다). `renderItem` 안에서 색을 읽는 FlatList · SectionList 는 `extraData` 에 모드를 넣는다.
+- 모노: 강조색 = 글자색(`accent` = `ink`), 그 위 글자 = `onAccent`(= `bg`). 주 버튼은 다크에서 흰 판 · 라이트에서 검은 판.
+- **사진 · 영상 위 글자와 막은 모드와 상관없다** — `onMedia` · `onMediaSub` · `mediaDim` · `mediaBadge` 토큰을 쓴다(`ink` 금지).
+- 모드 전환은 `toggleTheme()`(홈 토글) · `chooseTheme()`(MY › 화면). 옛 바탕 막이 240ms 동안 걷힌다(ThemeProvider).
+  앱 전체를 한 번에 다시 그리므로, 언젠가 토글이 굼떠지면 smiscamp `ThemeLane` 처럼 안 보이는 화면을 뒤로 미룬다.
+- 상태 표시줄은 ThemeProvider 가 맡는다. 루트 레이아웃에서 모드를 구독하는 것을 늘리지 않는다.
+- **누르는 것은 `src/ui` 의 `PressableScale`**(0.96 + 스프링 + 진동). 진동은 `haptic.select/tap/set/success/warn/error` 뜻으로만
+  부른다(`src/ui/haptics.ts` 표). 스프링 · 시간 값은 `src/ui/motion.ts` 에서 가져다 쓴다.
+- 장식으로 계속 도는 애니메이션은 `useReducedMotion()` 이면 멈춘다. 휴식 고리처럼 정보인 것은 움직인다.
+- 숫자 글꼴은 `FONT.num`(Barlow Condensed). 본문은 시스템 글꼴.
+- 웹: 정적 HTML 은 다크로 미리 그려진다. 라이트인 사람은 `app/+html.tsx` 스크립트가 화면을 가려 뒀다가 루트 레이아웃이 연다.
+  `Font.loadAsync` 같은 클라이언트 전용 호출을 파일 맨 위에 두면 웹 정적 렌더링이 깨진다 — effect 안에서.
 
 ## git push (Claude 세션용)
 
@@ -21,7 +42,7 @@ npm run deploy:hosting            # 웹 export + hosting
 
 ```bash
 GIT_SSH_COMMAND="ssh -i $PWD/.git/claude_deploy_key -o IdentitiesOnly=yes" \
-  git push git@github.com:pobredward/militarytracker.git main
+  git push git@github.com:militaryfriends/militarytracker.git main
 git fetch origin        # origin/main 추적 참조 동기화 (위 push 는 갱신하지 않음)
 ```
 

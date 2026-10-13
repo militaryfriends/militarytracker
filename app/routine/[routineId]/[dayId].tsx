@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors } from '../../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState, Notice, useSafeBack } from '../../../src/components/ui';
 import ExerciseMedia from '../../../src/components/ExerciseMedia';
 import { routineById, routineDay, routineExercises } from '../../../src/data/routines';
@@ -9,6 +9,7 @@ import { useAppStore } from '../../../src/stores/appStore';
 import { showAlert } from '../../../src/utils/alert';
 
 export default function RoutineDayScreen() {
+  useThemeMode();
   const { routineId, dayId } = useLocalSearchParams<{ routineId: string; dayId: string }>();
   const router = useRouter();
   const goBack = useSafeBack();
@@ -105,6 +106,7 @@ export default function RoutineDayScreen() {
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
+  useThemeMode();
   return (
     <View style={s.stat}>
       <Text style={s.statVal}>{value}</Text>
@@ -113,7 +115,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   focus: { fontSize: 14, color: colors.ink, fontWeight: '600', marginTop: 4 },
   desc: { fontSize: 13, color: colors.muted, lineHeight: 21, marginTop: 8 },
   statRow: { flexDirection: 'row', gap: 8, marginTop: 16, marginBottom: 14 },
@@ -141,4 +143,4 @@ const s = StyleSheet.create({
   exSetsNum: { fontSize: 19, fontWeight: '800', color: colors.ink, lineHeight: 23 },
   exSetsSub: { fontSize: 10, color: colors.muted, letterSpacing: 0.5 },
   exRep: { fontSize: 10.5, color: colors.mid, marginTop: 2 },
-});
+}));

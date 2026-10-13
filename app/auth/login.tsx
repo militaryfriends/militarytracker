@@ -14,10 +14,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Link } from 'expo-router';
 import { signInWithEmail, resetPassword } from '../../src/services/authService';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { showAlert } from '../../src/utils/alert';
 
 export default function LoginScreen() {
+  useThemeMode();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -130,7 +131,7 @@ export default function LoginScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { alignItems: 'center', marginBottom: 48 },
@@ -162,4 +163,4 @@ const s = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
   footerTxt: { color: colors.muted, fontSize: 13 },
   link: { color: colors.ink, fontWeight: '700', fontSize: 13 },
-});
+}));

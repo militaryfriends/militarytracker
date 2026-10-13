@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, useSafeBack } from '../../src/components/ui';
 import { ROUTINES, recommendRoutine, routineExCount } from '../../src/data/routines';
 import { useAppStore } from '../../src/stores/appStore';
@@ -8,6 +8,7 @@ import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 
 export default function RoutineListScreen() {
+  useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
   const { profile, plan } = useAppStore();
@@ -77,7 +78,7 @@ export default function RoutineListScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   lead: { fontSize: 13, color: colors.muted, lineHeight: 20, marginTop: 4 },
   recoLock: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
@@ -108,4 +109,4 @@ const s = StyleSheet.create({
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   tag: { backgroundColor: colors.panel3, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 4 },
   tagTxt: { fontSize: 10, color: colors.muted, fontWeight: '600' },
-});
+}));

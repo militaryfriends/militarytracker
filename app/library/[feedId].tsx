@@ -1,12 +1,13 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, EmptyState, useSafeBack } from '../../src/components/ui';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { feedById } from '../../src/data/feed';
 import { exByIds, PART_LABEL } from '../../src/data/exercises';
 
 export default function LibraryDetailScreen() {
+  useThemeMode();
   const { feedId } = useLocalSearchParams<{ feedId: string }>();
   const router = useRouter();
   const goBack = useSafeBack();
@@ -72,13 +73,13 @@ export default function LibraryDetailScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   hero: { width: '100%', aspectRatio: 1.4, position: 'relative', backgroundColor: colors.panel2 },
   heroImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   heroDim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.42)' },
   heroMeta: { position: 'absolute', left: 16, right: 16, bottom: 16 },
-  heroPart: { fontSize: 10.5, color: 'rgba(255,255,255,0.65)', fontWeight: '700', letterSpacing: 1 },
-  heroTitle: { fontSize: 22, fontWeight: '800', color: colors.ink, marginTop: 4 },
+  heroPart: { fontSize: 10.5, color: colors.onMediaSub, fontWeight: '700', letterSpacing: 1 },
+  heroTitle: { fontSize: 22, fontWeight: '800', color: colors.onMedia, marginTop: 4 },
   pad: { paddingHorizontal: 16, paddingTop: 18 },
   summary: { fontSize: 14, color: colors.mid, lineHeight: 22 },
   section: {
@@ -96,4 +97,4 @@ const s = StyleSheet.create({
   exName: { fontSize: 14, fontWeight: '600', color: colors.ink },
   exMeta: { fontSize: 11, color: colors.muted, marginTop: 2 },
   chev: { fontSize: 20, color: colors.muted },
-});
+}));

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, EmptyState, useSafeBack } from '../../src/components/ui';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -30,6 +30,7 @@ function dateOfBest(logs: WorkoutLog[], exId: string, best: SetDetail, stats?: U
 }
 
 export default function RecordsScreen() {
+  const mode = useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
   const logs = useAppStore((s) => s.logs);
@@ -96,6 +97,8 @@ export default function RecordsScreen() {
 
       <FlatList
         data={filtered}
+        // 모드가 바뀌면 줄도 다시 그린다 (renderItem 안에서 색을 읽는다)
+        extraData={mode}
         keyExtractor={(r) => r.id}
         contentContainerStyle={s.listInner}
         showsVerticalScrollIndicator={false}
@@ -129,7 +132,7 @@ export default function RecordsScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   // 칩은 가로 스크롤 대신 줄바꿈으로 전부 노출한다.
   // 스크롤바를 전역 CSS 로 숨겨 둔 웹에서는 더 넘어가는지 알 방법이 없고,
   // ScrollView 기본값(flexShrink:1) 탓에 아래 리스트에 눌려 잘리기도 했다
@@ -158,4 +161,4 @@ const s = StyleSheet.create({
   right: { alignItems: 'flex-end' },
   best: { fontSize: 15, fontWeight: '800', color: colors.ink },
   est: { fontSize: 10.5, color: colors.mid, marginTop: 3 },
-});
+}));

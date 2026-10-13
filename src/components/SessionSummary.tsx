@@ -1,13 +1,14 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { colors } from '../utils/colors';
+import { colors, themed, useThemeMode } from '../theme';
 import { useAppStore } from '../stores/appStore';
 import { exById, PART_LABEL } from '../data/exercises';
 import { fmtDuration, fmtVolume, fmtSetDetail } from '../utils/stats';
 
 /** 운동 완료 직후 오버레이 — 그날의 결과와 기록 갱신을 보여준다 */
 export default function SessionSummary() {
+  useThemeMode();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { summary, setSummary } = useAppStore();
@@ -99,6 +100,7 @@ export default function SessionSummary() {
 }
 
 function Stat({ value, unit }: { value: string; unit: string }) {
+  useThemeMode();
   return (
     <View style={s.stat}>
       <Text style={s.statVal}>{value}</Text>
@@ -107,7 +109,7 @@ function Stat({ value, unit }: { value: string; unit: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bg, zIndex: 50,
@@ -167,4 +169,4 @@ const s = StyleSheet.create({
     paddingVertical: 15, alignItems: 'center',
   },
   primaryTxt: { color: colors.bg, fontSize: 15, fontWeight: '700' },
-});
+}));

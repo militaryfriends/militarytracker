@@ -15,13 +15,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { signUpWithEmail } from '../../src/services/authService';
 import { useAuthStore } from '../../src/stores/authStore';
-import { colors } from '../../src/utils/colors';
+import { colors, themed, useThemeMode } from '../../src/theme';
 import { showAlert } from '../../src/utils/alert';
 import { LEGAL } from '../../src/config/entitlements';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function SignupScreen() {
+  useThemeMode();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -146,6 +147,7 @@ export default function SignupScreen() {
 }
 
 function Consent({ on, onToggle, label, url }: { on: boolean; onToggle: () => void; label: string; url: string }) {
+  useThemeMode();
   return (
     <View style={s.consentRow}>
       <TouchableOpacity activeOpacity={0.7}
@@ -165,7 +167,7 @@ function Consent({ on, onToggle, label, url }: { on: boolean; onToggle: () => vo
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   agreeBox: {
     marginTop: 20, backgroundColor: colors.panel, borderRadius: 12,
@@ -211,4 +213,4 @@ const s = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
   footerTxt: { color: colors.muted, fontSize: 13 },
   link: { color: colors.ink, fontWeight: '700', fontSize: 13 },
-});
+}));

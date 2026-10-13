@@ -1,10 +1,11 @@
 import { View, Text, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../utils/colors';
+import { colors, themed, useThemeMode } from '../theme';
 import { Feature, FEATURE_LABEL, FEATURE_DESC } from '../config/entitlements';
 
 /** 목록·헤더 옆에 붙이는 작은 PRO 표식 */
 export function ProBadge({ style }: { style?: StyleProp<ViewStyle> }) {
+  useThemeMode();
   return (
     <View style={[s.badge, style]}>
       <Text style={s.badgeTxt}>PRO</Text>
@@ -25,6 +26,7 @@ export function ProLock({
   cta?: string;
   style?: StyleProp<ViewStyle>;
 }) {
+  useThemeMode();
   const router = useRouter();
   return (
     <View style={[s.card, style]}>
@@ -41,7 +43,7 @@ export function ProLock({
   );
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   badge: {
     backgroundColor: colors.panel3, borderRadius: 5,
     paddingHorizontal: 6, paddingVertical: 2,
@@ -62,6 +64,6 @@ const s = StyleSheet.create({
     paddingVertical: 12, alignItems: 'center', marginTop: 14,
   },
   btnTxt: { fontSize: 13.5, fontWeight: '700', color: colors.bg },
-});
+}));
 
 export default ProLock;

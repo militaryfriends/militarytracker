@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
-import { colors } from '../../src/utils/colors';
+import { colors, useThemeMode } from '../../src/theme';
 
 export default function ProfileLayout() {
+  useThemeMode();
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
   );
