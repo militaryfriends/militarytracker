@@ -14,6 +14,11 @@ media/
 
 원본은 **절대 `assets/` 에 넣지 않는다.** `assets/` 는 저장소와 앱 번들에 들어간다.
 
+**원본의 기준은 클라이언트 구글 드라이브** `영상` 폴더(militaryfriends.official 소유, 하위 폴더 `가슴` · `등` · `하체` …).
+파일 이름 규칙: `NN.영문 이름.mp4` — 두 자리 번호(= `src/data/exercises.ts` 의 부위 내 순번) + 점 + 영문 이름.
+예) `01.Push-Up.mp4`, `19.Dips (Chest Version).mp4`. 받아서 `media/originals/<부위>/` 에 넣으면 업로드 스크립트가
+`01.pushup.mp4`(번호.종목 id) 로 정리한다. 같은 번호를 다시 올리면 교체된다.
+
 ## 올리기
 
 ```bash
