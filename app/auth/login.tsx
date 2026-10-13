@@ -2,8 +2,11 @@
  * 로그인 — 브랜드 인트로 모션 (디자인 캔버스 "밀리터리트래커 로그인 모션").
  *
  * 화면 전체가 시계 하나(clock, ms)로 움직인다 — 시간표는 src/components/brand/intro.ts.
- *   · 인트로 중 화면을 누르면 건너뛴다. 로고를 누르면 다시 본다.
- *   · 동작 줄이기면 처음부터 완성된 화면. 두 번째부터(로그아웃 뒤)는 로고가 다 그려진 데서 시작한다.
+ *   · 앱을 막 켰으면 스플래시를 이어받는다(HANDOFF): 스플래시와 같은 자리 · 크기의 로고로 첫 장면을 그리고
+ *     스플래시를 걷은 뒤, 질감 M 이 켜지고 → 빛이 고리를 지나고 → 위로 올라가며 입력칸이 나온다.
+ *   · 웹 첫 화면 · 로고를 눌러 다시 볼 때는 빈 화면에서 고리부터 그린다(INTRO).
+ *   · 인트로 중 화면을 누르면 건너뛴다. 동작 줄이기면 처음부터 완성된 화면.
+ *     두 번째부터(로그아웃 뒤)는 로고가 다 켜진 데서 시작한다.
  * 로그인 중에는 로고의 고리가 진행 표시가 되고, 성공하면 고리가 한 바퀴 완성된다.
  * 화면 이동은 세션(session.ts)이 사용자 문서를 받으면 라우팅 가드가 한다 — 여기서 기다리지 않는다.
  *
@@ -12,9 +15,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
-  useWindowDimensions, type StyleProp, type TextInput, type ViewStyle,
+  type LayoutChangeEvent, type StyleProp, type TextInput, type ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +28,9 @@ import Animated, {
 import { signInWithEmail, resetPassword } from '../../src/services/authService';
 import { showAlert } from '../../src/utils/alert';
 import { BrandMark, type BrandPhase } from '../../src/components/brand/BrandMark';
-import { INTRO, easeInOutQuart, easeOutQuart, seg } from '../../src/components/brand/intro';
+import { HANDOFF, INTRO, easeInOutQuart, easeOutQuart, seg, type Timeline } from '../../src/components/brand/intro';
+import { SPLASH_DY, SPLASH_FRAME } from '../../src/components/brand/geometry';
+import { hideSplash, splashUp } from '../../src/components/brand/splash';
 import { AuthField } from '../../src/components/auth/AuthField';
 import { D } from '../../src/components/auth/palette';
 import { FONT, PressableScale, haptic } from '../../src/ui';
@@ -34,15 +39,17 @@ import { FONT, PressableScale, haptic } from '../../src/ui';
 let introSeen = false;
 
 const LOGO = 132;   // 완성 후 로고 크기
-const BIG = 240;    // 인트로 중 로고 크기 (크게 그려 두고 줄인다 — 줄이는 쪽이 선명하다)
+const BIG = SPLASH_FRAME.size;   // 인트로 중 로고 크기 = 스플래시 로고 크기 (크게 그려 두고 줄인다 — 줄이는 쪽이 선명하다)
 const TOP_GAP = 36;
 const WORD = 25;    // 워드마크 글자 크기
 
-function Rise({ clock, i, style, children }: { clock: SharedValue<number>; i: number; style?: StyleProp<ViewStyle>; children: ReactNode }) {
+type RiseProps = { clock: SharedValue<number>; T: Timeline; i: number; style?: StyleProp<ViewStyle>; children: ReactNode };
+
+function Rise({ clock, T, i, style, children }: RiseProps) {
   const a = useAnimatedStyle(() => {
-    const p = easeOutQuart(seg(clock.value, INTRO.up.d + i * INTRO.up.step, INTRO.up.dur));
+    const p = easeOutQuart(seg(clock.value, T.up.d + i * T.up.step, T.up.dur));
     return { opacity: p, transform: [{ translateY: 18 * (1 - p) }] };
-  });
+  }, [T, i]);
   return <Animated.View style={[style, a]}>{children}</Animated.View>;
 }
 
@@ -62,7 +69,7 @@ const errorMessage = (code: string) =>
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height: winH } = useWindowDimensions();
+  const frame = useSafeAreaFrame();
   const reduce = useReducedMotion();
 
   const [email, setEmail] = useState('');
@@ -71,69 +78,87 @@ export default function LoginScreen() {
   const [msg, setMsg] = useState('');
   const [resetting, setResetting] = useState(false);
   const [run, setRun] = useState(0);
-  const [startAt] = useState(() => (reduce ? INTRO.end : introSeen ? INTRO.short : 0));
-  const [ready, setReady] = useState(startAt >= INTRO.up.d);
+  // 어디서 시작할지 — 앱을 막 켰으면 스플래시를 이어받고, 웹 첫 화면은 처음부터 그리고, 그 뒤로는 로고가 켜진 데서
+  const [init] = useState(() => {
+    if (reduce) return { T: HANDOFF, at: HANDOFF.end };
+    if (splashUp()) return { T: HANDOFF, at: 0 };
+    if (Platform.OS === 'web' && !introSeen) return { T: INTRO, at: 0 };
+    return { T: HANDOFF, at: HANDOFF.short };
+  });
+  const [T, setT] = useState<Timeline>(init.T);
+  const startAt = init.at;
+  const [ready, setReady] = useState(startAt >= init.T.up.d);
   const pwRef = useRef<TextInput>(null);
 
   const clock = useSharedValue(startAt);
   const shake = useSharedValue(0);
   const out = useSharedValue(0);
 
-  const play = useCallback((from: number) => {
+  const play = useCallback((from: number, tl: Timeline) => {
     cancelAnimation(clock);
     clock.value = from;
-    clock.value = withTiming(INTRO.end, { duration: INTRO.end - from, easing: Easing.linear });
+    clock.value = withTiming(tl.end, { duration: tl.end - from, easing: Easing.linear });
   }, [clock]);
 
   useEffect(() => {
     introSeen = true;
-    if (startAt < INTRO.end) play(startAt);
-  }, [play, startAt]);
+    if (init.at < init.T.end) play(init.at, init.T);
+  }, [play, init]);
 
   // 입력칸이 올라오기 시작하면 만질 수 있게
   useAnimatedReaction(
-    () => clock.value >= INTRO.up.d,
+    () => clock.value >= T.up.d,
     (now, prev) => {
       if (now !== prev) runOnJS(setReady)(now);
-    }
+    },
+    [T]
   );
 
   const skip = () => {
     cancelAnimation(clock);
-    clock.value = withTiming(INTRO.end, { duration: 260, easing: Easing.out(Easing.cubic) });
+    clock.value = withTiming(T.end, { duration: 260, easing: Easing.out(Easing.cubic) });
   };
   const replay = () => {
     if (phase !== 'idle') return;
     haptic.select();
     setMsg('');
+    setT(INTRO);
     setRun((r) => r + 1);
-    play(0);
+    play(0, INTRO);
   };
 
-  // 로고 · 워드마크: 화면 가운데에서 시작해 위로 올라간다
+  // 로고 · 워드마크: 스플래시 로고 자리(화면 가운데)에서 시작해 위로 올라간다.
+  // 높이는 첫 렌더부터 맞아야 스플래시와 겹친다 — 세이프에리어 프레임(= 화면)으로 시작하고 레이아웃으로 확인한다.
+  const [rootH, setRootH] = useState(frame.height);
+  const onRootLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (Math.abs(h - rootH) > 0.5) setRootH(h);
+    // 같은 장면이 그려진 다음에 스플래시를 걷는다 (이미 걷혔으면 아무 일 없음)
+    requestAnimationFrame(() => requestAnimationFrame(hideSplash));
+  };
   const headerTop = insets.top + TOP_GAP;
-  const introCenter = winH * 0.43;
-  const dyLogo = introCenter - (headerTop + LOGO / 2);
-  const dyWord = introCenter + BIG / 2 + 22 - (headerTop + LOGO + 16);
+  const startCenter = rootH / 2 + SPLASH_DY;
+  const dyLogo = startCenter - (headerTop + LOGO / 2);
+  const dyWord = startCenter + BIG / 2 + 22 - (headerTop + LOGO + 16);
 
   const logoStyle = useAnimatedStyle(() => {
-    const p = easeInOutQuart(seg(clock.value, INTRO.rise.d, INTRO.rise.dur));
+    const p = easeInOutQuart(seg(clock.value, T.rise.d, T.rise.dur));
     const z = out.value;
     return {
       opacity: 1 - z,
       transform: [{ translateY: dyLogo * (1 - p) }, { scale: (LOGO / BIG + (1 - LOGO / BIG) * (1 - p)) * (1 + 5 * z) }],
     };
-  }, [dyLogo]);
+  }, [dyLogo, T]);
   const wordStyle = useAnimatedStyle(() => {
-    const p = easeInOutQuart(seg(clock.value, INTRO.rise.d, INTRO.rise.dur));
+    const p = easeInOutQuart(seg(clock.value, T.rise.d, T.rise.dur));
     return { opacity: 1 - out.value, transform: [{ translateY: dyWord * (1 - p) }] };
-  }, [dyWord]);
+  }, [dyWord, T]);
   // 넓게 벌어진 자간이 좁혀지며 나타난다 (가운데 정렬이 흔들리지 않게 왼쪽에도 같은 만큼)
   const trackStyle = useAnimatedStyle(() => {
-    const p = easeOutQuart(seg(clock.value, INTRO.track.d, INTRO.track.dur));
+    const p = easeOutQuart(seg(clock.value, T.track.d, T.track.dur));
     const ls = WORD * (0.24 + 0.48 * (1 - p));
     return { opacity: p, letterSpacing: ls, paddingLeft: ls };
-  });
+  }, [T]);
   const formStyle = useAnimatedStyle(() => ({
     opacity: 1 - out.value,
     transform: [{ translateX: shake.value }, { translateY: 16 * out.value }],
@@ -196,7 +221,7 @@ export default function LoginScreen() {
   const busy = phase !== 'idle';
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={onRootLayout}>
       <StatusBar style="light" />
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
@@ -213,9 +238,10 @@ export default function LoginScreen() {
                     key={run}
                     size={BIG}
                     clock={clock}
+                    timeline={T}
                     phase={phase}
                     still={reduce}
-                    glintDelay={Math.max(0, INTRO.glint - (run ? 0 : startAt))}
+                    glintDelay={Math.max(0, T.glint - (run ? 0 : startAt))}
                   />
                 </Pressable>
               </Animated.View>
@@ -223,13 +249,13 @@ export default function LoginScreen() {
             <Animated.View style={[styles.wordWrap, wordStyle]}>
               <Animated.Text style={[styles.word, trackStyle]} numberOfLines={1}>MILITARYTRACKER</Animated.Text>
             </Animated.View>
-            <Rise clock={clock} i={0}>
+            <Rise clock={clock} T={T} i={0}>
               <Text style={styles.sub}>검증된 자세 가이드 위에서 기록하는{'\n'}가장 단순한 트레이닝 앱</Text>
             </Rise>
           </View>
 
           <Animated.View style={[styles.form, formStyle]}>
-            <Rise clock={clock} i={1}>
+            <Rise clock={clock} T={T} i={1}>
               <AuthField
                 label="이메일"
                 value={email}
@@ -245,7 +271,7 @@ export default function LoginScreen() {
                 editable={!busy}
               />
             </Rise>
-            <Rise clock={clock} i={2} style={styles.gap}>
+            <Rise clock={clock} T={T} i={2} style={styles.gap}>
               <AuthField
                 ref={pwRef}
                 label="비밀번호"
@@ -261,7 +287,7 @@ export default function LoginScreen() {
               />
             </Rise>
             <Text style={styles.msg} accessibilityRole="alert" accessibilityLiveRegion="polite">{msg}</Text>
-            <Rise clock={clock} i={3}>
+            <Rise clock={clock} T={T} i={3}>
               <PressableScale
                 style={[styles.btn, phase === 'loading' && styles.btnBusy]}
                 onPress={handleLogin}
@@ -281,7 +307,7 @@ export default function LoginScreen() {
                 )}
               </PressableScale>
             </Rise>
-            <Rise clock={clock} i={4} style={styles.center}>
+            <Rise clock={clock} T={T} i={4} style={styles.center}>
               <PressableScale haptic={false} scaleTo={0.97} onPress={handleReset} style={styles.textBtn}>
                 <Text style={styles.resetTxt}>비밀번호를 잊으셨나요?</Text>
               </PressableScale>
@@ -290,7 +316,7 @@ export default function LoginScreen() {
 
           <View style={styles.fill} />
 
-          <Rise clock={clock} i={5} style={styles.footer}>
+          <Rise clock={clock} T={T} i={5} style={styles.footer}>
             <Text style={styles.footerTxt}>계정이 없으신가요?</Text>
             <PressableScale haptic="select" scaleTo={0.97} onPress={() => router.push('/auth/signup')} style={styles.textBtn} disabled={busy}>
               <Text style={styles.link}>회원가입</Text>

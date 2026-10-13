@@ -32,6 +32,10 @@ npm run deploy:hosting            # 웹 export + hosting
   바탕은 단색 `D.bg` — 노이즈 · 그레인을 깔지 않는다(먼지처럼 보여 뺐다).
 - 로고 이미지 · 앱 아이콘 · 스플래시 · 파비콘은 `python3 scripts/brand-assets.py` 가 원본 2개(`media/brand/`)에서 만든다.
   직접 그리지 말 것. 로고를 바꾸면 스크립트를 다시 돌리고, 출력된 고리 위치를 `geometry.ts` 에 맞춘다. 아이콘 · 스플래시는 새 빌드부터 바뀐다.
+- **스플래시 → 첫 화면은 한 장면으로 잇는다** (`src/components/brand/splash.ts`). 스플래시는 테마와 상관없이 검정 + 흰 로고 한 벌,
+  로고 자리 · 크기는 `geometry.ts` 의 `SPLASH_FRAME`(= app.json `imageWidth`, 안드로이드 192dp 원 안). 스플래시를 걷는 쪽은 다음 화면이다 —
+  로그아웃이면 로그인 화면이 같은 장면을 그린 뒤 걷고 `HANDOFF` 시간표로 인트로를 잇는다, 로그인 상태면 루트의 `BootCurtain` 이
+  걷고 로고가 커지며 사라져 홈이 드러난다. **루트에서 `hideAsync` 를 바로 부르지 말 것** — 로고가 사라졌다 다시 나온다(2초 안전장치만 있다).
 - **누르는 것은 `src/ui` 의 `PressableScale`**(0.96 + 스프링 + 진동). 진동은 `haptic.select/tap/set/success/warn/error` 뜻으로만
   부른다(`src/ui/haptics.ts` 표). 스프링 · 시간 값은 `src/ui/motion.ts` 에서 가져다 쓴다.
 - 장식으로 계속 도는 애니메이션은 `useReducedMotion()` 이면 멈춘다. 휴식 고리처럼 정보인 것은 움직인다.

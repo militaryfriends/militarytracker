@@ -12,10 +12,13 @@
 만드는 것
   assets/brand/m-mark.png       흰 M 만 (고리 뺌, 투명) — 고리는 앱이 선으로 그린다(BrandMark, 그려지는 모션)
   assets/brand/m-texture.png    질감 M 을 무채색으로 · 배경은 투명 · 고리 위치를 m-mark 에 맞춤
-  assets/icon.png · android-icon-foreground.png · android-icon-monochrome.png · splash-icon(-light).png · favicon.png
+  assets/icon.png · android-icon-foreground.png · android-icon-monochrome.png · favicon.png
+  assets/splash-icon.png        스플래시 — 앱이 이어받는 첫 장면과 같은 그림(로그인 인트로 · 부팅 커튼)
 
 고리 위치(아래 출력)는 src/components/brand/geometry.ts 와 같아야 한다. 로고를 바꾸면 다시 돌리고 그 파일을 맞출 것.
+스플래시 크기 · 중심(SPLASH_*)은 geometry.ts SPLASH_FRAME · app.json imageWidth 와 같아야 한다(아래에서 확인).
 """
+import json
 import os
 import cv2
 import numpy as np
@@ -135,7 +138,35 @@ def on_bg(layer, bg=BG):
 on_bg(logo_layer(1024, 0.62, 2.2)).save(p(ROOT, 'assets', 'icon.png'), optimize=True)
 Image.fromarray(logo_layer(1024, 0.44, 2.2), 'RGBA').save(p(ROOT, 'assets', 'android-icon-foreground.png'), optimize=True)
 Image.fromarray(logo_layer(432, 0.44, 2.2, (255, 255, 255)), 'RGBA').save(p(ROOT, 'assets', 'android-icon-monochrome.png'), optimize=True)
-Image.fromarray(logo_layer(1024, 0.86, 1.4), 'RGBA').save(p(ROOT, 'assets', 'splash-icon.png'), optimize=True)
-Image.fromarray(logo_layer(1024, 0.86, 1.4, BG), 'RGBA').save(p(ROOT, 'assets', 'splash-icon-light.png'), optimize=True)
 on_bg(logo_layer(192, 0.7, 3.0)).resize((48, 48), Image.LANCZOS).save(p(ROOT, 'assets', 'favicon.png'), optimize=True)
+
+# ── 4. 스플래시 — 앱이 이어받는 첫 장면과 같은 그림 ─────────────────────
+# 로고 틀(1024)을 자르지 않고 그대로, 틀의 (SPLASH_CX, SPLASH_CY) 가 그림 가운데 오게 놓는다. 고리 굵기도 앱과 같게.
+# 스플래시는 이 그림을 imageWidth dp 로 화면 정가운데 그리고, 앱은 SPLASH_FRAME 으로 같은 자리에 BrandMark 를 그린다.
+SPLASH_SIZE, SPLASH_CX, SPLASH_CY = 208, 512, 476   # = geometry.ts SPLASH_FRAME
+APP_STROKE = 11.5                                    # = geometry.ts RING.stroke
+G = 2048                                             # 2배로 그려 줄인다
+g = G / 1024
+A = np.float32([[g * 1024 / H, 0, g * (512 - SPLASH_CX)], [0, g * 1024 / H, g * (512 - SPLASH_CY)]])
+sp = cv2.warpAffine(m_alpha, A, (G, G), flags=cv2.INTER_LINEAR, borderValue=0)
+ring = np.zeros((G, G), np.uint8)
+a0 = np.degrees(np.arctan2(ly - cy, lx - cx))   # 왼쪽 끝 → 위 → 오른쪽 끝 (화면 좌표, 아래가 +)
+a1 = np.degrees(np.arctan2(ry - cy, rx - cx))
+F = 16
+cv2.ellipse(ring, (int(round((cx - SPLASH_CX + 512) * g * F)), int(round((cy - SPLASH_CY + 512) * g * F))),
+            (int(round(R * g * F)), int(round(R * g * F))), 0, a0, 360 + a1, 255,
+            int(round(APP_STROKE * g)), cv2.LINE_AA, 4)
+sp = cv2.resize(np.maximum(sp, ring), (1024, 1024), interpolation=cv2.INTER_AREA)
+Image.fromarray(rgba(sp), 'RGBA').save(p(ROOT, 'assets', 'splash-icon.png'), optimize=True)
+
+# 안드로이드 12+ 는 스플래시 아이콘을 지름 192dp 원으로 자른다 — 로고가 그 안에 들어가는지
+yy, xx = np.nonzero(sp > 8)
+reach = np.sqrt((xx + 0.5 - 512) ** 2 + (yy + 0.5 - 512) ** 2).max() * SPLASH_SIZE / 1024
+print(f'SPLASH size={SPLASH_SIZE}dp center=({SPLASH_CX},{SPLASH_CY})  로고 반지름 {reach:.1f}dp (한도 96)')
+assert reach <= 94, '스플래시 로고가 안드로이드 원(지름 192dp)에 잘린다 — SPLASH_SIZE 를 줄이거나 중심을 옮길 것'
+
+conf = json.load(open(p(ROOT, 'app.json')))['expo']['plugins']
+splash = next(c[1] for c in conf if isinstance(c, list) and c[0] == 'expo-splash-screen')
+assert splash['imageWidth'] == SPLASH_SIZE, f"app.json 스플래시 imageWidth({splash['imageWidth']}) ≠ {SPLASH_SIZE}"
+assert 'dark' not in splash, 'app.json 스플래시는 테마와 상관없이 한 벌(다크)이어야 로그인 화면으로 이어진다'
 print('done')

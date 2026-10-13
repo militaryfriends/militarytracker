@@ -7,6 +7,16 @@
  */
 export const RING = { cx: 512.85, cy: 482.06, r: 334.24, stroke: 11.5 } as const;
 
+/**
+ * 스플래시 — 로고 틀(1024)이 size dp 로, 틀의 (cx, cy) 가 화면 정가운데 오게 그려진다.
+ * 로그인 첫 장면 · 부팅 커튼이 이 값으로 로고를 놓아 스플래시와 한 장면처럼 이어진다.
+ * size 는 app.json 스플래시 imageWidth 와 같아야 한다(scripts/brand-assets.py 가 확인).
+ * 안드로이드 12+ 는 스플래시 아이콘을 지름 192dp 원으로 잘라서, 로고가 그 안에 들어가는 크기 · 중심이다.
+ */
+export const SPLASH_FRAME = { size: 208, cx: 512, cy: 476 } as const;
+/** 틀 가운데가 화면 가운데에서 아래로 얼마나(dp) */
+export const SPLASH_DY = ((512 - SPLASH_FRAME.cy) / 1024) * SPLASH_FRAME.size;
+
 const TOP = { x: RING.cx, y: RING.cy - RING.r };
 const LEFT_END = { x: 286.7, y: 728.2 };
 const RIGHT_END = { x: 716.8, y: 746.9 };

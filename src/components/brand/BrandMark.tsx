@@ -1,7 +1,7 @@
 /**
  * 로고 — 연기 질감 M(뒤) + 선으로 그리는 고리 + 흰 M(앞). 이미지 · 고리 위치는 scripts/brand-assets.py.
  *
- * clock 을 주면 인트로 시간표(intro.ts)대로 그려지고, 없으면 완성된 모습으로 시작한다.
+ * clock 을 주면 인트로 시간표(intro.ts — timeline)대로 그려지고, 없으면 완성된 모습으로 시작한다.
  * phase: idle(6초마다 고리 위로 빛) · loading(고리가 진행 표시) · success(고리가 한 바퀴 완성).
  * still: 동작 줄이기 — 연기 흐름 · 빛 같은 반복 장식을 멈춘다(진행 표시는 정보라 남긴다).
  *
@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { ARC_LEFT, ARC_LEFT_LEN as LL, ARC_RIGHT, ARC_RIGHT_LEN as LR, RING, RING_FULL, RING_LEN } from './geometry';
-import { INTRO, easeInOutCubic, easeOutCubic, seg } from './intro';
+import { INTRO, easeInOutCubic, easeOutCubic, seg, type Timeline } from './intro';
 
 const APath = Animated.createAnimatedComponent(Path);
 const ACircle = Animated.createAnimatedComponent(Circle);
@@ -30,6 +30,8 @@ export type BrandPhase = 'idle' | 'loading' | 'success';
 type Props = {
   size: number;
   clock?: SharedValue<number>;
+  /** clock 이 따르는 시간표 — 처음부터 그리기(INTRO) · 스플래시 이어받기(HANDOFF) */
+  timeline?: Timeline;
   phase?: BrandPhase;
   still?: boolean;
   /** 대기 빛이 처음 지나갈 때까지(ms) — 인트로를 줄여 시작하면 그만큼 당긴다 */
@@ -38,8 +40,8 @@ type Props = {
   texture?: number;
 };
 
-export function BrandMark({ size, clock, phase = 'idle', still = false, glintDelay = INTRO.glint, texture = 0.45 }: Props) {
-  const fallback = useSharedValue<number>(INTRO.end);
+export function BrandMark({ size, clock, timeline: T = INTRO, phase = 'idle', still = false, glintDelay = T.glint, texture = 0.45 }: Props) {
+  const fallback = useSharedValue<number>(T.end);
   const t = clock ?? fallback;
   const drift = useSharedValue(0);
   const glint = useSharedValue(0);
@@ -80,11 +82,11 @@ export function BrandMark({ size, clock, phase = 'idle', still = false, glintDel
   }, [phase, still, glintDelay, glint, load, done]);
 
   const arcL = useAnimatedProps(() => ({
-    strokeDashoffset: LL * 1.05 * (1 - easeInOutCubic(seg(t.value, INTRO.arc.d, INTRO.arc.dur))),
-  }));
+    strokeDashoffset: LL * 1.05 * (1 - easeInOutCubic(seg(t.value, T.arc.d, T.arc.dur))),
+  }), [T]);
   const arcR = useAnimatedProps(() => ({
-    strokeDashoffset: LR * 1.05 * (1 - easeInOutCubic(seg(t.value, INTRO.arc.d, INTRO.arc.dur))),
-  }));
+    strokeDashoffset: LR * 1.05 * (1 - easeInOutCubic(seg(t.value, T.arc.d, T.arc.dur))),
+  }), [T]);
   // 빛 — 짧은 선이 위에서 아래로 흐른다. 로그인 중에는 더 길게 · 계속
   const glintL = useAnimatedProps(() => (loading
     ? { strokeDashoffset: LL * (0.38 - 1.42 * load.value), opacity: 1 }
@@ -95,10 +97,10 @@ export function BrandMark({ size, clock, phase = 'idle', still = false, glintDel
     : { strokeDashoffset: LR * (0.2 - 1.24 * glint.value), opacity: glint.value > 0 && glint.value < 1 ? 1 : 0 }
   ), [loading]);
   const shock = useAnimatedProps(() => {
-    const p = seg(t.value, INTRO.shock.d, INTRO.shock.dur);
+    const p = seg(t.value, T.shock.d, T.shock.dur);
     const e = easeOutCubic(p);
     return { r: RING.r * (0.9 + 0.52 * e), opacity: p <= 0 || p >= 1 ? 0 : 0.6 * (1 - e) };
-  });
+  }, [T]);
   const full = useAnimatedProps(() => ({
     strokeDashoffset: RING_LEN * 1.05 * (1 - done.value),
     opacity: done.value > 0 ? 1 : 0,
@@ -113,20 +115,20 @@ export function BrandMark({ size, clock, phase = 'idle', still = false, glintDel
   }));
   // 형광등처럼 깜빡이며 켜진다
   const texStyle = useAnimatedStyle(() => {
-    const p = seg(t.value, INTRO.ignite.d, INTRO.ignite.dur);
+    const p = seg(t.value, T.ignite.d, T.ignite.dur);
     return {
       opacity: interpolate(p, [0, 0.28, 0.36, 0.44, 0.58, 0.72, 1], [0, 0.62, 0.12, 0.8, 0.3, 0.62, texture]),
       transform: [{ scale: 1.14 - 0.14 * easeOutCubic(p) }],
     };
-  });
+  }, [T, texture]);
   // 찍히듯 내려앉는다 — 살짝 눌렸다가 튕긴다
   const markStyle = useAnimatedStyle(() => {
-    const p = easeOutCubic(seg(t.value, INTRO.stamp.d, INTRO.stamp.dur));
+    const p = easeOutCubic(seg(t.value, T.stamp.d, T.stamp.dur));
     return {
       opacity: interpolate(p, [0, 0.55, 1], [0, 1, 1]),
       transform: [{ scale: interpolate(p, [0, 0.55, 0.76, 1], [1.42, 0.965, 1.014, 1]) }],
     };
-  });
+  }, [T]);
 
   const box = { width: size, height: size };
   return (

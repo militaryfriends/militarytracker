@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AppState, Platform, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,9 +11,11 @@ import { useMediaStore } from '../src/stores/mediaStore';
 import { ThemeProvider, colors, restoreThemePref, useThemeMode } from '../src/theme';
 import { ConfettiLayer, FONT_ASSETS, restoreHaptics } from '../src/ui';
 import MobileFrame from '../src/components/MobileFrame';
+import { BootCurtain } from '../src/components/brand/BootCurtain';
+import { hideSplash, holdSplash } from '../src/components/brand/splash';
 
-// 하이드레이션이 끝날 때까지 스플래시를 잡아둔다 (로그인 화면 깜빡임 방지)
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// 첫 화면이 스플래시와 같은 장면을 그려 둘 때까지 스플래시를 잡아둔다 — 걷는 쪽은 그 화면 (src/components/brand/splash.ts)
+holdSplash();
 
 export default function RootLayout() {
   useThemeMode();
@@ -24,6 +25,9 @@ export default function RootLayout() {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const router = useRouter();
   const segments = useSegments();
+  // 이번 실행의 첫 화면을 아직 안 열었다 — 자동 로그인이면 부팅 커튼, 아니면 로그인 화면이 스플래시를 이어받는다
+  const [boot, setBoot] = useState(Platform.OS !== 'web');
+  const ready = isInitialized && prefsReady;
 
   useEffect(() => {
     Promise.allSettled([restoreThemePref(), restoreHaptics()]).finally(() => setPrefsReady(true));
@@ -71,9 +75,17 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  // ─── 스플래시 → 첫 화면 ─────────────────────────────────────────────────
+  // 로그인 상태: BootCurtain 이 걷는다. 로그아웃 상태: 로그인 화면이 첫 레이아웃에서 걷는다.
+  // 그 밖(딥 링크로 다른 화면 등)이나 화면이 늦으면 2초 뒤에 그냥 걷는다.
   useEffect(() => {
-    if (isInitialized && prefsReady) SplashScreen.hideAsync().catch(() => {});
-  }, [isInitialized, prefsReady]);
+    if (!ready) return;
+    const t = setTimeout(hideSplash, 2000);
+    return () => clearTimeout(t);
+  }, [ready]);
+  useEffect(() => {
+    if (ready && boot && !user) setBoot(false);
+  }, [ready, boot, user]);
 
   // ─── 라우팅 가드 ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -117,6 +129,7 @@ export default function RootLayout() {
       </Stack>
       </MobileFrame>
       <ConfettiLayer />
+      {boot && ready && user ? <BootCurtain onDone={() => setBoot(false)} /> : null}
     </ThemeProvider>
     </SafeAreaProvider>
     </GestureHandlerRootView>
