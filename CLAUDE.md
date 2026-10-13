@@ -28,7 +28,8 @@ npm run deploy:hosting            # 웹 export + hosting
   앱 전체를 한 번에 다시 그리므로, 언젠가 토글이 굼떠지면 smiscamp `ThemeLane` 처럼 안 보이는 화면을 뒤로 미룬다.
 - 상태 표시줄은 ThemeProvider 가 맡는다. 루트 레이아웃에서 모드를 구독하는 것을 늘리지 않는다.
 - **로그인 · 회원가입은 테마와 상관없이 항상 다크** — `colors` 대신 `src/components/auth/palette.ts` 의 `D`(다크 팔레트 고정),
-  화면에서 `<StatusBar style="light" />`. 로고 모션은 `src/components/brand/`(BrandMark · Grain · intro.ts 시간표 · geometry.ts 고리 위치).
+  화면에서 `<StatusBar style="light" />`. 로고 모션은 `src/components/brand/`(BrandMark · intro.ts 시간표 · geometry.ts 고리 위치).
+  바탕은 단색 `D.bg` — 노이즈 · 그레인을 깔지 않는다(먼지처럼 보여 뺐다).
 - 로고 이미지 · 앱 아이콘 · 스플래시 · 파비콘은 `python3 scripts/brand-assets.py` 가 원본 2개(`media/brand/`)에서 만든다.
   직접 그리지 말 것. 로고를 바꾸면 스크립트를 다시 돌리고, 출력된 고리 위치를 `geometry.ts` 에 맞춘다. 아이콘 · 스플래시는 새 빌드부터 바뀐다.
 - **누르는 것은 `src/ui` 의 `PressableScale`**(0.96 + 스프링 + 진동). 진동은 `haptic.select/tap/set/success/warn/error` 뜻으로만

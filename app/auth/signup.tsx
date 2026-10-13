@@ -15,7 +15,6 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { showAlert } from '../../src/utils/alert';
 import { LEGAL } from '../../src/config/entitlements';
 import { BrandMark } from '../../src/components/brand/BrandMark';
-import { Grain } from '../../src/components/brand/Grain';
 import { AuthField } from '../../src/components/auth/AuthField';
 import { D } from '../../src/components/auth/palette';
 import { FONT, PressableScale, haptic } from '../../src/ui';
@@ -85,7 +84,6 @@ export default function SignupScreen() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <Grain still={reduce} />
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 16 }]}

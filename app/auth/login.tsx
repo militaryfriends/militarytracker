@@ -25,7 +25,6 @@ import Animated, {
 import { signInWithEmail, resetPassword } from '../../src/services/authService';
 import { showAlert } from '../../src/utils/alert';
 import { BrandMark, type BrandPhase } from '../../src/components/brand/BrandMark';
-import { Grain } from '../../src/components/brand/Grain';
 import { INTRO, easeInOutQuart, easeOutQuart, seg } from '../../src/components/brand/intro';
 import { AuthField } from '../../src/components/auth/AuthField';
 import { D } from '../../src/components/auth/palette';
@@ -199,7 +198,6 @@ export default function LoginScreen() {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <Grain still={reduce} />
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingTop: headerTop, paddingBottom: insets.bottom + 16 }]}

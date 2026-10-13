@@ -12,7 +12,6 @@
 만드는 것
   assets/brand/m-mark.png       흰 M 만 (고리 뺌, 투명) — 고리는 앱이 선으로 그린다(BrandMark, 그려지는 모션)
   assets/brand/m-texture.png    질감 M 을 무채색으로 · 배경은 투명 · 고리 위치를 m-mark 에 맞춤
-  assets/brand/grain.png        필름 그레인 타일
   assets/icon.png · android-icon-foreground.png · android-icon-monochrome.png · splash-icon(-light).png · favicon.png
 
 고리 위치(아래 출력)는 src/components/brand/geometry.ts 와 같아야 한다. 로고를 바꾸면 다시 돌리고 그 파일을 맞출 것.
@@ -100,13 +99,7 @@ M = np.float32([[sc, 0, cx * ks - bcx * sc], [0, sc, cy * ks - bcy * sc]])
 aw = cv2.warpAffine((a * 255).astype(np.uint8), M, (S, S), flags=cv2.INTER_CUBIC, borderValue=0)
 Image.fromarray(rgba(aw), 'RGBA').save(p(OUT, 'm-texture.png'), optimize=True)
 
-# ── 3. 그레인 ────────────────────────────────────────────────────────
-rng = np.random.default_rng(7)
-noise = rng.integers(0, 255, (160, 160)).astype(np.uint8)
-Image.fromarray(np.dstack([noise, noise, noise, np.full_like(noise, 24)]), 'RGBA').save(p(OUT, 'grain.png'), optimize=True)
-
-
-# ── 4. 아이콘 · 스플래시 — 작은 크기에서도 보이게 고리를 굵게 다시 그린다 ──
+# ── 3. 아이콘 · 스플래시 — 작은 크기에서도 보이게 고리를 굵게 다시 그린다 ──
 def logo_layer(size, scale, ring_mul, rgb=INK):
     """size² 투명 캔버스 가운데에 로고(고리 + M). scale = 로고 원본 2000px 이 차지할 비율"""
     big = 2048
