@@ -6,10 +6,11 @@
  *   2) users/{uid}.stats(개인 기록 요약) 갱신 — 앱은 최근 로그 일부만 들고 있어서
  *      오래된 PR·누적치는 여기서만 살아남는다
  *
- * 오프라인이면 addDoc 이 끝나지 않는다(SDK 가 reject 하지 않고 대기). 그래서 saveWorkoutLog
+ * 오프라인이면 쓰기가 끝나지 않는다(SDK 가 reject 하지 않고 대기). 그래서 saveWorkoutLog
  * 는 타임아웃으로 빠져나오고, 로그는 pendingLogs 에 남아 다음 기회(앱 시작, 포그라운드 복귀)에
- * 여기 flushPendingLogs 가 올린다. 타임아웃 뒤에 SDK 큐가 먼저 커밋했을 수 있으므로
- * 재시도 전에 같은 createdAt 이 서버에 있는지 확인해 중복을 막는다.
+ * 여기 flushPendingLogs 가 올린다. 문서 id 가 사용자+만든 시각(stableDocId)이라 타임아웃 뒤
+ * SDK 큐가 먼저 커밋했어도 다시 올리면 같은 문서를 덮어쓸 뿐 중복이 생기지 않는다.
+ * (예전 버전이 무작위 id 로 남긴 대기 기록 때문에 재시도 전 createdAt 확인은 남겨 둔다 — 대기 기록당 읽기 1건)
  */
 import { FirestoreError } from 'firebase/firestore';
 import { WorkoutLog } from '../types';
@@ -68,7 +69,7 @@ export async function flushPendingLogs(uid: string): Promise<void> {
     const pending = useAppStore.getState().pendingLogs.filter((l) => l.userId === uid);
     for (const log of pending) {
       const { addLog, dropPending } = useAppStore.getState();
-      // 타임아웃 뒤 SDK 큐가 커밋했을 수 있다 — 같은 createdAt 이 있으면 그걸로 대체
+      // 이미 서버에 있으면(타임아웃 뒤 SDK 큐가 커밋 · 예전 버전의 무작위 id) 그걸로 대체
       const existing = await findLogByCreatedAt(uid, log.createdAt).catch(() => null);
       if (existing) {
         dropPending(log.createdAt);

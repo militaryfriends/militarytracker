@@ -1,6 +1,7 @@
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -9,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { WorkoutLog, WeightRecord, SetDetail } from '../types';
+import { stableDocId } from '../utils/merge';
 
 const nowIso = () => new Date().toISOString();
 
@@ -29,21 +31,42 @@ export class SaveTimeout extends Error {}
  */
 const SAVE_TIMEOUT_MS = 8_000;
 
+/** 쓰기를 timeoutMs 까지만 기다린다 — 넘기면 SaveTimeout. SDK 의 쓰기는 큐에 남아 재접속 때 커밋될 수 있다 */
+function withTimeout<T>(write: Promise<T>, timeoutMs = SAVE_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new SaveTimeout('save timeout')), timeoutMs);
+  });
+  return Promise.race([write, timeout]).finally(() => clearTimeout(timer));
+}
+
 // ─── Workout Logs ─────────────────────────────────────────────────────────
+/**
+ * 문서 id 는 사용자 + 만든 시각(stableDocId) — 타임아웃 뒤 SDK 큐가 먼저 커밋했든, 대기열에서 다시 올리든
+ * 같은 문서를 덮어써서 중복 기록이 생기지 않는다. (예전 addDoc 은 재시도마다 새 문서가 생길 수 있었다)
+ */
 export async function saveWorkoutLog(log: Omit<WorkoutLog, 'id'>): Promise<WorkoutLog> {
-  const write = addDoc(collection(db, 'workoutLogs'), log).then((ref) => ({ id: ref.id, ...log }));
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new SaveTimeout('save timeout')), SAVE_TIMEOUT_MS)
-  );
-  // 타임아웃으로 빠져나가도 SDK 의 쓰기는 큐에 남아 재접속 시 커밋될 수 있다.
-  // 호출자는 pendingLogs 에 넣고, 재시도 전에 서버에 같은 createdAt 이 있는지 확인한다(flushPendingLogs).
-  return Promise.race([write, timeout]);
+  const id = stableDocId(log.userId, log.createdAt);
+  return withTimeout(setDoc(doc(db, 'workoutLogs', id), log).then(() => ({ id, ...log })));
 }
 
 export async function getWorkoutLogs(userId: string, limitCount = 60): Promise<WorkoutLog[]> {
+  return logsQuery(userId, null, limitCount);
+}
+
+/**
+ * since(createdAt) 보다 나중 기록만 — 앱을 켤 때 기기 캐시 위에 새 것만 얹는다.
+ * 새 기록이 없으면 읽기 1건(빈 결과도 1건으로 친다). 인덱스는 전체 조회와 같은 (userId, createdAt desc).
+ */
+export async function getWorkoutLogsSince(userId: string, since: string, limitCount = 60): Promise<WorkoutLog[]> {
+  return logsQuery(userId, since, limitCount);
+}
+
+async function logsQuery(userId: string, since: string | null, limitCount: number): Promise<WorkoutLog[]> {
   const q = query(
     collection(db, 'workoutLogs'),
     where('userId', '==', userId),
+    ...(since ? [where('createdAt', '>', since)] : []),
     orderBy('createdAt', 'desc'),
     fsLimit(limitCount)
   );
@@ -115,21 +138,39 @@ export function normalizeLog(id: string, data: Record<string, unknown>): Workout
 }
 
 // ─── Weight Records ───────────────────────────────────────────────────────
-export async function saveWeight(userId: string, kg: number): Promise<WeightRecord> {
-  const record: Omit<WeightRecord, 'id'> = {
-    userId,
-    date: localDate(),
-    kg,
-    createdAt: nowIso(),
-  };
-  const ref = await addDoc(collection(db, 'weights'), record);
-  return { id: ref.id, ...record };
+/**
+ * 체중 저장. 오프라인이면 예전엔 끝나지 않는 스피너였다 — 8초 뒤 queued: true 로 돌려주고,
+ * 쓰기는 SDK 큐에 남아 연결되면 올라간다(앱을 완전히 끄기 전까지).
+ * queued 인 기록은 id 가 local- — 증분 동기화의 기준(latestServerCreatedAt)에서 빠지고,
+ * 서버에 올라간 뒤 받으면 같은 createdAt 의 서버 것으로 바뀐다.
+ */
+export async function saveWeight(userId: string, kg: number): Promise<{ record: WeightRecord; queued: boolean }> {
+  const createdAt = nowIso();
+  const data: Omit<WeightRecord, 'id'> = { userId, date: localDate(), kg, createdAt };
+  const id = stableDocId(userId, createdAt);
+  try {
+    await withTimeout(setDoc(doc(db, 'weights', id), data));
+    return { record: { id, ...data }, queued: false };
+  } catch (e) {
+    if (e instanceof SaveTimeout) return { record: { id: `local-${createdAt}`, ...data }, queued: true };
+    throw e;
+  }
 }
 
 export async function getWeights(userId: string, limitCount = 30): Promise<WeightRecord[]> {
+  return weightsQuery(userId, null, limitCount);
+}
+
+/** since(createdAt) 보다 나중 체중만 — getWorkoutLogsSince 와 같은 방식 */
+export async function getWeightsSince(userId: string, since: string, limitCount = 30): Promise<WeightRecord[]> {
+  return weightsQuery(userId, since, limitCount);
+}
+
+async function weightsQuery(userId: string, since: string | null, limitCount: number): Promise<WeightRecord[]> {
   const q = query(
     collection(db, 'weights'),
     where('userId', '==', userId),
+    ...(since ? [where('createdAt', '>', since)] : []),
     orderBy('createdAt', 'desc'),
     fsLimit(limitCount)
   );

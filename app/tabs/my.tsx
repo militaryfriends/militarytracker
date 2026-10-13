@@ -12,7 +12,8 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { PART_LABEL, PART_ORDER } from '../../src/data/exercises';
 import { saveWeight } from '../../src/services/workoutService';
-import { logout, deleteAccount, saveProfile } from '../../src/services/authService';
+import { saveProfile } from '../../src/services/authService';
+import { logoutUser, deleteUserAccount } from '../../src/services/session';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 import { SUB_STATUS_LABEL } from '../../src/utils/subscription';
@@ -68,8 +69,13 @@ export default function MyScreen() {
     const kg = Math.round(parseFloat(weightInput.replace(',', '.')) * 10) / 10;
     setSaving(true);
     try {
-      addWeight(await saveWeight(user.uid, kg));
+      const { record, queued } = await saveWeight(user.uid, kg);
+      addWeight(record);
       setWeightInput('');
+      if (queued) {
+        // 오프라인 — 기기에 기록해 두고 연결되면 올라간다(앱을 끄기 전까지)
+        showAlert('오프라인', '체중을 기록해 두었습니다. 인터넷에 연결되면 자동으로 저장됩니다.');
+      }
     } catch {
       showAlert('오류', '체중 저장에 실패했습니다.');
     } finally {
@@ -93,7 +99,7 @@ export default function MyScreen() {
   function handleLogout() {
     const doLogout = async () => {
       try {
-        await logout();
+        await logoutUser();
       } catch {
         showAlert('오류', '로그아웃에 실패했습니다. 네트워크를 확인해주세요.');
         return;
@@ -125,7 +131,7 @@ export default function MyScreen() {
           onPress: async () => {
             try {
               // 서버(Admin SDK)가 지운다 — 재로그인 요구 없음
-              await deleteAccount();
+              await deleteUserAccount();
               resetAll();
               router.replace('/auth/login');
             } catch {

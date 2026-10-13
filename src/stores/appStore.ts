@@ -31,6 +31,13 @@ const MAX_INPUT = 1000;
 /** 코치 대화 보관 상한 — 서버는 최근 20턴만 쓰고, 무한히 쌓이면 persist 가 느려진다 */
 const CHAT_KEEP = 40;
 
+export interface SyncMarks {
+  logsFullAt: number;
+  weightsFullAt: number;
+}
+
+const NO_SYNC: SyncMarks = { logsFullAt: 0, weightsFullAt: 0 };
+
 interface AppState {
   /** 기기에 저장된 데이터의 소유자 — 다른 계정으로 로그인하면 폐기한다 */
   ownerUid: string | null;
@@ -54,6 +61,12 @@ interface AppState {
 
   chat: CoachMessage[];
   chatBusy: boolean;
+
+  /**
+   * 마지막으로 기록·체중을 "통째로" 받은 시각(epoch ms). 그 사이에는 기기 캐시보다 새 것만 받는다
+   * (session.ts). 다른 기기에서 늦게 올라온 옛 날짜 기록은 통째로 받을 때 맞춰진다.
+   */
+  syncMarks: SyncMarks;
 
   setOwner: (uid: string | null) => void;
   setCachedUser: (u: User | null) => void;
@@ -87,6 +100,8 @@ interface AppState {
   setLogs: (logs: WorkoutLog[]) => void;
   addWeight: (w: WeightRecord) => void;
   setWeights: (ws: WeightRecord[]) => void;
+
+  setSyncMark: (key: keyof SyncMarks, at: number) => void;
 
   setDiet: (d: DietPlan | null) => void;
   setDietLoading: (v: boolean) => void;
@@ -153,6 +168,7 @@ export const useAppStore = create<AppState>()(
       dietLoading: false,
       chat: [],
       chatBusy: false,
+      syncMarks: NO_SYNC,
 
       setOwner: (uid) => {
         // 다른 계정이 로그인하면 기기에 남은 이전 사용자 데이터를 폐기한다.
@@ -160,7 +176,7 @@ export const useAppStore = create<AppState>()(
         if (uid && get().ownerUid && get().ownerUid !== uid) {
           set({
             cachedUser: null, profile: null, plan: null, logs: [], weights: [],
-            session: null, summary: null, diet: null, chat: [],
+            session: null, summary: null, diet: null, chat: [], syncMarks: NO_SYNC,
           });
         }
         set({ ownerUid: uid });
@@ -326,8 +342,10 @@ export const useAppStore = create<AppState>()(
       addLog: (log) =>
         set((s) => ({ logs: [log, ...s.logs.filter((l) => l.createdAt !== log.createdAt)] })),
       setLogs: (logs) => set({ logs }),
-      addWeight: (w) => set((s) => ({ weights: [w, ...s.weights] })),
+      addWeight: (w) =>
+        set((s) => ({ weights: [w, ...s.weights.filter((x) => !w.createdAt || x.createdAt !== w.createdAt)] })),
       setWeights: (ws) => set({ weights: ws }),
+      setSyncMark: (key, at) => set((s) => ({ syncMarks: { ...s.syncMarks, [key]: at } })),
 
       setDiet: (d) => set({ diet: d }),
       setDietLoading: (v) => set({ dietLoading: v }),
@@ -344,6 +362,7 @@ export const useAppStore = create<AppState>()(
           logs: [], weights: [],
           diet: null, dietLoading: false,
           chat: [], chatBusy: false,
+          syncMarks: NO_SYNC,
         }),
     }),
     {
@@ -363,12 +382,14 @@ export const useAppStore = create<AppState>()(
         pendingLogs: s.pendingLogs,
         diet: s.diet,
         chat: s.chat,
+        syncMarks: s.syncMarks,
       }),
       version: 3,
       migrate: (persisted, version) => {
         // v1 에는 ownerUid·pendingLogs 가 없었다 — 소유자 불명이므로 폐기한다
         if (version < 2) return { ownerUid: null, session: null, pendingLogs: [], diet: null, chat: [] };
-        // v2 → v3: 캐시 필드가 추가됐을 뿐이라 그대로 쓴다
+        // v2 → v3: 캐시 필드가 추가됐을 뿐이라 그대로 쓴다.
+        // syncMarks 처럼 나중에 더한 칸은 저장본에 없으면 초기값이 남는다(persist 의 얕은 병합) — 버전을 올리지 않았다.
         return persisted as never;
       },
       onRehydrateStorage: () => (state) => {

@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import * as FirebaseAuth from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Auth } from 'firebase/auth';
@@ -47,8 +47,22 @@ function createAuth(): Auth {
   return FirebaseAuth.getAuth(app);
 }
 
+/**
+ * ignoreUndefinedProperties — 선택 필드가 undefined 로 남아도 쓰기가 통째로 거절되지 않게(smiscamp 와 같은 설정).
+ * RN 에서는 Firestore 의 기기 저장 캐시(IndexedDB)가 없어 메모리 캐시뿐이다 — 재시작 뒤 화면은
+ * appStore(persist)의 캐시가 채우고, 서버에서는 바뀐 것만 받는다 (src/services/session.ts).
+ */
+function createDb(): Firestore {
+  try {
+    return initializeFirestore(app, { ignoreUndefinedProperties: true });
+  } catch {
+    // Fast Refresh 등으로 이미 초기화된 경우
+    return getFirestore(app);
+  }
+}
+
 export const auth = createAuth();
-export const db = getFirestore(app);
+export const db = createDb();
 /** Cloud Functions — AI 프록시가 배포된 서울 리전 */
 export const functions = getFunctions(app, 'asia-northeast3');
 export default app;

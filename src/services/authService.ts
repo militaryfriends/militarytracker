@@ -8,7 +8,7 @@ import {
   sendEmailVerification,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, writeBatch, runTransaction } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from './firebase';
 import { User, UserProfile, Plan, UserStats } from '../types';
@@ -37,7 +37,7 @@ export async function signUpWithEmail(
   displayName: string
 ): Promise<User> {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
-  // 문서를 먼저 만든다 — _layout 의 onAuthChange 가 이 문서를 읽으러 오기 때문에
+  // 문서를 먼저 만든다 — 세션(session.ts)이 이 문서를 구독하기 시작하므로
   // updateProfile(네트워크) 뒤로 미루면 "문서 없음" 창이 넓어진다.
   const userData = baseUserDoc({ email, displayName, authProvider: 'email' });
   await setDoc(doc(db, 'users', credential.user.uid), userData);
@@ -48,21 +48,33 @@ export async function signUpWithEmail(
 }
 
 /**
- * users/{uid} 문서가 없으면 만든다(멱등). 회원가입 직후 onAuthChange 가 setDoc 보다
- * 먼저 도착하거나, 삭제 도중 실패한 계정이 남았을 때 여기서 복구한다.
+ * users/{uid} 문서가 없으면 만든다(멱등). 회원가입 직후 구독이 setDoc 보다 먼저 "없음"을 보거나,
+ * 삭제 도중 실패한 계정이 남았을 때 세션(session.ts)이 부른다.
+ * 트랜잭션 — 가입 화면의 setDoc 과 겹쳐도 있는 문서를 덮어쓰지 않는다. 문서는 구독으로 들어온다.
  */
-export async function ensureUserDoc(fu: FirebaseUser): Promise<User> {
+export async function ensureUserDoc(fu: FirebaseUser): Promise<void> {
   const ref = doc(db, 'users', fu.uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) return normalizeUser(fu.uid, snap.data());
-  const userData = baseUserDoc({
-    email: fu.email,
-    displayName: fu.displayName,
-    photoURL: fu.photoURL,
-    authProvider: 'email',
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists()) return;
+    tx.set(
+      ref,
+      baseUserDoc({
+        email: fu.email,
+        displayName: fu.displayName,
+        photoURL: fu.photoURL,
+        authProvider: 'email',
+      })
+    );
   });
-  await setDoc(ref, userData);
-  return { uid: fu.uid, ...userData };
+}
+
+/**
+ * 마지막 접속 시각. 세션이 12시간에 한 번만 부른다 — users 문서를 쓰면 구독에 읽기 1건이 다시 붙는다.
+ * updateDoc: 문서가 없을 때 lastLoginAt 만 있는 조각 문서를 만들지 않는다(규칙도 거절한다).
+ */
+export async function touchLastLogin(uid: string): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), { lastLoginAt: nowIso() });
 }
 
 /** 인증 메일 재발송 */
@@ -81,25 +93,12 @@ export async function refreshIdToken(): Promise<boolean> {
   return u.emailVerified;
 }
 
+/**
+ * 로그인만 한다. 사용자 문서는 세션(session.ts)이 구독으로 받고, 없으면 만들고, lastLoginAt 도 거기서 쓴다.
+ * (예전엔 여기서 getDoc + setDoc 을 하고 _layout 이 또 getDoc 을 해서 로그인마다 같은 문서를 두 번 읽었다)
+ */
 export async function signInWithEmail(email: string, password: string): Promise<void> {
-  const credential = await signInWithEmailAndPassword(auth, email, password);
-  const ref = doc(db, 'users', credential.user.uid);
-  const snap = await getDoc(ref);
-
-  if (snap.exists()) {
-    // merge: true — 일시적 오류에도 기존 profile/role 이 날아가지 않도록
-    await setDoc(ref, { lastLoginAt: nowIso() }, { merge: true });
-    return;
-  }
-  await setDoc(
-    ref,
-    baseUserDoc({
-      email,
-      displayName: credential.user.displayName,
-      photoURL: credential.user.photoURL,
-      authProvider: 'email',
-    })
-  );
+  await signInWithEmailAndPassword(auth, email, password);
 }
 
 /** 비밀번호 재설정 메일 발송. 존재하지 않는 계정도 동일하게 처리(계정 존재 여부 노출 방지) */
@@ -107,6 +106,7 @@ export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
 
+/** 로그아웃 — 화면에서는 session.ts 의 logoutUser 를 쓴다(구독을 먼저 끊는다) */
 export async function logout(): Promise<void> {
   await signOut(auth);
 }
@@ -131,7 +131,8 @@ function normalizeStats(raw: unknown): UserStats {
   };
 }
 
-function normalizeUser(uid: string, data: Record<string, unknown> | undefined): User {
+/** 서버 문서 → User. 빠진 칸·깨진 값이 있어도 앱이 죽지 않게 채운다 */
+export function normalizeUser(uid: string, data: Record<string, unknown> | undefined): User {
   const d = (data ?? {}) as Partial<User>;
   return {
     uid,
@@ -150,17 +151,13 @@ function normalizeUser(uid: string, data: Record<string, unknown> | undefined): 
   };
 }
 
-export async function fetchUserProfile(uid: string): Promise<User | null> {
-  const snap = await getDoc(doc(db, 'users', uid));
-  if (!snap.exists()) return null;
-  return normalizeUser(uid, snap.data());
-}
-
 /**
  * 계정 + 하위 데이터 전체 삭제 — 서버(accountDelete 콜러블, Admin SDK)가 지운다.
  * 클라이언트가 users 문서를 지울 수 있으면 구독·사용량을 초기화하는 우회로가 되므로
  * 보안 규칙에서 막았고, Admin SDK 는 "최근 로그인" 제약도 없다.
  * 서버가 auth 사용자를 지우면 onAuthStateChanged(null) 이 온다. 여기서는 signOut 만 보장한다.
+ * 화면에서는 session.ts 의 deleteUserAccount 를 쓴다 — 구독을 먼저 끊지 않으면 지워진 문서를 "없음"으로 보고
+ * 다시 만든다.
  */
 export async function deleteAccount(): Promise<void> {
   if (!auth.currentUser) return;

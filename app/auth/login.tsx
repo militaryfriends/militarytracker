@@ -33,6 +33,9 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithEmail(email.trim(), password);
+      // 성공하면 스피너를 그대로 둔다 — 세션이 사용자 문서를 받으면 라우팅 가드가 화면을 넘긴다
+      // (늦어도 8초 안에 열린다: session.ts FIRST_SNAPSHOT_TIMEOUT_MS)
+      return;
     } catch (e: any) {
       const code: string = e?.code ?? '';
       // 최신 Firebase(이메일 열거 보호 ON)는 비밀번호 오류를 invalid-credential 로 준다
@@ -49,7 +52,6 @@ export default function LoginScreen() {
           ? '사용이 중지된 계정입니다.'
           : '로그인에 실패했습니다. 다시 시도해주세요.';
       showAlert('로그인 실패', msg);
-    } finally {
       setLoading(false);
     }
   }

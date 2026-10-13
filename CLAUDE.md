@@ -34,6 +34,21 @@ npm run deploy:hosting            # 웹 export + hosting
 - 웹: 정적 HTML 은 다크로 미리 그려진다. 라이트인 사람은 `app/+html.tsx` 스크립트가 화면을 가려 뒀다가 루트 레이아웃이 연다.
   `Font.loadAsync` 같은 클라이언트 전용 호출을 파일 맨 위에 두면 웹 정적 렌더링이 깨진다 — effect 안에서.
 
+## Firebase 읽기 · 쓰기 (`src/services/session.ts`)
+
+- **앱 시작은 기기 캐시(appStore persist)로 연다.** 서버 응답을 스플래시 앞에 두지 않는다.
+  RN 의 Firestore 는 디스크 캐시가 없고 메모리뿐이라, 재시작 뒤 화면은 appStore 캐시가 맡는다.
+- **`users/{uid}` 는 세션이 `onSnapshot` 으로 구독한다.** 화면에서 getDoc 으로 다시 읽지 말고 `useAuthStore` 의 user 를 쓴다.
+  users 문서를 쓰면 구독이 새 값을 넣어 준다(`patchUser` 는 즉시 반영용). 쓸 때마다 구독에 읽기 1건이 붙으니
+  자주 바뀌는 값을 users 문서에 넣지 않는다(lastLoginAt 도 12시간에 한 번).
+- **기록 · 체중은 `createdAt >` 증분**(새 것이 없어도 쿼리당 읽기 1건) + 사흘마다 전체(`syncMarks`).
+  새 컬렉션을 붙일 때도 같은 방식으로. 합치기는 `src/utils/merge.ts`.
+- **사용자가 만드는 문서 id 는 `stableDocId(uid, createdAt)`.** 재시도해도 같은 문서를 덮어써 중복이 없다 — addDoc(무작위 id) 금지.
+  쓰기는 `withTimeout` 으로 감싼다(오프라인에서 SDK 의 쓰기 Promise 는 끝나지 않는다).
+- **로그아웃 · 계정 삭제는 `logoutUser` · `deleteUserAccount`.** 구독을 먼저 끊어야 권한 오류가 안 나고,
+  서버가 지운 users 문서를 "없음"으로 보고 다시 만들지 않는다.
+- 구독(PRO) 판정은 문서의 `sub` + `isProSub`. `subStatus` 콜러블은 만료됐는데 문서가 아직 pro 일 때만 부른다.
+
 ## git push (Claude 세션용)
 
 맥의 키체인은 Claude 가 도는 리눅스 VM에서 보이지 않는다.
