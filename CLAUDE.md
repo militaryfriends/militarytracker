@@ -64,6 +64,15 @@ git fetch origin        # origin/main 추적 참조 동기화 (위 push 는 갱�
 원격 URL 은 일부러 HTTPS 그대로 두었다 — 맥에서 쓰던 `git push` 방식을 바꾸지 않기 위해서다.
 키 폐기는 GitHub 저장소 Settings → Deploy keys 에서 삭제.
 
+## 웹 배포 (Claude 세션용)
+
+- 맥 `node_modules` 는 macOS용이라 리눅스 VM 에서 `expo export` 가 안 된다 → 클라우드 컨테이너에서 같은 커밋으로
+  `npx expo export --platform web` → `dist` 를 tgz 로 맥에 보내 `dist/` 에 푼다(옛 dist 는 `.cache/` 로 mv — 삭제 권한 없음).
+- 배포는 맥의 Firebase MCP(`firebase_deploy only=hosting`, 로그인 pobredward@gmail.com). **먼저 project_dir 을 이 저장소로,
+  active project 를 `military-tracker-96bdd` 로 바꾼다** — 기본값이 smis-mentor 라 그대로 두면 다른 프로젝트에 배포된다.
+  끝나면 project_dir 을 `/Users/sunwoongshin/Dev/smis-mentor` 로 되돌린다.
+- `firebase.json` hosting 의 `site` 는 지우지 말 것 — 없으면 MCP 배포가 "no site name" 으로 실패한다.
+
 ## 운동 영상 (media/README.md)
 
 영상은 앱에 넣지 않는다. 버킷에 올리고 앱은 실행 시 `exercise/manifest.json` 을 읽는다 —
