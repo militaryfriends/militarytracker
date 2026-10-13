@@ -67,8 +67,9 @@ git fetch origin        # origin/main 추적 참조 동기화 (위 push 는 갱�
 ## 운동 영상 (media/README.md)
 
 영상은 앱에 넣지 않는다. 버킷에 올리고 앱은 실행 시 `exercise/manifest.json` 을 읽는다 —
-영상 추가에 앱 업데이트가 필요 없다. **저장소를 GCS(`gs://military-tracker-96bdd`)에서 Cloudflare R2(`militarytracker`)로
-옮기는 중** — 순서는 media/README.md "R2 버킷".
+영상 추가에 앱 업데이트가 필요 없다. **저장소는 Cloudflare R2(`militarytracker`)** — 옛 GCS 버킷은 옛 빌드용으로 남겨 둔다.
+공개 주소는 `src/data/media.ts` 의 `MEDIA_BASE` 한 줄. 지금은 r2.dev(개발용 · 속도 제한) — **출시 전에 커스텀 도메인으로**
+(media/README.md "R2 버킷" 6).
 
 ```bash
 npm run media:upload -- <부위> --dry   # 매칭표 먼저

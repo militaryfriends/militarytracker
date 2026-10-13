@@ -1,36 +1,39 @@
 /**
  * 운동 미디어
  * ───────────────────────────────────────────────────────────────────────────
- * 영상은 앱에 넣지 않고 서울 버킷(asia-northeast3)에서 받아 기기에 캐시한다.
+ * 영상은 앱에 넣지 않고 Cloudflare R2 버킷(militarytracker)에서 받아 기기에 캐시한다.
  * 무엇이 올라가 있는지는 버킷의 exercise/manifest.json 이 알려 주므로,
  * 영상을 추가·교체해도 앱 업데이트가 필요 없다 (src/stores/mediaStore.ts).
  *
  * 버킷 구조
  *   exercise/video/{id}.mp4    1080x1080 H.264, 무음, 루프용
  *   exercise/poster/{id}.jpg   512x512 첫 프레임
- *   exercise/manifest.json     { items: { [id]: { video, poster } } } — 값은 GCS generation
+ *   exercise/manifest.json     { items: { [id]: { video, poster } } } — 값은 버전(숫자 문자열)
  *
- * 업로드: node scripts/upload-videos.mjs <원본폴더> <부위>
+ * 업로드: npm run media:upload -- <부위>  (media/README.md)
  *
- * URL 의 v= 에 generation 을 넣는다. 같은 이름으로 다시 올리면 generation 이
- * 바뀌어 URL 이 달라지므로 기기 캐시·브라우저 캐시가 자동으로 새 파일을 받는다.
- * 그래서 객체에는 Cache-Control: immutable 을 걸어 두었다.
+ * URL 의 v= 에 버전을 넣는다. 내용이 바뀌면 버전이 바뀌어 URL 이 달라지므로
+ * 기기 캐시·브라우저 캐시가 자동으로 새 파일을 받는다. 그래서 객체에는 Cache-Control: immutable 을 걸어 두었다.
  */
 import type { ImageSourcePropType } from 'react-native';
 import type { VideoSource } from 'expo-video';
 
-export const MEDIA_BUCKET = 'military-tracker-96bdd';
-const BASE = `https://firebasestorage.googleapis.com/v0/b/${MEDIA_BUCKET}/o`;
+/**
+ * R2 공개 주소. 지금은 r2.dev(Cloudflare 가 개발용으로 안내 · 속도 제한 있음).
+ * 출시 전에 커스텀 도메인(예: https://media.militaryfriends.co.kr)으로 바꾼다 — 이 한 줄만 고치면 된다.
+ * (scripts/upload-videos.mjs · media-r2.mjs 가 이 줄을 읽는다 — 형식 유지)
+ */
+export const MEDIA_BASE = 'https://pub-3b0808a706984f0cb9b60a16a47334c5.r2.dev';
 
-// rev 는 GCS generation(숫자 문자열). 매니페스트가 오염돼도 URL 에 임의 쿼리가 붙지 않게 인코딩한다
+// rev 는 버전(숫자 문자열). 매니페스트가 오염돼도 URL 에 임의 쿼리가 붙지 않게 인코딩한다
 const objectUrl = (path: string, rev?: string): string =>
-  `${BASE}/${encodeURIComponent(path)}?alt=media${rev ? `&v=${encodeURIComponent(rev)}` : ''}`;
+  `${MEDIA_BASE}/${path}${rev ? `?v=${encodeURIComponent(rev)}` : ''}`;
 
 export const MANIFEST_URL = objectUrl('exercise/manifest.json');
-export const videoUrl = (id: string, rev: string) => objectUrl(`exercise/video/${id}.mp4`, rev);
-export const posterUrl = (id: string, rev: string) => objectUrl(`exercise/poster/${id}.jpg`, rev);
+export const videoUrl = (id: string, rev: string) => objectUrl(`exercise/video/${encodeURIComponent(id)}.mp4`, rev);
+export const posterUrl = (id: string, rev: string) => objectUrl(`exercise/poster/${encodeURIComponent(id)}.jpg`, rev);
 
-/** 매니페스트 한 항목 — 값은 GCS generation (없으면 해당 미디어 없음) */
+/** 매니페스트 한 항목 — 값은 버전 (없으면 해당 미디어 없음) */
 export interface MediaEntry {
   video?: string;
   poster?: string;

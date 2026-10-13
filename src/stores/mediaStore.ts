@@ -28,7 +28,7 @@ function parseManifest(raw: unknown): MediaManifest | null {
     if (!/^[A-Za-z0-9_]+$/.test(id) || !e || typeof e !== 'object') continue;
     const { video, poster } = e as MediaEntry;
     const entry: MediaEntry = {};
-    // generation 은 숫자 문자열이다 — 그 외 값은 버린다
+    // 버전은 숫자 문자열이다 — 그 외 값은 버린다
     if (typeof video === 'string' && /^\d{1,24}$/.test(video)) entry.video = video;
     if (typeof poster === 'string' && /^\d{1,24}$/.test(poster)) entry.poster = poster;
     if (entry.video || entry.poster) items[id] = entry;

@@ -29,7 +29,8 @@ npm run media:upload -- back         # 인코딩 · 업로드 · 매니페스트
 
 ## R2 버킷 `militarytracker` (Cloudflare 계정 militaryfriends.official)
 
-영상 저장소를 Firebase Storage(GCS)에서 Cloudflare R2 로 옮기는 중이다. R2 는 내려받기(이그레스) 요금이 없다.
+앱은 R2 에서 영상을 읽는다(2026-10-13 전환, 가슴 30개 이전). R2 는 내려받기(이그레스) 요금이 없다.
+공개 주소는 `src/data/media.ts` 의 `MEDIA_BASE` 한 줄 — 지금은 r2.dev, **출시 전에 커스텀 도메인으로**(아래 6).
 
 ```bash
 npm run media:r2 -- check     # 키 확인 · 공개 주소 · CORS
@@ -43,11 +44,15 @@ npm run media:r2 -- migrate   # 옛 버킷 exercise/** → R2 (다시 돌려도 
 3. **CORS** — 버킷 Settings › CORS Policy 에 `media/r2-cors.json`. 없으면 웹 앱이 매니페스트를 못 읽는다(영상 재생은 무관).
 4. `npm run media:r2 -- migrate` → `src/data/media.ts` 의 `MEDIA_BASE` 를 공개 주소로 → `npm run media:r2 -- check`.
    `MEDIA_BASE` 가 정해지기 전에는 `media:upload` 가 멈춘다(앱이 옛 버킷을 읽는 동안 R2 에 올리면 안 보인다).
-5. 옛 버킷 파일은 지우지 않는다 — 이미 설치된 옛 빌드가 읽는다.
+5. 옛 버킷 파일은 지우지 않는다 — 이미 설치된 옛 빌드 · 배포된 웹이 읽는다.
+6. **출시 전: 커스텀 도메인.** r2.dev 는 Cloudflare 가 개발용으로 안내하고 속도 제한이 있으며 CDN 캐시가 없다.
+   `militaryfriends.co.kr`(지금 DNS: 호스트코코아, 홈페이지는 AWS, 메일 MX 없음)을 이 Cloudflare 계정으로 옮긴 뒤
+   (무료 플랜 · 네임서버 변경 · 기존 A 레코드는 DNS only 로) 버킷 Custom Domains 에 `media.militaryfriends.co.kr` →
+   `MEDIA_BASE` 를 그 주소로 → `npm run media:r2 -- check`. 영상 경로 · 매니페스트는 그대로다.
 
 매니페스트 값은 파일 내용으로 정한 버전(숫자, `scripts/lib/r2.mjs` 의 `contentVersion`) — 옛 버킷에서 옮긴 30개는 GCS generation 그대로.
 
-## 옛 버킷 (GCS)
+## 옛 버킷 (GCS) — 읽기 전용으로 남김
 
 `gs://military-tracker-96bdd` — **asia-northeast3 (서울)**
 
