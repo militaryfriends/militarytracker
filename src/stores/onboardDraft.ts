@@ -38,10 +38,12 @@ interface DraftState {
   seeded: boolean;
   /** O6 "맞춤 루틴" 단계에서 만든 무료 자동 구성 플랜 — 거절하면 이걸로 시작한다 */
   localPlan: Plan | null;
+  /** 마이 탭 "온보딩 처음부터 다시 하기" — 가입한 사용자지만 거절해도 처음 가입처럼 루틴을 새로 정한다 */
+  restart: boolean;
 
   patch: (p: Partial<Omit<DraftState, 'patch' | 'reset' | 'setProfile'>>) => void;
   setProfile: <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void;
-  reset: (seed?: Partial<Pick<DraftState, 'profile' | 'waist' | 'pick'>>) => void;
+  reset: (seed?: Partial<Pick<DraftState, 'profile' | 'waist' | 'pick' | 'restart'>>) => void;
 }
 
 const empty = () => ({
@@ -53,6 +55,7 @@ const empty = () => ({
   resume: null,
   seeded: false,
   localPlan: null,
+  restart: false,
 });
 
 export const useOnboardDraft = create<DraftState>()((set) => ({

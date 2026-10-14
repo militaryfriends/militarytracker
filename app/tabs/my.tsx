@@ -121,6 +121,19 @@ export default function MyScreen() {
     doLogout();
   }
 
+  // 가입할 때와 같은 흐름을 처음부터 — 중간에 닫으면 아무것도 바뀌지 않는다
+  function restartOnboarding() {
+    const running = bodyProject?.status === 'active';
+    showAlert(
+      '온보딩 다시 하기',
+      `원하는 체형부터 다시 골라요. 끝까지 진행하면 루틴이 새로 정해지고, 운동 기록과 체중 기록은 그대로 남아요.${running ? ' 새 프로젝트를 시작하면 지금 진행 중인 프로젝트는 끝나요.' : ''}`,
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '처음부터 하기', onPress: () => router.push('/project/new?restart=1') },
+      ]
+    );
+  }
+
   function confirmDelete() {
     showAlert(
       '계정 삭제',
@@ -298,6 +311,17 @@ export default function MyScreen() {
             <Text style={s.subSub}>
               {canCoach ? '루틴 조정 · 대체 운동 · 식단 · 회복' : '구독하면 내 기록을 아는 코치와 대화할 수 있어요'}
             </Text>
+          </View>
+          <Text style={s.subChev}>›</Text>
+        </TouchableOpacity>
+
+        {/* 온보딩 — 가입 때 흐름(원하는 체형 → 분석 → 프로젝트)을 다시 */}
+        <Text style={s.sectionLabel}>온보딩</Text>
+        <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={restartOnboarding} accessibilityRole="button"
+          accessibilityLabel="온보딩 처음부터 다시 하기">
+          <View style={{ flex: 1 }}>
+            <Text style={s.subTitle}>온보딩 처음부터 다시 하기</Text>
+            <Text style={s.subSub}>원하는 체형 선택부터 분석 · 프로젝트까지 다시 해요</Text>
           </View>
           <Text style={s.subChev}>›</Text>
         </TouchableOpacity>

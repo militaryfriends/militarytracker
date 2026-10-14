@@ -1,5 +1,9 @@
 /**
- * 온보딩 입력 단계(O1~O5) — 처음 가입(mode=first)과 홈에서 다시 분석(mode=redo)이 같은 흐름을 쓴다.
+ * 온보딩 입력 단계(O1~O5) — 세 곳이 같은 흐름을 쓴다.
+ *  first   = 처음 가입
+ *  redo    = 홈 "내 몸 분석하기" — 저장된 프로필 · 목표로 채움, 습관 경로 없음
+ *  restart = 마이 "온보딩 처음부터 다시 하기" — 기본 정보만 채우고 목표부터 새로 고름, 습관 경로 있음,
+ *            거절해도 처음 가입처럼 루틴을 새로 정한다(draft.restart)
  *
  *  체형 경로: O1 기본 → O2 원하는 체형 → O3 현재 체형 → O4 환경·경력 → O5 식사 → O6 분석(/project/analysis)
  *  습관 경로: O1 → O2("체형보다 운동 습관이 먼저예요") → O4 → O5 → 루틴 선택(예전 Step 5) — O3·O6~O8 건너뜀
@@ -31,7 +35,9 @@ import { o } from './styles';
 const BODY_PATH: StepKey[] = ['basic', 'goal', 'body', 'env', 'food'];
 const HABIT_PATH: StepKey[] = ['basic', 'goal', 'env', 'food', 'routine'];
 
-export function OnboardFlow({ mode }: { mode: 'first' | 'redo' }) {
+export type FlowMode = 'first' | 'redo' | 'restart';
+
+export function OnboardFlow({ mode }: { mode: FlowMode }) {
   useThemeMode();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -48,20 +54,23 @@ export function OnboardFlow({ mode }: { mode: 'first' | 'redo' }) {
     const st = useOnboardDraft.getState();
     if (st.resume) return;
     if (mode === 'first' && st.seeded) return;
-    if (mode === 'redo' && savedProfile) {
+    if (mode !== 'first' && savedProfile) {
       st.reset({
         profile: { ...DEFAULT_PROFILE, ...savedProfile, goal: savedProfile.goal === 'habit' ? 'muscle' : savedProfile.goal },
         waist: savedProfile.waistCm ? String(savedProfile.waistCm) : '',
-        pick: savedProfile.goalArchetypeId ? { mode: 'pick', archetypeId: savedProfile.goalArchetypeId } : null,
+        // 처음부터 다시 하기는 목표를 새로 고른다
+        pick: mode === 'redo' && savedProfile.goalArchetypeId ? { mode: 'pick', archetypeId: savedProfile.goalArchetypeId } : null,
+        restart: mode === 'restart',
       });
     } else {
-      st.reset();
+      st.reset({ restart: mode === 'restart' });
     }
     // 화면이 열릴 때 한 번만 — 프로필이 바뀌었다고 입력 중인 값을 덮어쓰지 않는다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const path = d.habit && mode === 'first' ? HABIT_PATH : BODY_PATH;
+  const withHabit = mode !== 'redo';
+  const path = d.habit && withHabit ? HABIT_PATH : BODY_PATH;
   const key = path[Math.min(idx, path.length - 1)];
   const total = path.length;
 
@@ -98,6 +107,7 @@ export function OnboardFlow({ mode }: { mode: 'first' | 'redo' }) {
       setBodyErr({});
     }
     if (key === 'food' && path === BODY_PATH) {
+      // 가입한 사용자(redo · restart)는 redo=1 — 뒤로 가기 · 빈 화면 처리가 홈 기준이 된다
       router.push(mode === 'first' ? '/project/analysis' : '/project/analysis?redo=1');
       return;
     }
@@ -188,7 +198,7 @@ export function OnboardFlow({ mode }: { mode: 'first' | 'redo' }) {
               total={total}
               onPick={(id) => d.patch({ pick: { mode: 'pick', archetypeId: id }, habit: false })}
               onAuto={() => { d.patch({ pick: { mode: 'auto' }, habit: false }); setIdx(BODY_PATH.indexOf('body')); }}
-              onHabit={mode === 'first' ? () => { d.patch({ habit: true, pick: null }); setIdx(HABIT_PATH.indexOf('env')); } : undefined}
+              onHabit={withHabit ? () => { d.patch({ habit: true, pick: null }); setIdx(HABIT_PATH.indexOf('env')); } : undefined}
             />
           )}
           {key === 'body' && (
@@ -221,7 +231,7 @@ export function OnboardFlow({ mode }: { mode: 'first' | 'redo' }) {
         </ScrollView>
 
         <View style={[o.foot, { paddingBottom: Math.max(insets.bottom, 18) }]}>
-          {idx > 0 || mode === 'redo' ? (
+          {idx > 0 || mode !== 'first' ? (
             <TouchableOpacity activeOpacity={0.7} style={o.backBtn} accessibilityRole="button"
               onPress={() => (idx > 0 ? go(-1) : router.back())}>
               <Text style={o.backTxt}>{idx > 0 ? '이전' : '닫기'}</Text>

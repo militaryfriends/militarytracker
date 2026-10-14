@@ -81,7 +81,8 @@ export default function ProjectsScreen() {
     try {
       const d = useOnboardDraft.getState();
       const profile = profileFromAnalysis(a, d.seeded ? d.profile : useAppStore.getState().profile);
-      if (!user.onboardingDone) {
+      // 처음 가입 · "온보딩 처음부터 다시 하기" → 루틴도 새 입력으로. 홈에서 다시 분석 → 프로필만
+      if (!user.onboardingDone || d.restart) {
         const plan = d.localPlan ?? buildLocalPlan(profile);
         await saveOnboarding(user.uid, profile, plan);
         setPlan(plan);

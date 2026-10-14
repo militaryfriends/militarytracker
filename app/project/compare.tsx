@@ -43,7 +43,7 @@ export default function CompareScreen() {
   const addWaist = () => {
     useOnboardDraft.getState().patch({ resume: 'body' });
     if (useOnboardDraft.getState().seeded && router.canGoBack()) router.back();
-    else router.replace(redo ? '/project/new' : '/onboard');
+    else router.replace(!redo ? '/onboard' : useOnboardDraft.getState().restart ? '/project/new?restart=1' : '/project/new');
   };
 
   return (
