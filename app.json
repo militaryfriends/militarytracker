@@ -3,6 +3,14 @@
     "name": "밀리터리트래커",
     "slug": "militarytracker",
     "version": "1.2.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/cfaeff49-5bc0-49a6-9a8b-34f6d040b3f4",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

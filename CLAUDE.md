@@ -120,6 +120,23 @@ VM 은 연결 폴더에서 파일을 지울 수 없어 git 이 `.lock` 파일을
   로 맞춘 뒤 `firebase_get_environment` 로 확인한다(두 값을 한 호출에 바꾸면 smis-mentor 폴더에 이 프로젝트가 남은 적이 있다).
 - `firebase.json` hosting 의 `site` 는 지우지 말 것 — 없으면 MCP 배포가 "no site name" 으로 실패한다.
 
+## 앱 코드 푸시 (EAS Update, 1.2.0 빌드부터)
+
+스토어 심사 없이 JS · 화면 · 문구 · 이미지 같은 **JS 번들 안의 변경**을 이미 깔린 앱에 보낸다. 사용자는 다음에 앱을 켤 때 받는다
+(`updates.checkAutomatically: ON_LOAD`, 기다리지 않음 → 그다음 실행부터 새 코드).
+
+```bash
+eas update --channel production --message "무엇을 바꿨는지"     # 맥에서 (Expo 로그인 필요)
+```
+
+- 빌드 채널: production · preview · development (`eas.json`). 스토어 빌드는 production 채널을 본다.
+- `runtimeVersion` 정책은 `appVersion` — **같은 앱 버전(app.json `version`)의 빌드에만** 업데이트가 간다.
+- **네이티브가 바뀌면 코드 푸시로 못 보낸다**: 네이티브 모듈 추가 · 업그레이드(npx expo install 로 새 패키지), Expo SDK 올림,
+  app.json 의 아이콘 · 스플래시 · 권한 · 플러그인. 이때는 `version` 을 올리고 스토어 빌드 → 옛 버전 앱에는 그 업데이트가 안 간다.
+  버전을 안 올리고 네이티브가 필요한 JS 를 보내면 옛 앱이 그 모듈을 못 찾아 깨진다.
+- 1.1.0 이하 빌드에는 expo-updates 가 없어 코드 푸시를 받지 못한다.
+- 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
+
 ## 운동 영상 (media/README.md)
 
 영상은 앱에 넣지 않는다. 버킷에 올리고 앱은 실행 시 `exercise/manifest.json` 을 읽는다 —
