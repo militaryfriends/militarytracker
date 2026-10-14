@@ -9,7 +9,7 @@
  * 블러 · 가림 처리는 하지 않는다 — 결제 전에도 전부 선명하게.
  */
 import { memo, useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { AVATARS } from '../../data/avatarGrid';
 import { parseCell, type Coord, type Sex } from '../../utils/bodyComp';
@@ -84,6 +84,8 @@ export function AvatarView({
 
   const top = useAnimatedStyle(() => ({ opacity: p.value }));
   const is3dLive = live && has3D(sex);
+  // 앱(GL)은 한 장에서 몸이 변한다 — 크로스페이드로 GL 뷰를 두 개 띄우지 않는다
+  const native3d = !is3dLive && Platform.OS !== 'web' && has3D(sex);
 
   return (
     <View
@@ -97,6 +99,11 @@ export function AvatarView({
           <Avatar3DLive sex={sex} coord={coord ?? cellCoord(cell)} width={width} height={height}
             morphMs={morphMs} yawGroup={yawGroup} intro={intro}
             fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
+        </View>
+      ) : native3d ? (
+        <View style={[s.layer, { width, height }]}>
+          <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} from={fadeFrom && fadeFrom !== cell ? cellCoord(fadeFrom) : undefined}
+            width={width} height={height} fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
         </View>
       ) : (
         <>

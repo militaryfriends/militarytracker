@@ -9,11 +9,15 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { coordKey } from './morph';
 import { cachedSnapshot, mountViewer, snapshot, supports3D, type Viewer } from './engine.web';
+import { joinYawGroup } from './stage';
 
 export const has3D = (sex: Sex) => supports3D(sex);
 
 export function Avatar3DStill({ sex, coord, width, height, fallback }: {
-  sex: Sex; coord: Coord; width: number; height: number; fallback: ReactNode;
+  sex: Sex; coord: Coord;
+  /** 앱에서만 씀(이 좌표에서 coord 로 변해 감) — 웹은 AvatarView 의 크로스페이드가 대신한다 */
+  from?: Coord;
+  width: number; height: number; fallback: ReactNode;
 }) {
   const w = Math.round(width);
   const h = Math.round(height);
@@ -46,9 +50,6 @@ export function Avatar3DStill({ sex, coord, width, height, fallback }: {
   );
 }
 
-// 같은 그룹의 뷰어는 같이 돈다 (비교 화면의 지금 · 목표)
-const groups = new Map<string, Set<(y: number, from: object) => void>>();
-
 export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGroup, intro = false, fallback }: {
   sex: Sex; coord: Coord; width: number; height: number;
   /** 좌표가 바뀌면 이 시간 동안 몸이 변한다 */
@@ -70,18 +71,8 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
     let alive = true;
     const el = host.current as unknown as HTMLElement | null;
     if (!el) return;
-    const me = {};
-    const listener = (y: number, from: object) => {
-      if (from !== me) viewer.current?.setYaw(y);
-    };
-    if (yawGroup) {
-      if (!groups.has(yawGroup)) groups.set(yawGroup, new Set());
-      groups.get(yawGroup)!.add(listener);
-    }
-    mountViewer(el, {
-      sex, coord: coordRef.current, w, h, intro,
-      onYaw: yawGroup ? (y) => groups.get(yawGroup)?.forEach((fn) => fn(y, me)) : undefined,
-    })
+    const group = joinYawGroup(yawGroup, {}, (y) => viewer.current?.setYaw(y));
+    mountViewer(el, { sex, coord: coordRef.current, w, h, intro, onYaw: group.emit })
       .then((v) => {
         if (!alive) return v.dispose();
         viewer.current = v;
@@ -91,7 +82,7 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
       .catch(() => alive && setState('failed'));
     return () => {
       alive = false;
-      if (yawGroup) groups.get(yawGroup)?.delete(listener);
+      group.leave();
       viewer.current?.dispose();
       viewer.current = null;
     };

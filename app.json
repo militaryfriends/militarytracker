@@ -2,7 +2,7 @@
   "expo": {
     "name": "밀리터리트래커",
     "slug": "militarytracker",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

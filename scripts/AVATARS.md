@@ -15,13 +15,15 @@
   모델러가 몸 메시에 **같은 이름의 셰이프 키 4개**를 만들면 스크립트가 그걸 쓴다 — 레스트(T)포즈에서, 키 하나씩 1.0 이 위 표의 몸.
   반바지는 키가 없어도 몸을 따라간다(가까운 몸 정점의 변화를 옮긴다).
 - 여성: 같은 방식으로 `avatar_f.glb` 를 만들고 `morph.ts` 의 `MODEL_SEXES` · `engine.web.ts` 의 `MODEL_SRC` 에 넣는다. 그 전까지 여성은 2D 실루엣.
-- iOS · Android 는 아직 2D(`Avatar3D.tsx`) — expo-gl 연결 + 새 빌드가 필요하다.
+- iOS · Android: expo-gl GLView 위에 같은 장면(`avatar3d/stage.ts`)을 그린다(`Avatar3D.tsx` · `engine.native.ts`). GL 이 안 되면 2D 로.
 
 ```bash
 PY=~/.venv-bpy/bin/python
 $PY scripts/build-avatar-3d.py -- --blend Miltary_Friend_Model.blend --sex m --out /tmp/avatar_m.raw.glb --preview /tmp/avatar-prev
-npx @gltf-transform/cli meshopt /tmp/avatar_m.raw.glb assets/avatar/avatar_m.glb    # 1.9MB → 약 0.4MB
+npx @gltf-transform/cli meshopt  /tmp/avatar_m.raw.glb assets/avatar/avatar_m.glb                              # 웹: 1.9MB → 약 0.4MB
+npx @gltf-transform/cli quantize /tmp/avatar_m.raw.glb assets/avatar/avatar_m_native.glb --quantize-normal 8  # 앱: 약 1.1MB
 ```
+앱(iOS · Android)용은 meshopt 를 쓰지 않는다 — 해제기가 WebAssembly 인데 Hermes 에는 없다. 같은 원본에서 둘 다 만든다.
 `--preview` 폴더에 기본 · 모프별 · 네 귀퉁이(F1M1 … F5M5) 정면 · 측면 렌더가 나온다 — 모델을 바꾸면 꼭 본다.
 A-포즈 각도 `--arm-angle`(기본 17°), 폴리곤 `--body-tris`(기본 24000).
 
