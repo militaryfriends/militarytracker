@@ -9,6 +9,7 @@ import { PressableScale } from '../../ui';
 import type { Sex } from '../../utils/bodyComp';
 import type { StoredProject } from '../../types';
 import { AvatarView } from './AvatarView';
+import { coordOf } from './avatar3d/morph';
 import { kg, pct1, practiceLine, reachLine } from './format';
 
 export function ProjectCard({
@@ -30,6 +31,7 @@ export function ProjectCard({
       <AvatarView
         sex={sex}
         cell={p.end.cell}
+        coord={coordOf(sex, p.end.bfPct, p.end.nffmi)}
         width={compact ? 64 : 92}
         badge="예상"
         fadeFrom={selected && !compact ? fromCell : null}

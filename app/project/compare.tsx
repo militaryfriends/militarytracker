@@ -12,6 +12,8 @@ import { PressableScale } from '../../src/ui';
 import { useAppStore } from '../../src/stores/appStore';
 import { useOnboardDraft } from '../../src/stores/onboardDraft';
 import { AvatarView } from '../../src/components/body/AvatarView';
+import { has3D } from '../../src/components/body/avatar3d/Avatar3D';
+import { coordOf } from '../../src/components/body/avatar3d/morph';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
 import { kg, muscleOf, pct0 } from '../../src/components/body/format';
 import { EmptyState } from '../../src/components/ui';
@@ -54,20 +56,23 @@ export default function CompareScreen() {
 
         <View style={s.pair}>
           <Animated.View entering={FadeInDown.duration(320)} style={s.col}>
-            <AvatarView sex={sex} cell={a.cell} width={colW} badge="지금"
+            <AvatarView sex={sex} cell={a.cell} coord={a.coord} width={colW} badge="지금" live intro yawGroup="compare"
               label={`지금 몸, ${kg(a.input.weightKg)}kg, 체지방 ${pct0(a.comp.bfPct)}%`} />
             <Text style={s.colHead}>지금 {fromInbody ? '(인바디)' : '(추정)'}</Text>
             <Text style={s.colNum}>{kg(a.input.weightKg)}kg · 체지방 {pct0(a.comp.bfPct)}%</Text>
             <Text style={s.colSub}>근육: {muscleOf(a.cell)}</Text>
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(140).duration(320)} style={s.col}>
-            <AvatarView sex={sex} cell={a.goal.cell} width={colW} badge="목표"
+            <AvatarView sex={sex} cell={a.goal.cell} coord={coordOf(sex, a.goal.bfPct, a.goal.nffmi)} width={colW} badge="목표"
+              live intro yawGroup="compare"
               label={`목표 ${a.goal.name}, ${kg(a.goal.weightKg)}kg, 체지방 ${pct0(a.goal.bfPct)}%`} />
             <Text style={s.colHead}>목표 · {a.goal.name}</Text>
             <Text style={s.colNum}>{kg(a.goal.weightKg)}kg · 체지방 {pct0(a.goal.bfPct)}%</Text>
             <Text style={s.colSub}>근육: {muscleOf(a.goal.cell)}</Text>
           </Animated.View>
         </View>
+
+        {has3D(sex) ? <Text style={s.spin}>좌우로 밀면 두 몸이 같이 돌아가요</Text> : null}
 
         <Animated.View entering={FadeInDown.delay(260).duration(320)} style={s.gap}>
           <Text style={s.gapLabel}>목표까지</Text>
@@ -98,6 +103,7 @@ export default function CompareScreen() {
 }
 
 const s = themed(() => StyleSheet.create({
+  spin: { fontSize: 11.5, color: colors.muted, textAlign: 'center', marginTop: 8 },
   root: { flex: 1, backgroundColor: colors.bg },
   inner: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 24 },
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },

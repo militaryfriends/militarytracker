@@ -18,6 +18,7 @@ import { trendWeight } from '../../utils/body';
 import { AvatarView } from './AvatarView';
 import { projectNow } from './progress';
 import { kg, pct1 } from './format';
+import { coordOf } from './avatar3d/morph';
 
 export function HomeProjectCard() {
   useThemeMode();
@@ -39,9 +40,13 @@ export function HomeProjectCard() {
     if (!analysis) return null;
     const after = weights.filter((w) => (w.createdAt ?? w.date) > analysis.createdAt);
     const tw = trendWeight(after);
-    if (!tw) return { cell: analysis.cell, kg: analysis.input.weightKg };
+    if (!tw) return { cell: analysis.cell, coord: analysis.coord, kg: analysis.input.weightKg };
     const c = updateComp(analysis.comp, analysis.input.heightCm, tw);
-    return { cell: cellWithHysteresis(analysis.input.sex, c.bfPct, c.nffmi, analysis.cell), kg: tw };
+    return {
+      cell: cellWithHysteresis(analysis.input.sex, c.bfPct, c.nffmi, analysis.cell),
+      coord: coordOf(analysis.input.sex, c.bfPct, c.nffmi),
+      kg: tw,
+    };
   }, [analysis, weights]);
 
   if (project && now) {
@@ -52,9 +57,9 @@ export function HomeProjectCard() {
         accessibilityLabel={`내 변화 프로젝트, ${project.name}, ${now.week}주차`}>
         <Text style={s.label}>내 변화 프로젝트</Text>
         <View style={s.row}>
-          <AvatarView sex={sex} cell={now.nowCell} width={52} badge="지금" />
+          <AvatarView sex={sex} cell={now.nowCell} coord={coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi)} width={52} badge="지금" />
           <Ionicons name="arrow-forward" size={14} color={colors.muted} />
-          <AvatarView sex={sex} cell={project.end.cell} width={52} badge="예상" />
+          <AvatarView sex={sex} cell={project.end.cell} coord={coordOf(sex, project.end.bfPct, project.end.nffmi)} width={52} badge="예상" />
           <View style={s.info}>
             {fresh ? <Text style={s.fresh}>프로젝트가 시작되었습니다</Text> : null}
             <Text style={s.name} numberOfLines={1}>{project.name}</Text>
@@ -75,9 +80,9 @@ export function HomeProjectCard() {
         accessibilityLabel={`내 변화 프로젝트, ${rec.name} ${rec.months}개월, 프로젝트 보기`}>
         <Text style={s.label}>내 변화 프로젝트</Text>
         <View style={s.row}>
-          <AvatarView sex={analysis.input.sex} cell={freeNow.cell} width={52} badge="지금" />
+          <AvatarView sex={analysis.input.sex} cell={freeNow.cell} coord={freeNow.coord} width={52} badge="지금" />
           <Ionicons name="arrow-forward" size={14} color={colors.muted} />
-          <AvatarView sex={analysis.input.sex} cell={rec.end.cell} width={52} badge="예상" />
+          <AvatarView sex={analysis.input.sex} cell={rec.end.cell} coord={coordOf(analysis.input.sex, rec.end.bfPct, rec.end.nffmi)} width={52} badge="예상" />
           <View style={s.info}>
             <Text style={s.name} numberOfLines={1}>{rec.name}</Text>
             <Text style={s.sub}>{rec.months}개월 · {kg(rec.end.weightKg)}kg · 체지방 {pct1(rec.end.bfPct)}%</Text>

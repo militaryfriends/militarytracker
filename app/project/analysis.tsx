@@ -8,7 +8,7 @@
  * 온보딩에서는 AI 를 부르지 않는다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, BackHandler, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,9 @@ import { validateProfile } from '../../src/utils/body';
 import { buildLocalPlan } from '../../src/utils/planner';
 import { saveAnalysis, toAnalysis } from '../../src/services/bodyService';
 import { kg, kcal, pct0, profileFromAnalysis, signedKg } from '../../src/components/body/format';
+import { AvatarView } from '../../src/components/body/AvatarView';
+import { has3D } from '../../src/components/body/avatar3d/Avatar3D';
+import { coordOf } from '../../src/components/body/avatar3d/morph';
 
 /** [문구, 최소 표시 ms] — 명세 O6 표 */
 const STEPS: [string, number][] = [
@@ -162,6 +165,33 @@ export default function AnalysisScreen() {
     router.replace(redo ? '/project/compare?redo=1' : '/project/compare');
   }, [elapsed, router, redo]);
 
+  // 3D 몸 — 현재 체형 분석이 끝나면 지금 몸, 시뮬레이션 단계 동안 추천 프로젝트 기간만큼 달마다 변한다
+  const { height: winH } = useWindowDimensions();
+  const body = useMemo(() => {
+    if (!work) return null;
+    const core = work.core;
+    const rec = core.projects.find((p) => p.recommended) ?? core.projects[0];
+    const sex = core.input.sex;
+    const SIM = 5; // '변화 과정을 시뮬레이션하는 중입니다'
+    let month = 0;
+    if (current > SIM) month = rec.months;
+    else if (current === SIM) {
+      const k = Math.min(1, Math.max(0, (elapsed - ENDS[SIM - 1]) / STEPS[SIM][1]));
+      month = Math.round(k * k * (3 - 2 * k) * rec.months);
+    }
+    const pt = rec.track[Math.min(month, rec.track.length - 1)];
+    return {
+      sex,
+      shown: current >= 2,
+      month,
+      cell: pt.cell,
+      coord: month === 0 ? core.coord : coordOf(sex, pt.bfPct, pt.nffmi),
+      line: month === 0 ? `지금 몸 · 체지방 약 ${pct0(core.comp.bfPct)}%` : `${month}개월 뒤 예상 몸 · ${kg(pt.weightKg)}kg · 체지방 ${pct0(pt.bfPct)}%`,
+    };
+  }, [work, current, elapsed]);
+  const avH = Math.min(240, winH - 600);
+  const showBody = !!body && has3D(body.sex) && avH >= 120;
+
   if (!work) return <SafeAreaView style={s.root} />;
 
   return (
@@ -176,7 +206,16 @@ export default function AnalysisScreen() {
           <Text style={s.title} accessibilityRole="header">몸을 분석하고 있어요</Text>
         )}
 
-        <View style={s.list}>
+        {showBody && body ? (
+          <View style={s.hero} accessibilityLabel={body.shown ? body.line : '몸을 읽는 중'}>
+            <View style={{ opacity: body.shown ? 1 : 0.28 }}>
+              <AvatarView sex={body.sex} cell={body.cell} coord={body.coord} width={Math.round(avH / 1.5)} live morphMs={260} />
+            </View>
+            <Text style={s.heroTxt}>{body.shown ? body.line : ' '}</Text>
+          </View>
+        ) : null}
+
+        <View style={[s.list, showBody && s.listTight]}>
           {STEPS.map(([title], i) => {
             const state = i < current ? 'done' : i === current ? 'now' : 'wait';
             return (
@@ -213,6 +252,9 @@ const s = themed(() => StyleSheet.create({
   doneHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 23, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   list: { marginTop: 30, gap: 22 },
+  listTight: { marginTop: 14, gap: 16 },
+  hero: { alignItems: 'center', marginTop: 14 },
+  heroTxt: { fontSize: 12, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   icon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', marginTop: -1 },
   ring: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: colors.line2 },

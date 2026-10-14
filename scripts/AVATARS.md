@@ -1,4 +1,33 @@
-# 프리셋 아바타 50장 만들기 (체지방 5 × 근육 5 × 남녀)
+# 3D 아바타 (웹에서 지금 쓰는 방식)
+
+사진 50장 대신 **모델 하나 + 모프 4개**로 엔진 좌표(체지방 f · 근육 m)의 몸을 그대로 그린다 — 칸 사이도 끊기지 않고, 손으로 돌려 보고,
+개월마다 몸이 변하는 걸 보여 줄 수 있다. 앱 코드: `src/components/body/avatar3d/` (morph.ts · engine.web.ts · Avatar3D.web.tsx).
+
+| 모프 | 1.0 일 때 |
+|---|---|
+| `fat_up` | 기본 몸 → 체지방 F5 (남 약 28%) |
+| `fat_down` | 기본 몸 → F1 (남 약 9%) |
+| `mus_up` | 기본 몸 → 근육 M5 |
+| `mus_down` | 기본 몸 → 근육 M1 (근육 거의 없는 마른 몸) |
+
+- 기본 몸 = .blend 의 몸 그대로. 지도에서의 위치는 `morph.ts` 의 `BASE` (남: f 1.6 · m 4.0 — 복근이 선명한 근육질).
+- **지금 모프는 스크립트가 만든 임시값**(리그의 DEF 본 가중치로 부위별로 부풀리고 · 줄이고 · 근육 결을 편다).
+  모델러가 몸 메시에 **같은 이름의 셰이프 키 4개**를 만들면 스크립트가 그걸 쓴다 — 레스트(T)포즈에서, 키 하나씩 1.0 이 위 표의 몸.
+  반바지는 키가 없어도 몸을 따라간다(가까운 몸 정점의 변화를 옮긴다).
+- 여성: 같은 방식으로 `avatar_f.glb` 를 만들고 `morph.ts` 의 `MODEL_SEXES` · `engine.web.ts` 의 `MODEL_SRC` 에 넣는다. 그 전까지 여성은 2D 실루엣.
+- iOS · Android 는 아직 2D(`Avatar3D.tsx`) — expo-gl 연결 + 새 빌드가 필요하다.
+
+```bash
+PY=~/.venv-bpy/bin/python
+$PY scripts/build-avatar-3d.py -- --blend Miltary_Friend_Model.blend --sex m --out /tmp/avatar_m.raw.glb --preview /tmp/avatar-prev
+npx @gltf-transform/cli meshopt /tmp/avatar_m.raw.glb assets/avatar/avatar_m.glb    # 1.9MB → 약 0.4MB
+```
+`--preview` 폴더에 기본 · 모프별 · 네 귀퉁이(F1M1 … F5M5) 정면 · 측면 렌더가 나온다 — 모델을 바꾸면 꼭 본다.
+A-포즈 각도 `--arm-angle`(기본 17°), 폴리곤 `--body-tris`(기본 24000).
+
+---
+
+# (이전 방식) 프리셋 아바타 50장 만들기 (체지방 5 × 근육 5 × 남녀)
 
 베이스 바디 `.blend` 1개(성별당) → 셰이프 키 값만 바꿔 25칸 렌더 → 컨택트 시트로 승인 → WebP 를 앱에 넣는다.
 

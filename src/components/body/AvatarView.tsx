@@ -1,5 +1,8 @@
 /**
- * 아바타 한 장 — 칸(F?M?)의 프리셋 이미지(src/data/avatarGrid.ts), 없으면 회색 실루엣.
+ * 아바타 한 장.
+ *  · 3D 모델이 있으면(웹 · 남성, avatar3d/) 엔진 좌표 그대로의 3D 몸 — coord 를 주면 칸 중심이 아니라 그 좌표.
+ *    live 면 손으로 돌리는 뷰어(좌표가 바뀌면 몸이 서서히 변한다), 아니면 정지 이미지.
+ *  · 3D 가 없으면 칸(F?M?)의 프리셋 이미지(src/data/avatarGrid.ts), 없으면 회색 실루엣.
  *
  * 배지: 지금(입력·측정 기반) · 예상(엔진 계산 — 항상 붙인다) · 목표(O2 에서 고른 칸).
  * 칸이 바뀌면 이전 칸 → 새 칸 0.6초 크로스페이드(같은 카메라라 자연스럽다, 명세 4-4).
@@ -9,27 +12,43 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { AVATARS } from '../../data/avatarGrid';
-import { parseCell, type Sex } from '../../utils/bodyComp';
+import { parseCell, type Coord, type Sex } from '../../utils/bodyComp';
 import { colors, themed, useThemeMode } from '../../theme';
 import { Silhouette } from './Silhouette';
+import { Avatar3DLive, Avatar3DStill, has3D } from './avatar3d/Avatar3D';
+import { cellCoord } from './avatar3d/morph';
 
 export type AvatarBadge = '지금' | '예상' | '목표' | '시작';
 
 const FADE_MS = 600;
 
-/** 칸 한 장 (배지 없음) */
-const Still = memo(function Still({ sex, cell, width, height }: { sex: Sex; cell: string; width: number; height: number }) {
+/** 칸 한 장 — 2D (프리셋 이미지 또는 실루엣) */
+const Flat = memo(function Flat({ sex, cell, width, height }: { sex: Sex; cell: string; width: number; height: number }) {
   const src = AVATARS[sex][cell];
   if (src) return <Image source={src} style={{ width, height }} resizeMode="contain" accessibilityIgnoresInvertColors />;
   const { f, m } = parseCell(cell);
   return <Silhouette sex={sex} f={f} m={m} width={width} height={height} />;
 });
 
+/** 한 장 (배지 없음) — 3D 가 되면 3D, 아니면 2D */
+const Still = memo(function Still({ sex, cell, coord, width, height }: { sex: Sex; cell: string; coord?: Coord; width: number; height: number }) {
+  const flat = <Flat sex={sex} cell={cell} width={width} height={height} />;
+  if (!has3D(sex)) return flat;
+  return <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} width={width} height={height} fallback={flat} />;
+});
+
 export function AvatarView({
-  sex, cell, width, badge, style, fadeFrom, label,
+  sex, cell, coord, width, badge, style, fadeFrom, label, live = false, yawGroup, morphMs, intro,
 }: {
   sex: Sex;
   cell: string;
+  /** 엔진 연속 좌표 — 3D 일 때 칸 중심 대신 이 몸을 그린다 */
+  coord?: Coord;
+  /** 3D 뷰어(손으로 돌리기 · 좌표가 바뀌면 몸이 변함). 3D 가 없으면 보통 아바타 */
+  live?: boolean;
+  yawGroup?: string;
+  morphMs?: number;
+  intro?: boolean;
   /** 높이는 2:3 으로 따라간다 */
   width: number;
   badge?: AvatarBadge;
@@ -64,6 +83,7 @@ export function AvatarView({
   }, [cell, fadeFrom, p]);
 
   const top = useAnimatedStyle(() => ({ opacity: p.value }));
+  const is3dLive = live && has3D(sex);
 
   return (
     <View
@@ -72,14 +92,24 @@ export function AvatarView({
       accessibilityRole="image"
       accessibilityLabel={label ?? `${badge ?? ''} 아바타`.trim()}
     >
-      {under ? (
+      {is3dLive ? (
         <View style={[s.layer, { width, height }]}>
-          <Still sex={sex} cell={under} width={width} height={height} />
+          <Avatar3DLive sex={sex} coord={coord ?? cellCoord(cell)} width={width} height={height}
+            morphMs={morphMs} yawGroup={yawGroup} intro={intro}
+            fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
         </View>
-      ) : null}
-      <Animated.View style={[s.layer, { width, height }, top]}>
-        <Still sex={sex} cell={cell} width={width} height={height} />
-      </Animated.View>
+      ) : (
+        <>
+          {under ? (
+            <View style={[s.layer, { width, height }]}>
+              <Still sex={sex} cell={under} width={width} height={height} />
+            </View>
+          ) : null}
+          <Animated.View style={[s.layer, { width, height }, top]}>
+            <Still sex={sex} cell={cell} coord={coord} width={width} height={height} />
+          </Animated.View>
+        </>
+      )}
       {badge && small ? (
         <Text style={[s.caption, { top: height + 2 }, badge === '예상' && s.badgeEstTxt]} maxFontSizeMultiplier={1.2}>{badge}</Text>
       ) : badge ? (

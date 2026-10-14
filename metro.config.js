@@ -8,6 +8,8 @@ const { FileStore } = require('metro-cache');
 const config = getDefaultConfig(__dirname);
 
 config.resolver.unstable_enablePackageExports = true;
+// 3D 아바타 모델(assets/avatar/*.glb) — scripts/build-avatar-3d.py 가 만든다
+config.resolver.assetExts = [...config.resolver.assetExts, 'glb'];
 config.resolver.unstable_conditionNames = ['react-native', 'browser', 'require', 'import'];
 
 // 변환 캐시를 이 프로젝트 안에 둔다. 기본값(맥의 임시 폴더)은 모든 프로젝트가 같이 써서,

@@ -22,6 +22,7 @@ import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { AvatarView } from '../../src/components/body/AvatarView';
 import { kg, pct1 } from '../../src/components/body/format';
 import { projectNow } from '../../src/components/body/progress';
+import { coordOf } from '../../src/components/body/avatar3d/morph';
 import { cellWithHysteresis, toCoord, updateComp } from '../../src/utils/bodyComp';
 import { STATUS_TEXT, checkinStatus, expectedPoint, progressPct } from '../../src/utils/projection';
 import { checkInbodyDate, parseNum, trendWeight, validateBodyFat, validateField, validateSmm, validateWaist } from '../../src/utils/body';
@@ -164,12 +165,15 @@ export default function CheckinScreen() {
 
           <View style={s.trio}>
             {[
-              { cell: baseCell, badge: '시작' as const, txt: `${kg(project.input.weightKg)}kg` },
-              { cell: now.nowCell, badge: '지금' as const, txt: `${kg(now.nowComp.fmKg + now.nowComp.ffmKg)}kg` },
-              { cell: endCell, badge: '예상' as const, txt: `${kg(project.end.weightKg)}kg` },
+              { cell: baseCell, badge: '시작' as const, txt: `${kg(project.input.weightKg)}kg`,
+                coord: project.track[0] ? coordOf(sex, project.track[0].bfPct, project.track[0].nffmi) : undefined },
+              { cell: now.nowCell, badge: '지금' as const, txt: `${kg(now.nowComp.fmKg + now.nowComp.ffmKg)}kg`,
+                coord: coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi) },
+              { cell: endCell, badge: '예상' as const, txt: `${kg(project.end.weightKg)}kg`,
+                coord: coordOf(sex, project.end.bfPct, project.end.nffmi) },
             ].map((x) => (
               <View key={x.badge} style={s.col}>
-                <AvatarView sex={sex} cell={x.cell} width={colW} badge={x.badge} />
+                <AvatarView sex={sex} cell={x.cell} coord={x.coord} width={colW} badge={x.badge} />
                 <Text style={s.colTxt}>{x.txt}</Text>
               </View>
             ))}

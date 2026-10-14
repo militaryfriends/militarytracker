@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale, haptic } from '../../ui';
 import { archetypesFor, type Archetype } from '../../data/archetypes';
+import { has3D } from '../body/avatar3d/Avatar3D';
 import type { GoalPick } from '../../utils/bodyAnalysis';
 import type { Sex } from '../../utils/bodyComp';
 import { AvatarView } from '../body/AvatarView';
@@ -90,10 +91,13 @@ export function StepGoal({
         <Pressable style={s.scrim} onPress={() => setPreview(null)} accessibilityRole="button" accessibilityLabel="닫기">
           {preview ? (
             <View style={s.sheet}>
-              <AvatarView sex={sex} cell={preview.cell} width={Math.min(260, width - 80)} badge="목표" />
+              {/* 3D 를 돌리는 손가락이 바깥(닫기)으로 새지 않게 아바타가 터치를 가져간다 */}
+              <View onStartShouldSetResponder={() => true}>
+                <AvatarView sex={sex} cell={preview.cell} width={Math.min(260, width - 80)} badge="목표" live intro />
+              </View>
               <Text style={s.sheetName}>{preview.name}</Text>
               <Text style={s.sheetLine}>{preview.line} · 체지방률 약 {preview.bfPct}%</Text>
-              <Text style={s.sheetHint}>눌러서 닫기</Text>
+              <Text style={s.sheetHint}>{has3D(sex) ? '좌우로 밀어 돌려 보기 · 바깥을 누르면 닫혀요' : '눌러서 닫기'}</Text>
             </View>
           ) : null}
         </Pressable>

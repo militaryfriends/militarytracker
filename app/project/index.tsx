@@ -5,8 +5,8 @@
  * 결제 버튼 바로 위에 프로 혜택을 "이 몸을 만드는 도구"로 나열한다.
  * 거절해도 분석은 저장되고 홈의 "내 변화 프로젝트" 카드에서 이 화면으로 다시 온다.
  */
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,9 @@ import { saveAnalysis, setAnalysisDecision } from '../../src/services/bodyServic
 import { buildLocalPlan } from '../../src/utils/planner';
 import { showAlert } from '../../src/utils/alert';
 import { ProjectCard } from '../../src/components/body/ProjectCard';
+import { ChangePreview } from '../../src/components/body/ChangePreview';
+import { analyzeBody } from '../../src/utils/bodyAnalysis';
+import type { MonthPoint } from '../../src/utils/projection';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
 import { profileFromAnalysis } from '../../src/components/body/format';
 import { EmptyState, useSafeBack } from '../../src/components/ui';
@@ -48,6 +51,19 @@ export default function ProjectsScreen() {
   const { pro, sub } = useEntitlement();
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { width } = useWindowDimensions();
+
+  // 저장된 분석에는 프로젝트별 트랙이 없다 — 같은 입력 · 같은 엔진이면 같은 결과라 다시 계산해 달마다 몸을 보여 준다
+  const tracks = useMemo<Record<string, MonthPoint[]> | null>(() => {
+    if (!a) return null;
+    try {
+      const core = analyzeBody(a.input, { mode: a.goal.mode, archetypeId: a.goal.archetypeId });
+      if (core.engineVersion !== a.engineVersion) return null;
+      return Object.fromEntries(core.projects.map((p) => [p.id, p.track]));
+    } catch {
+      return null;
+    }
+  }, [a]);
 
   if (!a) {
     return (
@@ -119,6 +135,22 @@ export default function ProjectsScreen() {
         <View style={s.acc}>
           <AccuracyMeter accuracy={a.comp.accuracy} compact />
         </View>
+
+        {(() => {
+          const cur = a.projects.find((p) => p.id === sel) ?? a.projects[0];
+          return (
+            <ChangePreview
+              key={cur.id}
+              sex={a.input.sex}
+              title={cur.name}
+              months={cur.months}
+              start={{ cell: a.cell, coord: a.coord, weightKg: a.input.weightKg, bfPct: a.comp.bfPct }}
+              end={cur.end}
+              track={tracks?.[cur.id] ?? null}
+              width={Math.min(width, 520) - 36}
+            />
+          );
+        })()}
 
         {a.projects.map((p) => (
           <ProjectCard
