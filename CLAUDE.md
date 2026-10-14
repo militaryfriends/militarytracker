@@ -100,6 +100,11 @@ git fetch origin        # origin/main 추적 참조 동기화 (위 push 는 갱�
 원격 URL 은 일부러 HTTPS 그대로 두었다 — 맥에서 쓰던 `git push` 방식을 바꾸지 않기 위해서다.
 키 폐기는 GitHub 저장소 Settings → Deploy keys 에서 삭제.
 
+커밋 작성자는 **`Sunwoong Shin <pobredward@gmail.com>`** (GitHub 에 밀프 개발자로 등록된 계정, 2026-10-15 부터).
+VM 에는 git 사용자 설정이 없으니 `git -c user.name="Sunwoong Shin" -c user.email="pobredward@gmail.com" commit …` 로 한다.
+VM 은 연결 폴더에서 파일을 지울 수 없어 git 이 `.lock` 파일을 남길 수 있다 — 끝나고 `find .git -name '*.lock'` 로 확인해
+`.git/stale-…` 로 mv 해 둔다(남겨 두면 맥에서 git 이 "File exists" 로 멈춘다).
+
 ## 웹 배포 (Claude 세션용)
 
 - 맥 `node_modules` 는 macOS용이라 리눅스 VM 에서 `expo export` 가 안 된다 → 클라우드 컨테이너에서 같은 커밋으로
