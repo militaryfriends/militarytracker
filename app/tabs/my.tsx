@@ -326,6 +326,20 @@ export default function MyScreen() {
           <Text style={s.subChev}>›</Text>
         </TouchableOpacity>
 
+        {user?.role === 'admin' ? (
+          <>
+            <Text style={s.sectionLabel}>관리자</Text>
+            <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => router.push('/profile/waitlist')}
+              accessibilityRole="button" accessibilityLabel="대기자 명단 등록">
+              <View style={{ flex: 1 }}>
+                <Text style={s.subTitle}>대기자 명단 등록</Text>
+                <Text style={s.subSub}>Tally CSV → 3개월 · 1개월 프리미엄 자동 지급</Text>
+              </View>
+              <Text style={s.subChev}>›</Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
+
         {/* 화면 · 진동 */}
         <Text style={s.sectionLabel}>화면</Text>
         <View style={s.card}>

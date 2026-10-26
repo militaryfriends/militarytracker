@@ -27,6 +27,8 @@ export interface Subscription {
   /** 무료 체험을 이미 사용했는지 — 재발급 방지 */
   trialUsed: boolean;
   updatedAt: string;
+  /** 대기자 명단 확인 — claimed(혜택 받음) · none(명단에 없음) · 없음(확인 전). 서버만 쓴다 */
+  waitlist?: 'claimed' | 'none';
 }
 
 /**

@@ -137,6 +137,27 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - 1.1.0 이하 빌드에는 expo-updates 가 없어 코드 푸시를 받지 못한다.
 - 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
 
+## 구독 · 결제 · 대기자 (2026-10-26)
+
+- **요금**: 프리미엄 월 ₩9,900 하나(`mt_pro_monthly`), 체험 30일(`TRIAL_DAYS` 앱 · 서버 두 곳).
+- **스토어 결제 = RevenueCat** (`react-native-purchases`, 1.0.0 빌드부터 네이티브에 포함). 앱 `src/services/storeIap.native.ts`
+  (웹은 `storeIap.ts` 빈 자리), 공개 SDK 키는 `src/config/revenuecat.ts` — **비어 있으면 가격표 · 구매 · 복원이 숨는다**.
+  키를 넣고 코드 푸시하면 열린다. 구매 · 복원 뒤 앱이 `subApplyReceipt` 를 부르면 서버가 RevenueCat REST 에 uid 로 직접 물어
+  `sub` 를 쓴다(`functions/src/revenuecat.ts`, 앱이 보낸 값은 안 믿음). 비밀 키는 Firestore `serverConfig/revenuecat { secretKey }`
+  (Secret Manager 를 쓰면 키가 없을 때 배포 전체가 실패해서). 기간이 지난 스토어 구독은 `subStatus` 가 RevenueCat 에 다시 물어 갱신.
+  RevenueCat 대시보드: entitlement `pro`, offering `default` 에 월간 패키지(상품 `mt_pro_monthly`).
+- **대기자 명단**(Tally 폼: 이름 · 이메일 · 휴대폰) — `functions/src/waitlist.ts`. 명단은 `waitlist/{sha256}` 해시만.
+  관리자 MY › 관리자 › 대기자 명단 등록(CSV 붙여넣기, 기준일 이전 90일 · 이후 30일) → `subGrant({ waitlist })`.
+  인증된 가입 이메일이 명단에 있으면 접속 때 `subStatus({ claim: true })` 로 자동 지급(`sub.waitlist` claimed · none).
+  번호만 낸 사람은 **웹** 구독 화면 코드 칸에 번호(`subRedeemPromo` 가 번호를 알아본다). 앱에는 코드 칸을 두지 않는다(Apple 3.1.1).
+- 새 콜러블을 만들지 않고 기존 콜러블에 붙였다(새 콜러블은 공개 호출 설정을 콘솔에서 따로 켜야 해서).
+
+## AI 코치 식단 카드 · WARNING
+
+- `aiCoach` 는 JSON `{ text, meal, warning }` 을 받아 `{ reply, meal, warning, quota }` 를 돌려준다(`functions/src/coachMeal.ts`).
+  음식 kcal · 단백질은 서버 식품표로 다시 계산(표에 없는 음식만 AI 값 + approx), "목표의 N%" 는 앱이 보낸 `dayKcal`(엔진 값) 기준.
+  화면은 `src/components/CoachCards.tsx`. 식품표에 음식을 더하면 카드 숫자가 더 정확해진다.
+
 ## 운동 영상 (media/README.md)
 
 영상은 앱에 넣지 않는다. 버킷에 올리고 앱은 실행 시 `exercise/manifest.json` 을 읽는다 —

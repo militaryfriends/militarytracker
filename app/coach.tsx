@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../src/theme';
 import { Screen, TopBar, useSafeBack } from '../src/components/ui';
 import { ProLock } from '../src/components/ProLock';
+import { MealCard, WarningCard } from '../src/components/CoachCards';
 import { useAppStore } from '../src/stores/appStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useEntitlement } from '../src/hooks/useEntitlement';
@@ -25,9 +26,12 @@ import {
   askCoach, AIUnavailable, SubscriptionRequired, QuotaExceeded, CoachQuota, CoachMessage,
 } from '../src/services/aiService';
 
+/** 처음 화면의 빠른 질문 — 누르면 바로 보낸다 */
+const QUICK = ['지금 뭐 먹어야 해?', '운동 후에 뭐 먹을까?', '오늘 운동 뭐 하지?'];
+
 const WELCOME: CoachMessage = {
   role: 'assistant',
-  content: '안녕하세요, AI 코치입니다.\n루틴 조정, 대체 운동, 식단 등 무엇이든 물어보세요.',
+  content: '안녕하세요, AI 코치입니다.\n"지금 뭐 먹어야 해?"처럼 물어보면 한 끼를 g 단위로 짜 드립니다. 루틴 조정 · 대체 운동도 물어보세요.',
 };
 
 export default function CoachScreen() {
@@ -82,20 +86,23 @@ export default function CoachScreen() {
     ].join('\n');
   }, [profile, weights, logs, plan, bodyProject]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(preset?: string) {
+    const text = (preset ?? input).trim();
     if (!text || chatBusy) return;
     if (!canCoach) {
       router.push('/subscribe?f=ai_coach');
       return;
     }
     if (coachEmpty) return;
-    setInput('');
+    if (!preset) setInput('');
     addChat({ role: 'user', content: text });
     setChatBusy(true);
     try {
-      const { reply, quota: next } = await askCoach([...chat, { role: 'user', content: text }], context());
-      addChat({ role: 'assistant', content: reply });
+      const st = calcBodyStats(profile, weights, bodyProject);
+      const { reply, meal, warning, quota: next } = await askCoach(
+        [...chat, { role: 'user', content: text }], context(), st?.kcal,
+      );
+      addChat({ role: 'assistant', content: reply, meal, warning });
       if (next) setQuota(next);
     } catch (e) {
       if (e instanceof SubscriptionRequired) {
@@ -164,10 +171,24 @@ export default function CoachScreen() {
               item.role === 'user' ? (
                 <View style={s.msgU}><Text style={s.msgUTxt}>{item.content}</Text></View>
               ) : (
-                <View style={s.msgA}><Text style={s.msgATxt}>{item.content}</Text></View>
+                <View>
+                  <View style={s.msgA}><Text style={s.msgATxt}>{item.content}</Text></View>
+                  {item.meal ? <MealCard meal={item.meal} /> : null}
+                  {item.warning ? <WarningCard text={item.warning} /> : null}
+                </View>
               )
             }
           />
+          {!chat.length && !coachEmpty ? (
+            <View style={s.quick}>
+              {QUICK.map((q) => (
+                <TouchableOpacity key={q} activeOpacity={0.7} style={s.chip} onPress={() => send(q)}
+                  disabled={chatBusy} accessibilityRole="button" accessibilityLabel={q}>
+                  <Text style={s.chipTxt}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
           <View style={[s.inRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <TextInput
               style={[s.input, coachEmpty && s.inputOff]}
@@ -175,7 +196,7 @@ export default function CoachScreen() {
               placeholderTextColor={colors.placeholder}
               value={input}
               onChangeText={setInput}
-              onSubmitEditing={send}
+              onSubmitEditing={() => send()}
               returnKeyType="send"
               blurOnSubmit={false}
               editable={!coachEmpty && !chatBusy}
@@ -185,7 +206,7 @@ export default function CoachScreen() {
             />
             <TouchableOpacity activeOpacity={0.7}
               style={[s.send, (coachEmpty || !input.trim() || chatBusy) && s.sendOff]}
-              onPress={send}
+              onPress={() => send()}
               disabled={coachEmpty || !input.trim() || chatBusy}
               accessibilityRole="button"
               accessibilityLabel="보내기"
@@ -202,6 +223,12 @@ export default function CoachScreen() {
 }
 
 const s = themed(() => StyleSheet.create({
+  quick: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
+  chip: {
+    borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.panel,
+    borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  chipTxt: { fontSize: 13, color: colors.ink, fontWeight: '600' },
   clearTxt: { fontSize: 12, color: colors.mid, fontWeight: '600' },
   lockWrap: { padding: 20 },
   list: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },

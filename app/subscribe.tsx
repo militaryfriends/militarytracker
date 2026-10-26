@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
@@ -13,7 +13,7 @@ import {
   PRODUCTS, TRIAL_DAYS, PRO_NAME, Feature, LEGAL,
 } from '../src/config/entitlements';
 import {
-  purchase, restore, startTrial, redeemPromo, canPurchase,
+  purchase, restore, startTrial, redeemPromo, canPurchase, getOfferings,
   BillingUnavailable, PromoError, EmailUnverified, STORE_BILLING_READY,
 } from '../src/services/billingService';
 import { resendVerification } from '../src/services/authService';
@@ -46,12 +46,17 @@ export default function SubscribeScreen() {
   const storeReady = STORE_BILLING_READY && Platform.OS !== 'web';
 
   const focus = PRO_FEATURES.includes(f as Feature) ? (f as Feature) : null;
-  // 기본 요금제: 프로젝트가 9개월 이상이면 연간(월간 합계가 더 비싸다), 6개월 이하면 월간. 둘 다 보여 준다
-  const [picked, setPicked] = useState(
-    chosen
-      ? (chosen.months >= 9 ? 'mt_pro_yearly' : 'mt_pro_monthly')
-      : PRODUCTS.find((p) => p.best)?.id ?? PRODUCTS[0].id,
-  );
+  // 요금제는 월간 하나(₩9,900). 스토어 가격을 받으면 그 값으로 바꿔 보여 준다
+  const [products, setProducts] = useState(PRODUCTS);
+  const [picked, setPicked] = useState(PRODUCTS.find((p) => p.best)?.id ?? PRODUCTS[0].id);
+  useEffect(() => {
+    if (!storeReady || pro) return;
+    let alive = true;
+    getOfferings().then((list) => { if (alive) setProducts(list); }).catch(() => {});
+    return () => { alive = false; };
+  }, [storeReady, pro]);
+  // 코드 · 대기자 휴대폰 번호 입력은 웹에서만 (앱 안의 자체 잠금 해제 수단은 스토어 정책 위반)
+  const codeOpen = Platform.OS === 'web';
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
 
@@ -152,7 +157,7 @@ export default function SubscribeScreen() {
         {!pro && storeReady && (
           <>
             <SectionLabel>플랜 선택</SectionLabel>
-            {PRODUCTS.map((p) => {
+            {products.map((p) => {
               const on = picked === p.id;
               return (
                 <TouchableOpacity
@@ -206,24 +211,25 @@ export default function SubscribeScreen() {
           </Text>
         )}
 
-        {!pro && storeReady && (
+        {!pro && codeOpen && (
           <>
-            <SectionLabel>코드가 있다면</SectionLabel>
+            <SectionLabel>코드 · 대기자 명단 휴대폰 번호</SectionLabel>
+            <Text style={s.codeHint}>휴대폰 번호로 대기자 명단을 신청했다면 그 번호를 넣으면 프리미엄이 적용됩니다.</Text>
             <View style={s.codeRow}>
               <TextInput
                 style={s.codeInput}
-                placeholder="프로모션 코드"
+                placeholder="코드 또는 010-0000-0000"
                 placeholderTextColor={colors.placeholder}
                 value={code}
                 onChangeText={setCode}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                accessibilityLabel="프로모션 코드"
+                accessibilityLabel="프로모션 코드 또는 휴대폰 번호"
               />
               <TouchableOpacity activeOpacity={0.7}
                 style={[s.codeBtn, !code.trim() && s.codeBtnOff]}
                 disabled={!!busy || !code.trim()}
-                onPress={() => run('promo', () => redeemPromo(code), '코드가 등록되었습니다.')}
+                onPress={() => run('promo', () => redeemPromo(code), '프리미엄이 적용되었습니다.')}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !!busy || !code.trim() }}
               >
@@ -324,6 +330,7 @@ const s = themed(() => StyleSheet.create({
   comingSoon: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 12, lineHeight: 18 },
 
   codeRow: { flexDirection: 'row', gap: 8 },
+  codeHint: { fontSize: 12, color: colors.mid, lineHeight: 18, marginBottom: 8 },
   codeInput: {
     flex: 1, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line2,
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.ink,

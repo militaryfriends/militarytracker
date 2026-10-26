@@ -256,8 +256,11 @@ export default function SessionPlayer() {
                 <Text style={s.restTime} maxFontSizeMultiplier={1.2}>{fmtClock(rest)}</Text>
               </View>
               <View style={s.restBtns}>
-                <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={() => startRest(rest + 30)} accessibilityRole="button" accessibilityLabel="휴식 30초 추가">
-                  <Text style={s.skipTxt}>+30초</Text>
+                <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={() => (rest > 15 ? startRest(rest - 15) : stopRest())} accessibilityRole="button" accessibilityLabel="휴식 15초 줄이기">
+                  <Text style={s.skipTxt}>−15초</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={() => startRest(rest + 15)} accessibilityRole="button" accessibilityLabel="휴식 15초 늘리기">
+                  <Text style={s.skipTxt}>+15초</Text>
                 </TouchableOpacity>
                 <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={stopRest} accessibilityRole="button" accessibilityLabel="휴식 건너뛰기">
                   <Text style={s.skipTxt}>건너뛰기</Text>

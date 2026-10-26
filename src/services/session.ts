@@ -24,11 +24,13 @@ import {
 } from './authService';
 import { getWorkoutLogs, getWorkoutLogsSince, getWeights, getWeightsSince } from './workoutService';
 import { refreshSub } from './billingService';
+import { logOutStore } from './storeIap';
 import { flushPendingLogs, mergePendingIntoLogs } from './sync';
 import { fetchActiveProject, fetchCheckins, fetchLatestAnalysis, saveAnalysis } from './bodyService';
 import { useAuthStore } from '../stores/authStore';
 import { useAppStore, waitForHydration } from '../stores/appStore';
 import { isProSub } from '../utils/subscription';
+import { showAlert } from '../utils/alert';
 import { latestServerCreatedAt, mergeByCreatedAt, replaceWithFresh, userSignature } from '../utils/merge';
 import type { User } from '../types';
 
@@ -136,6 +138,8 @@ export function resumeSession(): void {
 /** 로그아웃 — 구독을 먼저 끊는다(로그아웃 뒤 권한 오류가 구독으로 날아오지 않게) */
 export async function logoutUser(): Promise<void> {
   endSession();
+  // 스토어 결제 계정도 떼어 둔다 — 다음 로그인 계정에 이 사람의 구매가 붙지 않게
+  void logOutStore();
   try {
     await logout();
   } catch (e) {
@@ -237,6 +241,19 @@ function greet(u: User) {
     touchLastLogin(u.uid).catch(() => {});
   }
   const sub = u.sub;
+  // 대기자 명단 — 인증된 가입 이메일이 명단에 있으면 서버가 프리미엄을 준다(계정당 한 번 확인)
+  if (!sub?.waitlist && auth.currentUser?.uid === u.uid && auth.currentUser.emailVerified) {
+    refreshSub({ claim: true })
+      .then((next) => {
+        if (!next || useAuthStore.getState().user?.uid !== u.uid) return;
+        useAuthStore.getState().patchUser({ sub: next });
+        if (next.waitlist === 'claimed') {
+          showAlert('대기자 명단 혜택', '사전 신청해 주셔서 감사합니다. 프리미엄이 적용되었습니다.');
+        }
+      })
+      .catch(() => {});
+    return;
+  }
   if (sub && sub.tier === 'pro' && !isProSub(sub) && sub.status !== 'expired') {
     // 서버가 정리하면 새 sub 가 구독으로 들어온다. 콜러블 응답도 바로 반영한다.
     refreshSub()

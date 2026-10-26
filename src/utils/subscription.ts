@@ -56,6 +56,7 @@ export function normalizeSub(raw: unknown): Subscription {
     productId: typeof d.productId === 'string' ? d.productId : null,
     trialUsed: d.trialUsed === true,
     updatedAt: typeof d.updatedAt === 'string' ? d.updatedAt : '',
+    ...(d.waitlist === 'claimed' || d.waitlist === 'none' ? { waitlist: d.waitlist } : {}),
   };
 }
 

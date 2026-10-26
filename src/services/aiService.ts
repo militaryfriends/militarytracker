@@ -224,9 +224,22 @@ function normalizeTarget(raw: unknown): DietPlan['target'] | null {
 }
 
 // ─── 코치 ──────────────────────────────────────────────────────────────────
+/** 코치 식단 카드 — kcal · 단백질은 서버가 식품표로 다시 계산한 값 (functions/src/coachMeal.ts) */
+export interface CoachMealItem { n: string; q: number; u: string; kcal: number; p: number; approx?: boolean }
+export interface CoachMeal {
+  t: string;
+  pct: number;
+  items: CoachMealItem[];
+  kcal: number;
+  p: number;
+  dayKcal?: number;
+}
+
 export interface CoachMessage {
   role: 'user' | 'assistant';
   content: string;
+  meal?: CoachMeal | null;
+  warning?: string | null;
 }
 
 /** 남은 코치 대화 횟수 — 서버가 계산해서 내려 준다 (앱은 표시만) */
@@ -239,18 +252,33 @@ export interface CoachQuota {
 
 export interface CoachReply {
   reply: string;
+  meal?: CoachMeal | null;
+  warning?: string | null;
   quota?: CoachQuota;
 }
 
+const fmtQ = (i: CoachMealItem) => `${i.n} ${i.q}${i.u}`;
+
+/** 서버로 보내는 대화 — 카드 내용은 글로 붙여 코치가 앞서 제안한 식단을 기억하게 한다 */
+const toWire = (m: CoachMessage) => ({
+  role: m.role,
+  content: [
+    m.content,
+    m.meal ? `[제안한 ${m.meal.t}: ${m.meal.items.map(fmtQ).join(', ')} · ${m.meal.kcal}kcal]` : '',
+    m.warning ? `[경고: ${m.warning}]` : '',
+  ].filter(Boolean).join('\n'),
+});
+
 export async function askCoach(
   messages: CoachMessage[],
-  context: string
+  context: string,
+  dayKcal?: number,
 ): Promise<CoachReply> {
   try {
     const call = httpsCallable(functions, 'aiCoach', { timeout: CALL_TIMEOUT_MS });
-    const res = await call({ messages: messages.slice(-20), context });
-    const d = res.data as { reply?: string; quota?: CoachQuota };
-    if (d?.reply) return { reply: d.reply, quota: d.quota };
+    const res = await call({ messages: messages.slice(-20).map(toWire), context, dayKcal });
+    const d = res.data as CoachReply;
+    if (d?.reply) return { reply: d.reply, meal: d.meal ?? null, warning: d.warning ?? null, quota: d.quota };
     throw new AIUnavailable();
   } catch (e) {
     const need = asSubRequired(e);

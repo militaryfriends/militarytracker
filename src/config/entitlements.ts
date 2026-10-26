@@ -75,19 +75,11 @@ export interface SubProduct {
 }
 
 export const PRODUCTS: readonly SubProduct[] = [
-  { id: 'mt_pro_monthly', label: '월간', price: '₩4,900', period: '/월' },
-  {
-    id: 'mt_pro_yearly',
-    label: '연간',
-    price: '₩39,000',
-    period: '/년',
-    note: '월 3,250원 꼴 · 33% 저렴',
-    best: true,
-  },
+  { id: 'mt_pro_monthly', label: '월간', price: '₩9,900', period: '/월', best: true },
 ];
 
 /** 무료 체험 일수. 0 이면 체험 없음 */
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 30;
 
 export const PRO_NAME = 'MILITARYTRACKER PRO';
 

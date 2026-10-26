@@ -6,6 +6,8 @@ import { colors, themed, useThemeMode } from '../../src/theme';
 import { useAppStore } from '../../src/stores/appStore';
 import SessionPlayer from '../../src/components/SessionPlayer';
 import SessionSummary from '../../src/components/SessionSummary';
+import { useEffect } from 'react';
+import { scheduleComeback } from '../../src/services/reminders';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -31,6 +33,11 @@ export default function TabLayout() {
   const session = useAppStore((s) => s.session);
   const summary = useAppStore((s) => s.summary);
   const overlay = !!session || !!summary;
+  // 마지막 운동이 바뀔 때마다 "다시 시작" 알림을 다시 예약 (첫 운동을 마친 뒤 권한을 묻는다)
+  const lastAt = useAppStore((s) => s.logs[0]?.createdAt ?? null);
+  useEffect(() => {
+    if (lastAt) void scheduleComeback(lastAt, true);
+  }, [lastAt]);
   const insets = useSafeAreaInsets();
   // height/paddingBottom 을 고정하면 react-navigation 의 inset 계산을 덮어써 홈 인디케이터 위에 라벨이 앉는다
   const bottomPad = Math.max(insets.bottom, 10);

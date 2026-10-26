@@ -21,6 +21,8 @@ import { refreshIdToken } from './authService';
 import type { Subscription } from '../types';
 import { normalizeSub } from '../utils/subscription';
 import { PRODUCTS, SubProduct } from '../config/entitlements';
+import { auth } from './firebase';
+import { storeIapReady, loadPackages, buyPackage, restoreStore, StorePackage } from './storeIap';
 
 export class BillingUnavailable extends Error {}
 export class PromoError extends Error {}
@@ -28,27 +30,57 @@ export class PromoError extends Error {}
 export class EmailUnverified extends Error {}
 
 /**
- * ⚠️ 결제 SDK(RevenueCat/expo-iap)를 붙이면 true 로 바꾼다.
- * false 인 동안 구독 화면은 가격표·구매·복원·코드 입력을 숨긴다 — 동작하지 않는
- * 결제 UI 와 앱 자체 코드로 유료 기능을 여는 UI 는 스토어 심사 거절 사유다(Apple 3.1.1/2.1).
+ * 결제 SDK(RevenueCat) 키가 들어 있으면 true (src/config/revenuecat.ts).
+ * false 인 동안 구독 화면은 가격표·구매·복원을 숨긴다 — 동작하지 않는 결제 UI 는 심사 거절 사유다(Apple 2.1).
+ * 앱 안에 자체 코드 입력 칸은 두지 않는다(Apple 3.1.1) — 코드 · 대기자 휴대폰 번호는 웹에서만.
  */
-export const STORE_BILLING_READY = false;
+export const STORE_BILLING_READY = storeIapReady();
+
+const uidOrThrow = (): string => {
+  const u = auth.currentUser?.uid;
+  if (!u) throw new BillingUnavailable('로그인이 필요합니다.');
+  return u;
+};
+
+let packages: StorePackage[] = [];
 
 const msg = (e: unknown, fallback: string): string => {
   const m = (e as FunctionsError)?.message;
   return typeof m === 'string' && m.trim() ? m : fallback;
 };
 
-/** 스토어에서 받아온 상품 목록. 아직 결제 SDK 가 없으면 기본값을 그대로 쓴다. */
+/** 스토어에서 받아온 상품 목록(가격은 스토어 값). 결제 SDK 가 없거나 못 받으면 기본값 */
 export async function getOfferings(): Promise<SubProduct[]> {
-  return [...PRODUCTS];
+  if (!canPurchase()) return [...PRODUCTS];
+  try {
+    packages = await loadPackages(uidOrThrow());
+  } catch (e) {
+    console.warn('[billing] offerings', e);
+    return [...PRODUCTS];
+  }
+  if (!packages.length) return [...PRODUCTS];
+  return PRODUCTS.map((p) => {
+    const hit = packages.find((k) => k.productId === p.id || k.productId.startsWith(`${p.id}:`));
+    return hit ? { ...p, price: hit.price } : p;
+  });
 }
 
-/** 서버가 보는 현재 구독 상태 */
-export async function refreshSub(): Promise<Subscription | null> {
+/** 서버가 RevenueCat 에 직접 확인해 sub 를 기록한다 */
+async function applyStore(): Promise<Subscription | null> {
+  try {
+    const call = httpsCallable(functions, 'subApplyReceipt', { timeout: 30_000 });
+    const res = await call({ platform: Platform.OS });
+    return normalizeSub((res.data as { sub?: unknown })?.sub);
+  } catch (e) {
+    throw new BillingUnavailable(msg(e, '구독 정보를 확인하지 못했습니다. 잠시 후 구매 복원을 눌러주세요.'));
+  }
+}
+
+/** 서버가 보는 현재 구독 상태. claim: 대기자 명단(가입 이메일)도 확인한다 */
+export async function refreshSub(opts?: { claim?: boolean }): Promise<Subscription | null> {
   try {
     const call = httpsCallable(functions, 'subStatus', { timeout: 15_000 });
-    const res = await call({});
+    const res = await call(opts?.claim ? { claim: true } : {});
     return normalizeSub((res.data as { sub?: unknown })?.sub);
   } catch {
     // 함수 미배포·오프라인 — 기존 상태를 유지한다
@@ -93,18 +125,26 @@ export function canPurchase(): boolean {
   return STORE_BILLING_READY;
 }
 
-export async function purchase(_productId: string): Promise<Subscription> {
-  if (Platform.OS === 'web') {
-    throw new BillingUnavailable('구독은 앱에서만 결제할 수 있습니다. iOS·Android 앱에서 진행해주세요.');
+export async function purchase(productId: string): Promise<Subscription | null> {
+  if (!canPurchase()) {
+    throw new BillingUnavailable(
+      Platform.OS === 'web'
+        ? '구독은 앱에서만 결제할 수 있습니다. iOS·Android 앱에서 진행해주세요.'
+        : '스토어 결제가 아직 연결되지 않았습니다. 지금은 무료 체험으로 이용할 수 있습니다.'
+    );
   }
-  throw new BillingUnavailable(
-    '스토어 결제가 아직 연결되지 않았습니다. 지금은 무료 체험이나 코드로 이용할 수 있습니다.'
-  );
-  // 붙일 때:
-  //   const result = await IAP.purchase(_productId);
-  //   const call = httpsCallable(functions, 'subApplyReceipt');
-  //   const res = await call({ platform: Platform.OS, receipt: result.transactionReceipt });
-  //   return normalizeSub((res.data as { sub?: unknown })?.sub);
+  const uid = uidOrThrow();
+  if (!packages.length) packages = await loadPackages(uid);
+  const pkg = packages.find((k) => k.productId === productId || k.productId.startsWith(`${productId}:`)) ?? packages[0];
+  if (!pkg) throw new BillingUnavailable('구독 상품을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+  let r: 'done' | 'cancelled';
+  try {
+    r = await buyPackage(uid, pkg);
+  } catch (e) {
+    throw new BillingUnavailable(msg(e, '결제를 완료하지 못했습니다.'));
+  }
+  if (r === 'cancelled') return null;
+  return applyStore();
 }
 
 export async function restore(): Promise<Subscription | null> {
@@ -112,5 +152,10 @@ export async function restore(): Promise<Subscription | null> {
     // 결제 SDK 가 없어도 서버 기록(코드·관리자 지급)은 되살릴 수 있다
     return refreshSub();
   }
-  throw new BillingUnavailable('복원 기능이 아직 연결되지 않았습니다.');
+  try {
+    await restoreStore(uidOrThrow());
+  } catch (e) {
+    throw new BillingUnavailable(msg(e, '스토어에서 구매 내역을 불러오지 못했습니다.'));
+  }
+  return applyStore();
 }

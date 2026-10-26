@@ -37,6 +37,8 @@ export interface Subscription {
   productId: string | null;
   trialUsed: boolean;
   updatedAt: string;
+  /** 대기자 명단 확인 결과 — claimed(혜택 받음) · none(명단에 없음). 없으면 아직 확인 전 */
+  waitlist?: 'claimed' | 'none';
 }
 
 /** 형식이 깨진 expiresAt 에 쓰는 "이미 만료" 값 */
@@ -77,6 +79,7 @@ export function normalizeSub(raw: unknown): Subscription {
     productId: typeof d.productId === 'string' ? d.productId : null,
     trialUsed: d.trialUsed === true,
     updatedAt: typeof d.updatedAt === 'string' ? d.updatedAt : '',
+    ...(d.waitlist === 'claimed' || d.waitlist === 'none' ? { waitlist: d.waitlist } : {}),
   };
 }
 

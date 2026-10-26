@@ -4,6 +4,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
+import { FONT } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -146,6 +147,14 @@ export default function DietScreen() {
           <MacroCard value={`${st.protein}`} unit="g" label="단백질" />
           <MacroCard value={`${st.carb}`} unit="g" label="탄수화물" />
           <MacroCard value={`${st.fat}`} unit="g" label="지방" />
+        </View>
+        {/* 계산 근거 — 감이 아니라 계산으로: 유지 칼로리 ± 목표 조정 = 하루 목표 */}
+        <View style={s.calcRow} accessible accessibilityLabel={`유지 칼로리 ${st.tdee}, 조정 ${st.kcal - st.tdee}, 하루 목표 ${st.kcal}킬로칼로리`}>
+          <View style={s.calcCell}><Text style={s.calcNum}>{st.tdee.toLocaleString()}</Text><Text style={s.calcLabel}>유지 칼로리</Text></View>
+          <Text style={s.calcOp}>{st.kcal - st.tdee >= 0 ? '+' : '−'}</Text>
+          <View style={s.calcCell}><Text style={s.calcNum}>{Math.abs(st.kcal - st.tdee).toLocaleString()}</Text><Text style={s.calcLabel}>{st.kcal - st.tdee >= 0 ? '증량 조정' : '감량 조정'}</Text></View>
+          <Text style={s.calcOp}>=</Text>
+          <View style={s.calcCell}><Text style={[s.calcNum, s.calcHi]}>{st.kcal.toLocaleString()}</Text><Text style={s.calcLabel}>하루 목표</Text></View>
         </View>
         <Text style={s.tdeeTxt}>
           유지 칼로리(TDEE) 약 {st.tdee}kcal · Mifflin-St Jeor × 활동계수 {st.activityFactor}(주 {profile.days}일) · BMI {st.bmi} ({st.bodyType})
@@ -293,6 +302,16 @@ const s = themed(() => StyleSheet.create({
   mboxVal: { fontSize: 19, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   mboxUnit: { fontSize: 11, fontWeight: '600', color: colors.mid },
   mboxLabel: { fontSize: 10, color: colors.muted, marginTop: 4 },
+  calcRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line, borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 12, marginTop: 4, marginBottom: 8,
+  },
+  calcCell: { alignItems: 'center', flex: 1 },
+  calcNum: { fontSize: 18, color: colors.mid, fontFamily: FONT.num },
+  calcHi: { color: colors.ink, fontWeight: '700' },
+  calcLabel: { fontSize: 10, color: colors.muted, marginTop: 2 },
+  calcOp: { fontSize: 16, color: colors.muted, paddingHorizontal: 2 },
   tdeeTxt: { fontSize: 11, color: colors.muted, lineHeight: 17, marginBottom: 6 },
 
   staleBox: {
