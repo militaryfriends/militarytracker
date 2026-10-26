@@ -139,6 +139,11 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - 1.1.0 이하 빌드에는 expo-updates 가 없어 코드 푸시를 받지 못한다.
 - 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
 
+## 앱 식별자
+
+- iOS 번들 ID `com.militarytracker.app` · **Android 패키지 `com.militaryfriends.militarytracker`** (Play Console 앱에 이미 고정된 이름이라 맞췄다 — 바꾸면 업로드가 거부된다).
+  RevenueCat Android 앱 · Play 구독 링크(`billingService.ts`)도 이 패키지를 쓴다.
+
 ## 구독 · 결제 · 대기자 (2026-10-26)
 
 - **요금**: 프리미엄 월 ₩9,900 하나(`mt_pro_monthly`). 앱에 스토어 결제가 열리면 **스토어 무료 체험**(상품의 도입 혜택, 카드 등록 후

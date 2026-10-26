@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.militarytracker.app",
+      "package": "com.militaryfriends.militarytracker",
       "userInterfaceStyle": "automatic",
       "blockedPermissions": [
         "android.permission.READ_EXTERNAL_STORAGE",

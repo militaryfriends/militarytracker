@@ -165,7 +165,7 @@ export function manageSubscriptionUrl(source: Subscription['source'], productId?
   if (source === 'ios') return 'https://apps.apple.com/account/subscriptions';
   if (source === 'android') {
     const sku = (productId ?? 'mt_pro_monthly').split(':')[0];
-    return `https://play.google.com/store/account/subscriptions?package=com.militarytracker.app&sku=${encodeURIComponent(sku)}`;
+    return `https://play.google.com/store/account/subscriptions?package=com.militaryfriends.militarytracker&sku=${encodeURIComponent(sku)}`;
   }
   return null;
 }
