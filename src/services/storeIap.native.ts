@@ -7,7 +7,7 @@
 import { Platform } from 'react-native';
 import { REVENUECAT } from '../config/revenuecat';
 
-export interface StorePackage { id: string; productId: string; price: string; raw: unknown }
+export interface StorePackage { id: string; productId: string; price: string; raw: unknown; /** 무료 체험 기간(예: '1개월') — 없으면 체험 없음 */ trial?: string }
 
 type RC = typeof import('react-native-purchases').default;
 let rc: RC | null = null;
@@ -40,7 +40,20 @@ export async function loadPackages(uid: string): Promise<StorePackage[]> {
     productId: k.product.identifier,
     price: k.product.priceString,
     raw: k,
+    trial: trialOf(k.product),
   }));
+}
+
+const UNIT: Record<string, string> = { DAY: '일', WEEK: '주', MONTH: '개월', YEAR: '년' };
+
+/** 스토어 상품의 무료 체험 기간 — iOS 는 introPrice(가격 0), Android 는 기본 옵션의 무료 단계 */
+function trialOf(p: { introPrice?: { price: number; periodUnit: string; periodNumberOfUnits: number } | null;
+  defaultOption?: { freePhase?: { billingPeriod?: { unit: string; value: number } } | null } | null }): string | undefined {
+  if (p.introPrice && p.introPrice.price === 0) {
+    return `${p.introPrice.periodNumberOfUnits}${UNIT[p.introPrice.periodUnit] ?? ''}`;
+  }
+  const f = p.defaultOption?.freePhase?.billingPeriod;
+  return f ? `${f.value}${UNIT[f.unit] ?? ''}` : undefined;
 }
 
 export async function buyPackage(uid: string, pkg: StorePackage): Promise<'done' | 'cancelled'> {

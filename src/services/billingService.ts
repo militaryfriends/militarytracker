@@ -61,7 +61,7 @@ export async function getOfferings(): Promise<SubProduct[]> {
   if (!packages.length) return [...PRODUCTS];
   return PRODUCTS.map((p) => {
     const hit = packages.find((k) => k.productId === p.id || k.productId.startsWith(`${p.id}:`));
-    return hit ? { ...p, price: hit.price } : p;
+    return hit ? { ...p, price: hit.price, trial: hit.trial } : p;
   });
 }
 
@@ -158,4 +158,14 @@ export async function restore(): Promise<Subscription | null> {
     throw new BillingUnavailable(msg(e, '스토어에서 구매 내역을 불러오지 못했습니다.'));
   }
   return applyStore();
+}
+
+/** 기기의 구독 관리(해지) 화면 — 앱 안에서 해지할 수는 없고 스토어로 보낸다 */
+export function manageSubscriptionUrl(source: Subscription['source'], productId?: string | null): string | null {
+  if (source === 'ios') return 'https://apps.apple.com/account/subscriptions';
+  if (source === 'android') {
+    const sku = (productId ?? 'mt_pro_monthly').split(':')[0];
+    return `https://play.google.com/store/account/subscriptions?package=com.militarytracker.app&sku=${encodeURIComponent(sku)}`;
+  }
+  return null;
 }

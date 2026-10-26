@@ -20,7 +20,8 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
 import { db, requirePro } from './entitlement';
-import { consumeQuota, refundQuota, Quota, QuotaKind } from './quota';
+import { consumeQuota, refundQuota, periodKey, Quota, QuotaKind } from './quota';
+import { FieldValue } from 'firebase-admin/firestore';
 import { analyzeBody } from './engine/bodyAnalysis';
 import { cellWithHysteresis, targetBody, toCell, toCoord, updateComp } from './engine/bodyComp';
 import {
@@ -47,15 +48,24 @@ export {
 //  플랜·식단: 한 번에 유효한 JSON 을 만들어야 해서 정확도가 중요하고 호출이 드물다.
 //  코치:      짧은 대화라 호출이 압도적으로 많다 — 여기가 원가의 대부분이다.
 //             Haiku 로 내리면 호출당 원가가 절반 이하가 된다.
+// 2026-10-26: 플랜 · 식단 · 리포트도 먼저 Haiku(약 1/3 가격) — 숫자는 엔진이 정하고 AI 는 구성 · 문장만 고르므로
+// 충분하다. 형식이 틀린 답이 오면 그때만 Sonnet 으로 다시 부른다(planCall).
 const MODEL_PLANNING = 'claude-sonnet-4-5';
 const MODEL_CHAT = 'claude-haiku-4-5-20251001';
+const MODEL_FAST = MODEL_CHAT;
+/** 원가 기록용 가격(USD / 100만 토큰) · 환율 — 대략값, 한도 판단에만 쓴다 */
+const PRICE: Record<string, { in: number; out: number }> = {
+  [MODEL_CHAT]: { in: 1, out: 5 },
+  [MODEL_PLANNING]: { in: 3, out: 15 },
+};
+const KRW_PER_USD = 1400;
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 
 /** 코치 한 번에 보내는 대화 총량(문자). 20턴 × 4,000자를 그대로 두면 호출당 원가가 월 구독료를 넘는다. */
-const COACH_INPUT_BUDGET = 12_000;
+const COACH_INPUT_BUDGET = 6_000;
 const COACH_CONTEXT_MAX = 2_000;
-const COACH_TURNS_MAX = 20;
+const COACH_TURNS_MAX = 12;
 /** 플랜 카탈로그: `id|이름|부위|난이도` 한 줄씩, 최대 200줄 */
 const CATALOG_LINE = /^[A-Za-z0-9_-]{1,40}\|[^|\n]{1,40}\|[^|\n]{1,12}\|(lv)?[123]$/;
 const CATALOG_LINES_MAX = 200;
@@ -71,6 +81,8 @@ async function callAnthropic(opts: {
   maxTokens: number;
   apiKey: string;
   model: string;
+  /** 있으면 이 사용자의 이번 달 AI 원가(aiCost/{uid})에 더한다 */
+  uid?: string;
 }): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55_000);
@@ -86,7 +98,8 @@ async function callAnthropic(opts: {
       body: JSON.stringify({
         model: opts.model,
         max_tokens: opts.maxTokens,
-        system: opts.system,
+        // 규칙(시스템 프롬프트)은 고정 문자열이라 캐시한다 — 길이가 캐시 최소 길이에 못 미치면 API 가 그냥 무시한다
+        system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
         messages: opts.messages,
       }),
       signal: controller.signal,
@@ -104,7 +117,11 @@ async function callAnthropic(opts: {
       throw new HttpsError(ours ? 'internal' : 'unavailable', `AI 응답 실패 (${res.status})`);
     }
 
-    const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+    const data = (await res.json()) as {
+      content?: { type: string; text?: string }[];
+      usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+    };
+    if (opts.uid && data.usage) void addCost(opts.uid, opts.model, data.usage);
     return (data.content ?? [])
       .filter((c) => c.type === 'text')
       .map((c) => c.text ?? '')
@@ -116,6 +133,39 @@ async function callAnthropic(opts: {
     throw new HttpsError('unavailable', 'AI 서버에 연결하지 못했습니다.');
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+/** 이번 달 AI 원가(원) 기록 — aiCost/{uid} { 'YYYY-MM': 원 } (관리자 전용 컬렉션, 규칙의 기본 거부) */
+async function addCost(uid: string, model: string, u: {
+  input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number;
+}) {
+  const p = PRICE[model] ?? PRICE[MODEL_PLANNING];
+  const usd = ((u.input_tokens ?? 0) * p.in + (u.cache_creation_input_tokens ?? 0) * p.in * 1.25
+    + (u.cache_read_input_tokens ?? 0) * p.in * 0.1 + (u.output_tokens ?? 0) * p.out) / 1e6;
+  const won = Math.round(usd * KRW_PER_USD * 100) / 100;
+  if (!(won > 0)) return;
+  try {
+    await db.collection('aiCost').doc(uid).set({ [periodKey('month')]: FieldValue.increment(won) }, { merge: true });
+  } catch (e) {
+    logger.warn('aiCost write failed', { uid, e: String(e) });
+  }
+}
+
+/**
+ * 플랜 · 식단 · 리포트: 빠른 모델로 먼저, 형식이 틀리면(parse 가 던지면) 큰 모델로 한 번 더.
+ * 연결 · 설정 오류(unavailable 등)는 그대로 올린다.
+ */
+async function planCall<T>(o: { system: string; prompt: string; maxTokens: number; uid: string },
+  parse: (raw: string) => T): Promise<T> {
+  const base = { system: o.system, messages: [{ role: 'user' as const, content: o.prompt }], maxTokens: o.maxTokens,
+    apiKey: ANTHROPIC_API_KEY.value(), uid: o.uid };
+  const fast = await callAnthropic({ ...base, model: MODEL_FAST });
+  try {
+    return parse(fast);
+  } catch (e) {
+    logger.warn('fast model output rejected — retry with planning model', { e: String(e) });
+    return parse(await callAnthropic({ ...base, model: MODEL_PLANNING }));
   }
 }
 
@@ -291,14 +341,10 @@ export const aiPlan = onCall(
     ].join('\n');
 
     const { result } = await withQuota(acc.uid, 'plan', acc.isAdmin, async () => {
-      const raw = await callAnthropic({
+      return planCall({
         system: withGuard('너는 근거 기반 운동 프로그램 설계 AI다. 반드시 유효한 JSON 객체만 출력한다. 마크다운, 백틱, 설명 텍스트 금지.'),
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1500,
-        model: MODEL_PLANNING,
-        apiKey: ANTHROPIC_API_KEY.value(),
-      });
-      return normalizePlanOut(parseJson(raw), days);
+        prompt, maxTokens: 1500, uid: acc.uid,
+      }, (raw) => normalizePlanOut(parseJson(raw), days));
     });
     return result;
   }
@@ -373,14 +419,8 @@ async function projectDiet(acc: { uid: string; isAdmin: boolean }, projectId: un
   ].join('\n');
 
   const { result } = await withQuota(acc.uid, 'diet', acc.isAdmin, async () => {
-    const raw = await callAnthropic({
-      system: withGuard(DIET_SYSTEM),
-      messages: [{ role: 'user', content: prompt }],
-      maxTokens: 1000,
-      model: MODEL_PLANNING,
-      apiKey: ANTHROPIC_API_KEY.value(),
-    });
-    return projectMeals(parseJson(raw), targets);
+    return planCall({ system: withGuard(DIET_SYSTEM), prompt, maxTokens: 1000, uid: acc.uid },
+      (raw) => projectMeals(parseJson(raw), targets));
   });
   return { ...result, kcal: n.kcal, protein: n.proteinG, carb, fat, phase: n.phase };
 }
@@ -403,14 +443,8 @@ export const aiDiet = onCall(
     ].join('\n');
 
     const { result } = await withQuota(acc.uid, 'diet', acc.isAdmin, async () => {
-      const raw = await callAnthropic({
-        system: withGuard(DIET_SYSTEM),
-        messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1000,
-        model: MODEL_PLANNING,
-        apiKey: ANTHROPIC_API_KEY.value(),
-      });
-      return normalizeDietOut(parseJson(raw));
+      return planCall({ system: withGuard(DIET_SYSTEM), prompt, maxTokens: 1000, uid: acc.uid },
+        (raw) => normalizeDietOut(parseJson(raw)));
     });
     return result;
   }
@@ -508,6 +542,7 @@ export const aiCoach = onCall(
           maxTokens: 1000,
           apiKey: ANTHROPIC_API_KEY.value(),
           model: MODEL_CHAT,
+          uid: acc.uid,
         });
         return raw ? parseCoach(raw, dayKcal > 800 && dayKcal < 6000 ? dayKcal : undefined) : null;
       },
@@ -821,6 +856,7 @@ export const bodyCheckinReport = onCall(
     const prompt = `<data>\n${data}\n</data>\n\n위 기록으로 이번 체크인 리포트를 써라.\n출력 형식(JSON만):\n${REPORT_FORMAT}`;
 
     let body: ReportBody | null = null;
+    let usedModel = MODEL_FAST;
     try {
       const { result } = await withQuota(uid, 'report', acc.isAdmin, async () => {
         // 형식이 틀리거나 호출이 실패하면 한 번 더 — 두 번 다 실패하면 환불하고 템플릿으로
@@ -831,9 +867,11 @@ export const bodyCheckinReport = onCall(
               system: withGuard(REPORT_SYSTEM),
               messages: [{ role: 'user', content: prompt }],
               maxTokens: 800,
-              model: MODEL_PLANNING,
+              model: attempt === 0 ? MODEL_FAST : MODEL_PLANNING,
               apiKey: ANTHROPIC_API_KEY.value(),
+              uid,
             });
+            usedModel = attempt === 0 ? MODEL_FAST : MODEL_PLANNING;
             const ok = validateReport(parseJson(raw));
             if (ok) return ok;
             last = new HttpsError('internal', 'AI 리포트 형식 오류');
@@ -851,9 +889,9 @@ export const bodyCheckinReport = onCall(
     }
     if (!body) return toCheckinResult(reportId, report);
 
-    const next: BodyReportDoc = { ...report, report: body, model: MODEL_PLANNING, fallback: false };
+    const next: BodyReportDoc = { ...report, report: body, model: usedModel, fallback: false };
     try {
-      await db.collection('bodyReports').doc(reportId).update({ report: body, model: MODEL_PLANNING, fallback: false });
+      await db.collection('bodyReports').doc(reportId).update({ report: body, model: usedModel, fallback: false });
     } catch (e) {
       // 저장 실패해도 받은 글은 돌려준다 — 다음 호출이 템플릿을 보고 다시 시도한다
       logger.error('aiReport save failed', { uid, checkinId, e: String(e) });

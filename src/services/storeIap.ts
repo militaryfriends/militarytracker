@@ -1,7 +1,7 @@
 /**
  * 스토어 결제 — 웹 · 키 없음 자리. 앱(iOS · Android)은 storeIap.native.ts.
  */
-export interface StorePackage { id: string; productId: string; price: string; raw: unknown }
+export interface StorePackage { id: string; productId: string; price: string; raw: unknown; trial?: string }
 
 export const storeIapReady = (): boolean => false;
 export async function loadPackages(_uid: string): Promise<StorePackage[]> { return []; }

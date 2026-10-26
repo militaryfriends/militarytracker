@@ -31,11 +31,18 @@ interface QuotaRule {
 
 export const QUOTA: Record<QuotaKind, QuotaRule> = {
   coach: { limit: 10, period: 'day', reason: 'coach_quota_exceeded', label: '오늘의 코치 대화' },
-  plan: { limit: 5, period: 'day', reason: 'plan_quota_exceeded', label: '오늘의 AI 플랜 생성' },
-  diet: { limit: 5, period: 'day', reason: 'diet_quota_exceeded', label: '오늘의 AI 식단 생성' },
+  plan: { limit: 2, period: 'day', reason: 'plan_quota_exceeded', label: '오늘의 AI 플랜 생성' },
+  diet: { limit: 3, period: 'day', reason: 'diet_quota_exceeded', label: '오늘의 AI 식단 생성' },
   // 체크인은 4주마다라 달력 한 달에 두 번 들 수 있다. 다 써도 체크인은 템플릿 리포트로 끝난다(aiReport)
   report: { limit: 2, period: 'month', reason: 'report_quota_exceeded', label: '이번 달 리포트' },
 };
+
+/**
+ * 계정당 이번 달 AI 원가 상한(원). 넘으면 그달 남은 날은 코치가 하루 COACH_OVER_BUDGET 회로 줄어든다
+ * (구독료 9,900원 · 남는 돈 약 7,650원보다 원가가 커지지 않게). 원가는 aiCost/{uid} — index.ts addCost.
+ */
+export const AI_MONTHLY_CAP_WON = 5000;
+export const COACH_OVER_BUDGET = 3;
 
 /** 앱과 공유하는 값 — 코치 화면이 남은 횟수를 표시한다 (하루 기준) */
 export const COACH_DAILY_LIMIT = QUOTA.coach.limit;
@@ -85,19 +92,22 @@ export async function consumeQuota(uid: string, kind: QuotaKind, isAdmin: boolea
   const rule = QUOTA[kind];
   const ref = db.collection('users').doc(uid);
 
+  const costRef = db.collection('aiCost').doc(uid);
   return db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
+    const [snap, cost] = await Promise.all([tx.get(ref), kind === 'coach' ? tx.get(costRef) : Promise.resolve(null)]);
     const used = readUsage(snap.data(), kind);
-    if (used >= rule.limit) {
+    const spent = Number(cost?.data()?.[periodKey('month')] ?? 0);
+    const limit = kind === 'coach' && spent >= AI_MONTHLY_CAP_WON ? COACH_OVER_BUDGET : rule.limit;
+    if (used >= limit) {
       throw new HttpsError(
         'resource-exhausted',
-        `${rule.label} ${rule.limit}회를 모두 사용했습니다.`,
-        { reason: rule.reason, limit: rule.limit, used }
+        `${rule.label} ${limit}회를 모두 사용했습니다.`,
+        { reason: rule.reason, limit, used }
       );
     }
     const count = used + 1;
     tx.set(ref, { usage: { [kind]: { period: periodKey(rule.period), count } } }, { merge: true });
-    return { used: count, limit: rule.limit, remaining: rule.limit - count };
+    return { used: count, limit, remaining: limit - count };
   });
 }
 

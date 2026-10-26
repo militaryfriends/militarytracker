@@ -72,6 +72,8 @@ export interface SubProduct {
   period: string;
   note?: string;
   best?: boolean;
+  /** 스토어 무료 체험 기간(예: '1개월') — 스토어에서 받아온 값, 없으면 체험 없음 */
+  trial?: string;
 }
 
 export const PRODUCTS: readonly SubProduct[] = [

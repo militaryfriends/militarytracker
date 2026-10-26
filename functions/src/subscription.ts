@@ -306,6 +306,7 @@ export const accountDelete = onCall({ ...opts, timeoutSeconds: 120 }, async (req
       .map((c) => deleteByQuery(db.collection(c).where('userId', '==', uid)))
   )).reduce((a, b) => a + b, 0);
   await db.collection('promoAttempts').doc(uid).delete();
+  await db.collection('aiCost').doc(uid).delete();
   await db.collection('plans').doc(uid).delete();
   await db.collection('users').doc(uid).delete();
   // subEvents 는 감사 로그라 남긴다 (uid 만 있고 개인정보는 없다)

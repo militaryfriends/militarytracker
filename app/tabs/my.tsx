@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, KeyboardAvoidingView, Platform, Switch,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,6 +19,7 @@ import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 import { SUB_STATUS_LABEL } from '../../src/utils/subscription';
 import { PRO_NAME } from '../../src/config/entitlements';
+import { manageSubscriptionUrl } from '../../src/services/billingService';
 import { calcBodyStats, effectiveWeight, validateField } from '../../src/utils/body';
 import { setsByPart, weakestPart, totalSets, totalVolume, currentStreakDays, fmtDuration, fmtVolume } from '../../src/utils/stats';
 
@@ -44,6 +46,7 @@ export default function MyScreen() {
   const resetAll = useAppStore((s) => s.resetAll);
   const setProfile = useAppStore((s) => s.setProfile);
   const { can, pro, sub, left } = useEntitlement();
+  const manageUrl = manageSubscriptionUrl(sub.source, sub.productId);
   const canCoach = can('ai_coach');
   const [weightInput, setWeightInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -314,6 +317,16 @@ export default function MyScreen() {
           </View>
           <Text style={s.subChev}>›</Text>
         </TouchableOpacity>
+        {manageUrl ? (
+          <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => Linking.openURL(manageUrl)}
+            accessibilityRole="link" accessibilityLabel="구독 관리 · 해지">
+            <View style={{ flex: 1 }}>
+              <Text style={s.subTitle}>구독 관리 · 해지</Text>
+              <Text style={s.subSub}>{sub.source === 'ios' ? 'App Store' : 'Google Play'} 구독 화면에서 해지 · 결제 수단을 바꿉니다</Text>
+            </View>
+            <Text style={s.subChev}>›</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* 온보딩 — 가입 때 흐름(원하는 체형 → 분석 → 프로젝트)을 다시 */}
         <Text style={s.sectionLabel}>온보딩</Text>

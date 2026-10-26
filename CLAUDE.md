@@ -141,7 +141,9 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 
 ## 구독 · 결제 · 대기자 (2026-10-26)
 
-- **요금**: 프리미엄 월 ₩9,900 하나(`mt_pro_monthly`), 체험 30일(`TRIAL_DAYS` 앱 · 서버 두 곳).
+- **요금**: 프리미엄 월 ₩9,900 하나(`mt_pro_monthly`). 앱에 스토어 결제가 열리면 **스토어 무료 체험**(상품의 도입 혜택, 카드 등록 후
+  자동 결제 — 버튼 "1개월 무료로 시작하기")을 쓰고, 카드 없는 서버 체험 30일(`TRIAL_DAYS` 앱 · 서버 두 곳)은 결제가 없는 곳(웹 · 키 전)에만.
+  구독 관리 · 해지는 MY 탭 · 구독 화면에서 스토어 구독 화면으로 보낸다(`manageSubscriptionUrl`).
 - **스토어 결제 = RevenueCat** (`react-native-purchases`, 1.0.0 빌드부터 네이티브에 포함). 앱 `src/services/storeIap.native.ts`
   (웹은 `storeIap.ts` 빈 자리), 공개 SDK 키는 `src/config/revenuecat.ts` — **비어 있으면 가격표 · 구매 · 복원이 숨는다**.
   키를 넣고 코드 푸시하면 열린다. 구매 · 복원 뒤 앱이 `subApplyReceipt` 를 부르면 서버가 RevenueCat REST 에 uid 로 직접 물어
@@ -153,6 +155,14 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
   인증된 가입 이메일이 명단에 있으면 접속 때 `subStatus({ claim: true })` 로 자동 지급(`sub.waitlist` claimed · none).
   번호만 낸 사람은 **웹** 구독 화면 코드 칸에 번호(`subRedeemPromo` 가 번호를 알아본다). 앱에는 코드 칸을 두지 않는다(Apple 3.1.1).
 - 새 콜러블을 만들지 않고 기존 콜러블에 붙였다(새 콜러블은 공개 호출 설정을 콘솔에서 따로 켜야 해서).
+
+## AI 원가 (2026-10-26)
+
+- 모델: 코치 Haiku 4.5, 플랜 · 식단 · 리포트도 **Haiku 먼저 → 형식이 틀리면 Sonnet 4.5 로 한 번 더**(`planCall`).
+  숫자는 엔진이 정하고 AI 는 구성 · 문장만 고르므로 Haiku 로 충분하다는 판단 — 품질이 떨어지면 여기부터 본다.
+- 시스템 프롬프트는 `cache_control` 로 캐시(최소 길이 미만이면 API 가 무시). 코치가 보내는 대화는 최근 12턴 · 6,000자까지.
+- 한도(`quota.ts`): 코치 하루 10 · 플랜 하루 2 · 식단 하루 3 · 리포트 월 2. 호출마다 원가(원)를 `aiCost/{uid}`
+  `{ 'YYYY-MM': 원 }` 에 더하고(가격표 `PRICE` · 환율 1,400 대략값), 이번 달 5,000원을 넘으면 코치가 하루 3회로 줄어든다.
 
 ## AI 코치 식단 카드 · WARNING
 

@@ -13,7 +13,7 @@ import {
   PRODUCTS, TRIAL_DAYS, PRO_NAME, Feature, LEGAL,
 } from '../src/config/entitlements';
 import {
-  purchase, restore, startTrial, redeemPromo, canPurchase, getOfferings,
+  purchase, restore, startTrial, redeemPromo, canPurchase, getOfferings, manageSubscriptionUrl,
   BillingUnavailable, PromoError, EmailUnverified, STORE_BILLING_READY,
 } from '../src/services/billingService';
 import { resendVerification } from '../src/services/authService';
@@ -60,7 +60,11 @@ export default function SubscribeScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
 
-  const trialAvailable = TRIAL_DAYS > 0 && !sub.trialUsed && !pro;
+  // 카드 없는 서버 체험은 스토어 결제가 없을 때(웹 · 키 전)만 — 앱 결제가 열리면 스토어 무료 체험이 대신한다
+  const trialAvailable = TRIAL_DAYS > 0 && !sub.trialUsed && !pro && !storeReady;
+  const pickedProduct = products.find((p) => p.id === picked) ?? products[0];
+  const storeTrial = pickedProduct?.trial;
+  const manageUrl = manageSubscriptionUrl(sub.source, sub.productId);
 
   function fail(e: unknown, fallback: string) {
     if (e instanceof EmailUnverified) {
@@ -127,6 +131,14 @@ export default function SubscribeScreen() {
             {sub.status === 'canceled' && (
               <Text style={s.activeSub}>해지가 예약되어 있어도 남은 기간은 그대로 사용합니다.</Text>
             )}
+            {sub.status === 'grace' && (
+              <Text style={s.activeSub}>결제가 실패했습니다. 스토어의 결제 수단을 확인해 주세요 — 확인되는 동안은 그대로 사용합니다.</Text>
+            )}
+            {manageUrl ? (
+              <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL(manageUrl)} hitSlop={8} accessibilityRole="link">
+                <Text style={s.manageTxt}>구독 관리 · 해지</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ) : (
           <Text style={s.lead}>
@@ -181,12 +193,17 @@ export default function SubscribeScreen() {
             })}
 
             <PrimaryBtn
-              label="구독 시작"
+              label={storeTrial ? `${storeTrial} 무료로 시작하기` : `월 ${pickedProduct.price.replace('₩', '')}원으로 시작하기`}
               loading={busy === 'buy'}
               disabled={!!busy || !canPurchase()}
-              onPress={() => run('buy', () => purchase(picked), '구독이 시작되었습니다.')}
+              onPress={() => run('buy', () => purchase(picked), storeTrial ? `${storeTrial} 무료 체험이 시작되었습니다.` : '구독이 시작되었습니다.')}
               style={{ marginTop: 6 }}
             />
+            <Text style={s.trialNote}>
+              {storeTrial
+                ? `처음 구독하면 ${storeTrial} 무료, 이후 매월 ${pickedProduct.price} 자동 결제 · 체험 중 해지하면 결제되지 않습니다`
+                : `매월 ${pickedProduct.price} 자동 결제 · 언제든 해지할 수 있습니다`}
+            </Text>
           </>
         )}
 
@@ -330,6 +347,8 @@ const s = themed(() => StyleSheet.create({
   comingSoon: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 12, lineHeight: 18 },
 
   codeRow: { flexDirection: 'row', gap: 8 },
+  trialNote: { fontSize: 12, color: colors.mid, lineHeight: 18, textAlign: 'center', marginTop: 8 },
+  manageTxt: { fontSize: 13, color: colors.ink, fontWeight: '600', textDecorationLine: 'underline', marginTop: 10 },
   codeHint: { fontSize: 12, color: colors.mid, lineHeight: 18, marginBottom: 8 },
   codeInput: {
     flex: 1, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line2,
