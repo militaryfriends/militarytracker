@@ -14,15 +14,24 @@
 - **지금 모프는 스크립트가 만든 임시값**(리그의 DEF 본 가중치로 부위별로 부풀리고 · 줄이고 · 근육 결을 편다).
   모델러가 몸 메시에 **같은 이름의 셰이프 키 4개**를 만들면 스크립트가 그걸 쓴다 — 레스트(T)포즈에서, 키 하나씩 1.0 이 위 표의 몸.
   반바지는 키가 없어도 몸을 따라간다(가까운 몸 정점의 변화를 옮긴다).
-- 여성: 같은 방식으로 `avatar_f.glb` 를 만들고 `morph.ts` 의 `MODEL_SEXES` · `engine.web.ts` 의 `MODEL_SRC` 에 넣는다. 그 전까지 여성은 2D 실루엣.
+- **여성(2026-10-26)**: 조각한 .blend 가 없어 `scripts/build-avatar-female.py` 가 MakeHuman(CC0) 기본 메시 + 체중 · 근육 매크로 타깃으로 만든다
+  (모프 4개가 진짜 체형 타깃 — 남성의 임시 모프보다 자연스럽다). 마네킹 머리(달걀형) · A-포즈 17° · 스포츠 브라 + 반바지(위장무늬, 몸을 평면으로 잘라 띄움).
+  기본 몸 = 근육 0.55 · 체중 0.38 (morph.ts BASE female f 2.0 · m 3.0). 재료 받는 법은 스크립트 맨 위.
 - iOS · Android: expo-gl GLView 위에 같은 장면(`avatar3d/stage.ts`)을 그린다(`Avatar3D.tsx` · `engine.native.ts`). GL 이 안 되면 2D 로.
 
 ```bash
-PY=~/.venv-bpy/bin/python
-$PY scripts/build-avatar-3d.py -- --blend Miltary_Friend_Model.blend --sex m --out /tmp/avatar_m.raw.glb --preview /tmp/avatar-prev
-npx @gltf-transform/cli meshopt  /tmp/avatar_m.raw.glb assets/avatar/avatar_m.glb                              # 웹: 1.9MB → 약 0.4MB
-npx @gltf-transform/cli quantize /tmp/avatar_m.raw.glb assets/avatar/avatar_m_native.glb --quantize-normal 8  # 앱: 약 1.1MB
+PY=~/.venv-bpy/bin/python      # bpy 5.2 (pip install bpy) — 스크립트 파일은 /tmp 처럼 하이픈 없는 cwd 에서 돌린다(glog 이중 초기화로 죽은 적)
+# 남성: --hq 폴더에 텍스처를 굽는다 — body_n.png(고해상도 몸 → 노멀맵) · body_ao.png · cloth_c.png(위장무늬)
+$PY scripts/build-avatar-3d.py -- --blend Miltary_Friend_Model.blend --sex m --out /tmp/avatar_m.raw.glb --hq /tmp/m_tex --preview /tmp/avatar-prev
+# 여성
+$PY scripts/build-avatar-female.py -- --mh ~/mh --out /tmp/avatar_f.raw.glb --tex /tmp/f_tex
+npx @gltf-transform/cli meshopt  /tmp/avatar_X.raw.glb assets/avatar/avatar_X.glb                              # 웹 (약 0.4~0.5MB)
+npx @gltf-transform/cli quantize /tmp/avatar_X.raw.glb assets/avatar/avatar_X_native.glb --quantize-normal 8  # 앱 (약 1.2MB)
+# 텍스처 → assets/avatar/{m|f}_body_n.jpg(남 2048) · {m|f}_body_ao.jpg(1024, 흑백) · {m|f}_cloth.jpg(1024) — PNG 를 JPEG 85~90 으로
 ```
+- 텍스처는 glb 안에 넣지 않고 따로 둔다 — 앱(expo-gl)은 이미지 디코더가 없어 `{ localUri }` 를 GL 에 직접 넘긴다(engine.native.ts `nativeTexture`).
+- 조명 · 재질은 광고 렌더(Blender, 스튜디오 HDRI)와 맞춘 값(stage.ts): 위 스폿 + 테두리 빛 둘, 노출 0.75, 몸 #A3A6A8.
+  노멀맵 세기는 모프로 줄인다(살 · 근육 감소 때 복근 결이 묻히게).
 앱(iOS · Android)용은 meshopt 를 쓰지 않는다 — 해제기가 WebAssembly 인데 Hermes 에는 없다. 같은 원본에서 둘 다 만든다.
 `--preview` 폴더에 기본 · 모프별 · 네 귀퉁이(F1M1 … F5M5) 정면 · 측면 렌더가 나온다 — 모델을 바꾸면 꼭 본다.
 A-포즈 각도 `--arm-angle`(기본 17°), 폴리곤 `--body-tris`(기본 24000).

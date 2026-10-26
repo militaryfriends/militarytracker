@@ -76,13 +76,14 @@ O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 �
 - 저장: `bodyAnalyses`(본인) · `checkins`(본인, 판정은 `aiReport` 가 다시) · `bodyProjects` · `bodyReports`(서버만).
   기기 캐시가 원본처럼 쓰이고 서버에서는 사흘마다 · 새 기기에서만 받는다(`session.ts` syncBody). 계정 삭제가 네 컬렉션을 지운다.
 - 진행 중인 프로젝트가 있으면 `calcBodyStats(p, weights, project)` 의 칼로리 · 단백질은 지금 단계(감량/린벌크/유지) 값.
-- 아바타: 남성은 **3D**(`src/components/body/avatar3d/`, 모델 + 모프 4개, 만드는 법 `scripts/AVATARS.md`).
+- 아바타: 남성 · 여성 모두 **3D**(`src/components/body/avatar3d/`, 모델 + 모프 4개 + 텍스처 jpg, 만드는 법 `scripts/AVATARS.md`).
+  여성은 MakeHuman(CC0)으로 만든 모델(`scripts/build-avatar-female.py`). 남성 극단(F5 · M1) 모프는 임시값이라 조각한 셰이프 키가 있으면 더 좋아진다.
   웹 = three.js(`engine.web.ts`, 모델 `avatar_m.glb` meshopt), 앱 = expo-gl GLView + three.js(`engine.native.ts`, 모델 `avatar_m_native.glb`
   — meshopt 해제기가 WebAssembly 라 Hermes 에서 못 씀). 장면 · 조명 · 움직임은 `stage.ts` 한 벌. 앱에서 GL 초기화가 한 번이라도 실패하면
   그 뒤로는 2D(`markBroken`). expo-gl 은 네이티브 모듈 — 앱에 반영하려면 새 빌드.
   `AvatarView` 에 `coord`(엔진 연속 좌표)를 주면 그 몸, `live` 면 손으로 돌리는 뷰어(좌표가 바뀌면 몸이 서서히 변함).
   three.js 는 `avatar3d/kit.web.ts` 하나로만 가져온다 — 다른 곳에서 three 를 import 하면 메인 번들에 섞여 웹 첫 로딩이 무거워진다.
-  3D 가 없으면(네이티브 · 여성 · WebGL 불가) 칸 프리셋 `src/data/avatarGrid.ts` → 회색 실루엣(`Silhouette`) 순서.
+  3D 가 없으면(WebGL · GL 불가) 칸 프리셋 `src/data/avatarGrid.ts` → 회색 실루엣(`Silhouette`) 순서.
 - 프로 혜택 문구(O8 "이 몸을 만드는 도구": 코치 하루 10회)는 서버 한도(`functions/src/quota.ts`)와 같아야 한다.
 - 콜러블 배포 이름은 `bodyProjectStart`(명세의 projectStart) · `bodyCheckinReport`(aiReport). **콜러블의 공개 호출 설정은
   처음 만들 때만 적용된다** — 첫 생성에서 실패하면 재배포로 고쳐지지 않고 403 이 남는다.

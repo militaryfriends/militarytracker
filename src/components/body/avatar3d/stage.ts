@@ -7,13 +7,25 @@ import type { Morph, MorphKey } from './morph';
 
 export type THREE = typeof THREE_NS;
 
-export const BODY_COLOR = '#B9B9BB';
-export const CLOTH_COLOR = '#7C7C80';
+/** 광고 렌더(Blender)와 맞춘 클레이 회색 — 조명이 어두운 스튜디오라 예전(#B9B9BB)보다 한 톤 아래 */
+export const BODY_COLOR = '#A3A6A8';
+/** 옷 텍스처가 없을 때만 쓰는 색 */
+export const CLOTH_COLOR = '#2E3033';
 /** 화면 높이 대비 몸 높이 — 발 아래 · 머리 위 여백 */
 const FRAME = 1.07;
 const FOV = 24;
 
 export interface Loaded { T: THREE; scene: THREE_NS.Object3D; height: number }
+
+/** 모델과 같이 구운 텍스처 (scripts/build-avatar-3d.py --hq · build-avatar-female.py --tex) — 없으면 색만 */
+export interface ModelTex {
+  /** 몸 노멀맵 — 고해상도 조각(복근 · 혈관 결)을 가벼운 메시에 입힌다 */
+  normal?: THREE_NS.Texture | null;
+  /** 몸 AO — 옷 아래 · 겨드랑이 · 사타구니 그늘 */
+  ao?: THREE_NS.Texture | null;
+  /** 옷 색(위장무늬) */
+  cloth?: THREE_NS.Texture | null;
+}
 
 export interface Stage {
   scene: THREE_NS.Scene;
@@ -21,45 +33,81 @@ export interface Stage {
   pivot: THREE_NS.Group;
   meshes: THREE_NS.Mesh[];
   height: number;
+  /** 이 뷰어의 몸 재질(복사본) — 모프에 따라 노멀맵 세기를 바꾼다 */
+  bodyMats: THREE_NS.MeshStandardMaterial[];
 }
 
+const isCloth = (mesh: THREE_NS.Mesh) => /cloth/i.test(mesh.name) || /cloth/i.test(mesh.geometry.name);
+
 /** 불러온 glTF 장면에 재질을 입히고 키를 잰다 (성별마다 한 번) */
-export function prepareModel(T: THREE, scene: THREE_NS.Object3D): Loaded {
-  const body = new T.MeshStandardMaterial({ color: BODY_COLOR, roughness: 0.72, metalness: 0 });
-  const cloth = new T.MeshStandardMaterial({ color: CLOTH_COLOR, roughness: 0.9, metalness: 0 });
+export function prepareModel(T: THREE, scene: THREE_NS.Object3D, tex: ModelTex = {}): Loaded {
+  const body = new T.MeshStandardMaterial({ color: BODY_COLOR, roughness: 0.5, metalness: 0 });
+  if (tex.normal) body.normalMap = tex.normal;
+  if (tex.ao) {
+    body.aoMap = tex.ao;
+    body.aoMapIntensity = 1;
+  }
+  const cloth = new T.MeshStandardMaterial({
+    color: tex.cloth ? '#FFFFFF' : CLOTH_COLOR, map: tex.cloth ?? null, roughness: 0.92, metalness: 0,
+  });
   scene.traverse((o) => {
     const mesh = o as THREE_NS.Mesh;
     if (!mesh.isMesh) return;
-    mesh.material = /cloth/i.test(mesh.name) || /cloth/i.test(mesh.geometry.name) ? cloth : body;
+    mesh.material = isCloth(mesh) ? cloth : body;
     mesh.frustumCulled = false; // 모프로 커진 몸이 잘리지 않게
   });
   const box = new T.Box3().setFromObject(scene);
   return { T, scene, height: box.max.y - box.min.y };
 }
 
+/** 텍스처 공통 설정 — glTF UV(위가 0)라 뒤집지 않는다 */
+export function texSetup(T: THREE, t: THREE_NS.Texture, color: boolean): THREE_NS.Texture {
+  t.flipY = false;
+  t.colorSpace = color ? T.SRGBColorSpace : T.NoColorSpace;
+  t.anisotropy = 4;
+  t.needsUpdate = true;
+  return t;
+}
+
 export function buildStage(m: Loaded, aspect: number): Stage {
   const { T } = m;
   const scene = new T.Scene();
-  scene.add(new T.HemisphereLight(0xffffff, 0x3a3a3e, 1.0));
-  const key = new T.DirectionalLight(0xffffff, 1.9);
-  key.position.set(-2.2, 3.2, 4);
-  const fill = new T.DirectionalLight(0xffffff, 0.75);
-  fill.position.set(3, 1.2, 2.6);
-  const rim = new T.DirectionalLight(0xffffff, 1.5);
-  rim.position.set(0.5, 2.6, -4);
-  scene.add(key, fill, rim);
+  // 광고 렌더와 맞춘 스튜디오 조명: 위에서 내리는 스폿(가슴 · 배에 빛, 다리로 갈수록 어두워짐) + 뒤 테두리 빛 둘.
+  // 환경맵(HDR)은 쓰지 않는다 — 앱(expo-gl)에서 PMREM 렌더 타깃이 기기마다 안 될 수 있다. 위치는 키(h) 비례.
+  const h = m.height;
+  scene.add(new T.HemisphereLight(0xffffff, 0x202024, 0.5));
+  const spot = new T.SpotLight(0xffffff, 3, 0, 0.55, 0.8, 0);
+  spot.position.set(-0.2 * h, 2.1 * h, 1.3 * h);
+  spot.target.position.set(0, 0.675 * h, 0);
+  const key = new T.DirectionalLight(0xffffff, 0.3);
+  key.position.set(-1.5, 3, 3);
+  const fill = new T.DirectionalLight(0xffffff, 0.25);
+  fill.position.set(2.5, 1.0, 2.0);
+  const rim = new T.DirectionalLight(0xffffff, 1.6);
+  rim.position.set(0.8, 2.6, -4);
+  const rim2 = new T.DirectionalLight(0xffffff, 1.0);
+  rim2.position.set(-1.2, 2.0, -3);
+  scene.add(spot, spot.target, key, fill, rim, rim2);
   const pivot = new T.Group();
   const model = m.scene.clone(true);
   const meshes: THREE_NS.Mesh[] = [];
+  const bodyMats: THREE_NS.MeshStandardMaterial[] = [];
   model.traverse((o) => {
     const mesh = o as THREE_NS.Mesh;
-    if (mesh.isMesh && mesh.morphTargetInfluences) meshes.push(mesh);
+    if (!mesh.isMesh) return;
+    if (mesh.morphTargetInfluences) meshes.push(mesh);
+    // 몸 재질은 뷰어마다 따로 — 노멀맵 세기를 이 뷰어의 몸에 맞춰 바꾼다
+    if (!isCloth(mesh) && (mesh.material as THREE_NS.MeshStandardMaterial).normalMap) {
+      const mat = (mesh.material as THREE_NS.MeshStandardMaterial).clone();
+      mesh.material = mat;
+      bodyMats.push(mat);
+    }
   });
   pivot.add(model);
   scene.add(pivot);
   const camera = new T.PerspectiveCamera(FOV, aspect, 0.1, 50);
   frame(camera, m.height, aspect);
-  return { scene, camera, pivot, meshes, height: m.height };
+  return { scene, camera, pivot, meshes, height: m.height, bodyMats };
 }
 
 export function frame(camera: THREE_NS.PerspectiveCamera, h: number, aspect: number) {
@@ -84,6 +132,9 @@ export function applyMorph(st: Stage, mo: Morph) {
       if (i !== undefined) inf[i] = mo[k];
     });
   }
+  // 노멀맵은 기본 몸(복근 선명)의 결이다 — 살이 붙거나 근육이 줄면 결이 묻히게 약하게
+  const ns = Math.min(1, Math.max(0.08, 1 - 0.9 * mo.fat_up - 0.6 * mo.mus_down));
+  for (const mat of st.bodyMats) mat.normalScale.set(ns, ns);
 }
 
 /** 렌더러 공통 설정 — 투명 배경 · sRGB · 하이라이트가 하얗게 날아가지 않게 */
@@ -91,7 +142,7 @@ export function styleRenderer(T: THREE, r: THREE_NS.WebGLRenderer) {
   r.setClearColor(0x000000, 0);
   r.outputColorSpace = T.SRGBColorSpace;
   r.toneMapping = T.NeutralToneMapping;
-  r.toneMappingExposure = 1.05;
+  r.toneMappingExposure = 0.75;
 }
 
 export const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);

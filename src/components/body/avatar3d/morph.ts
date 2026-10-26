@@ -13,11 +13,12 @@ export type MorphKey = 'fat_up' | 'fat_down' | 'mus_up' | 'mus_down';
 export type Morph = Record<MorphKey, number>;
 
 /** 성별별 3D 모델 — 없는 성별은 2D 실루엣으로 그린다 */
-export const MODEL_SEXES: readonly Sex[] = ['male'];
+export const MODEL_SEXES: readonly Sex[] = ['male', 'female'];
 
 /**
  * 기본 몸의 좌표. 남성 모델(.blend 원본)은 복근이 선명한 근육질 — 체지방 약 11% · 근육 M4.
- * 지금 모프는 스크립트가 만든 임시 모프(형이 셰이프 키를 만들면 교체).
+ * 남성 모프는 스크립트가 만든 임시 모프(셰이프 키를 조각하면 교체). 여성은 MakeHuman 근육 0.55 · 체중 0.38 기본 몸 +
+ * 실제 체중 · 근육 타깃(scripts/build-avatar-female.py).
  */
 export const BASE: Record<Sex, Coord> = {
   male: { f: 1.6, m: 4.0 },

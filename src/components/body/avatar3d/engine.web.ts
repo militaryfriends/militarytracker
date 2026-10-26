@@ -8,10 +8,23 @@
 import { Asset } from 'expo-asset';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { MODEL_SEXES, morphFor } from './morph';
-import { applyMorph, buildStage, frame, makeDriver, prepareModel, styleRenderer, type Loaded, type Stage, type THREE } from './stage';
+import { applyMorph, buildStage, frame, makeDriver, prepareModel, styleRenderer, texSetup, type Loaded, type Stage, type THREE } from './stage';
 
 const MODEL_SRC: Partial<Record<Sex, number>> = {
   male: require('../../../../assets/avatar/avatar_m.glb'),
+  female: require('../../../../assets/avatar/avatar_f.glb'),
+};
+/** 모델과 같이 구운 텍스처 — 못 받아도 색만으로 그린다 */
+const TEX_SRC: Partial<Record<Sex, { normal?: number; ao?: number; cloth?: number }>> = {
+  male: {
+    normal: require('../../../../assets/avatar/m_body_n.jpg'),
+    ao: require('../../../../assets/avatar/m_body_ao.jpg'),
+    cloth: require('../../../../assets/avatar/m_cloth.jpg'),
+  },
+  female: {
+    ao: require('../../../../assets/avatar/f_body_ao.jpg'),
+    cloth: require('../../../../assets/avatar/f_cloth.jpg'),
+  },
 };
 
 let threeP: Promise<{ T: THREE; GLTFLoader: typeof import('three/examples/jsm/loaders/GLTFLoader.js').GLTFLoader; Meshopt: unknown }> | null = null;
@@ -48,8 +61,14 @@ export function loadModel(sex: Sex): Promise<Loaded> {
       const asset = Asset.fromModule(MODEL_SRC[sex]!);
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(Meshopt as never);
-      const gltf = await loader.loadAsync(asset.uri);
-      return prepareModel(T, gltf.scene);
+      const src = TEX_SRC[sex] ?? {};
+      const tl = new T.TextureLoader();
+      const tex = (mod: number | undefined, color: boolean) =>
+        mod ? tl.loadAsync(Asset.fromModule(mod).uri).then((t) => texSetup(T, t, color)).catch(() => null) : Promise.resolve(null);
+      const [gltf, normal, ao, cloth] = await Promise.all([
+        loader.loadAsync(asset.uri), tex(src.normal, false), tex(src.ao, false), tex(src.cloth, true),
+      ]);
+      return prepareModel(T, gltf.scene, { normal, ao, cloth });
     })();
     p.catch(() => models.delete(sex));
     models.set(sex, p);

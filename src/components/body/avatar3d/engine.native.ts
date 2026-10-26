@@ -1,6 +1,6 @@
 /**
  * 3D 아바타 렌더러 (iOS · Android, three.js + expo-gl).
- *  · 모델: assets/avatar/avatar_m_native.glb — 웹 모델과 같은 메시 · 모프지만 meshopt 압축이 없다
+ *  · 모델: assets/avatar/avatar_{m|f}_native.glb + 텍스처(jpg) — 웹 모델과 같은 메시 · 모프지만 meshopt 압축이 없다
  *    (meshopt 해제는 WebAssembly 인데 Hermes 에는 없다). 정점만 양자화(KHR_mesh_quantization, 약 1MB).
  *  · GLView 하나 = GL 컨텍스트 하나. 정지 아바타도 GLView 로 한 번 그리고 멈춘다(바뀔 때만 다시 그림).
  *  · 한 번이라도 GL 초기화가 실패하면 그 뒤로는 2D 로 그린다(broken) — 3D 때문에 화면이 깨지지 않게.
@@ -10,12 +10,47 @@ import { Asset } from 'expo-asset';
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { MODEL_SEXES, morphFor } from './morph';
-import { buildStage, makeDriver, prepareModel, styleRenderer, type Loaded, type THREE } from './stage';
+import { buildStage, makeDriver, prepareModel, styleRenderer, texSetup, type Loaded, type THREE } from './stage';
 import { ensureTextDecoder } from './textDecoder';
 
 const MODEL_SRC: Partial<Record<Sex, number>> = {
   male: require('../../../../assets/avatar/avatar_m_native.glb'),
+  female: require('../../../../assets/avatar/avatar_f_native.glb'),
 };
+const TEX_SRC: Partial<Record<Sex, { normal?: number; ao?: number; cloth?: number }>> = {
+  male: {
+    normal: require('../../../../assets/avatar/m_body_n.jpg'),
+    ao: require('../../../../assets/avatar/m_body_ao.jpg'),
+    cloth: require('../../../../assets/avatar/m_cloth.jpg'),
+  },
+  female: {
+    ao: require('../../../../assets/avatar/f_body_ao.jpg'),
+    cloth: require('../../../../assets/avatar/f_cloth.jpg'),
+  },
+};
+
+/**
+ * 앱의 텍스처 — expo-gl 은 HTMLImage 가 없고 gl.texImage2D · texSubImage2D 에 { localUri } 를 주면 파일을 직접 푼다
+ * (expo-gl common/EXGLImageUtils.cpp). 그래서 three 에는 "데이터 텍스처"로 넘겨 그 객체를 그대로 GL 에 보내게 한다
+ * (expo-three 와 같은 방식). 크기는 에셋이 알려 준 값 — 파일과 같아야 한다.
+ */
+async function nativeTexture(T: THREE, mod: number | undefined, color: boolean) {
+  if (!mod) return null;
+  try {
+    const a = Asset.fromModule(mod);
+    await a.downloadAsync();
+    if (!a.localUri || !a.width || !a.height) return null;
+    const t = new T.Texture();
+    t.image = { data: { localUri: a.localUri }, width: a.width, height: a.height };
+    (t as unknown as { isDataTexture: boolean }).isDataTexture = true;
+    t.generateMipmaps = true;
+    t.minFilter = T.LinearMipmapLinearFilter;
+    t.magFilter = T.LinearFilter;
+    return texSetup(T, t, color);
+  } catch {
+    return null;
+  }
+}
 
 let broken = false;
 export const native3D = (sex: Sex) => !broken && MODEL_SEXES.includes(sex) && !!MODEL_SRC[sex];
@@ -42,7 +77,11 @@ export function loadModel(sex: Sex): Promise<Loaded> {
       const { File } = require('expo-file-system') as typeof import('expo-file-system');
       const buf = await new File(asset.localUri ?? asset.uri).arrayBuffer();
       const gltf = await new GLTFLoader().parseAsync(buf, '');
-      return prepareModel(T, gltf.scene);
+      const src = TEX_SRC[sex] ?? {};
+      const [normal, ao, cloth] = await Promise.all([
+        nativeTexture(T, src.normal, false), nativeTexture(T, src.ao, false), nativeTexture(T, src.cloth, true),
+      ]);
+      return prepareModel(T, gltf.scene, { normal, ao, cloth });
     })();
     p.catch(() => models.delete(sex));
     models.set(sex, p);

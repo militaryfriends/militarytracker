@@ -53,6 +53,8 @@ def parse_args():
     p.add_argument('--body-tris', type=int, default=24000, help='몸 삼각형 수 목표')
     p.add_argument('--cloth-tris', type=int, default=5000)
     p.add_argument('--preview', default='', help='모프별 정면 · 측면 렌더를 이 폴더에')
+    p.add_argument('--hq', default='', help='이 폴더에 텍스처를 굽는다: body_n.png(고해상도 몸 → 노멀) · body_ao.png · cloth_c.png(옷 색 · 위장무늬)')
+    p.add_argument('--tex', type=int, default=2048, help='--hq 노멀맵 크기')
     return p.parse_args(argv)
 
 
@@ -312,6 +314,99 @@ def keys_from_blend(body, base_P):
     return out
 
 
+# ── 고품질: 텍스처 굽기 (--hq) ─────────────────────────────────────────────
+
+def _bake_target(obj, name, size, non_color):
+    img = bpy.data.images.new(name, size, size, alpha=False)
+    img.colorspace_settings.name = 'Non-Color' if non_color else 'sRGB'
+    mat = bpy.data.materials.new(name + '_bake')
+    mat.use_nodes = True
+    nt = mat.node_tree
+    tex = nt.nodes.new('ShaderNodeTexImage')
+    tex.image = img
+    nt.nodes.active = tex
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+    return img
+
+
+def _select(active, others):
+    for o in bpy.context.scene.objects:
+        o.select_set(False)
+    for o in others:
+        o.hide_render = False
+        o.select_set(True)
+    active.hide_render = False
+    active.select_set(True)
+    bpy.context.view_layer.objects.active = active
+
+
+def _cycles(samples):
+    sc = bpy.context.scene
+    sc.render.engine = 'CYCLES'
+    sc.cycles.device = 'CPU'
+    sc.cycles.samples = samples
+    sc.render.bake.margin = 8
+
+
+def bake_body(hi, lo, others, folder, size):
+    """고해상도 몸(스무딩까지 적용된 원본) → 줄인 몸의 탄젠트 노멀맵 + AO. 몸의 UV(원본 UVMap)를 쓴다."""
+    # 원본 근육 텍스처가 쓰는 펼침(UVMap.001)만 남긴다 — glTF TEXCOORD_0
+    keep = 'UVMap.001' if 'UVMap.001' in lo.data.uv_layers else lo.data.uv_layers[0].name
+    for uv in list(lo.data.uv_layers):
+        if uv.name != keep:
+            lo.data.uv_layers.remove(uv)
+    lo.data.uv_layers[0].active = True
+    lo.data.uv_layers[0].active_render = True
+    _cycles(1)
+    img = _bake_target(lo, 'body_n', size, True)
+    _select(lo, [hi])
+    bpy.ops.object.bake(type='NORMAL', use_selected_to_active=True, cage_extrusion=0.01, max_ray_distance=0.03,
+                        normal_space='TANGENT')
+    img.filepath_raw = os.path.join(folder, 'body_n.png'); img.file_format = 'PNG'; img.save()
+    log('노멀맵', img.filepath_raw)
+    # AO — 옷 · 팔 사이 가림까지 (몸 자기 자신 + 옷)
+    _cycles(64)
+    ao = _bake_target(lo, 'body_ao', size // 2, True)
+    for o in bpy.context.scene.objects:
+        o.hide_render = o not in [lo] + others
+    _select(lo, [])
+    bpy.context.scene.world = bpy.context.scene.world or bpy.data.worlds.new('w')
+    bpy.ops.object.bake(type='AO')
+    ao.filepath_raw = os.path.join(folder, 'body_ao.png'); ao.file_format = 'PNG'; ao.save()
+    log('AO', ao.filepath_raw)
+
+
+def bake_cloth(src_parts, cl, folder, size):
+    """원본 옷(재질 · 위장무늬 그대로) → 줄인 옷의 색 텍스처. 줄인 옷은 UV 를 새로 편다."""
+    bpy.context.view_layer.objects.active = cl
+    for o in bpy.context.scene.objects:
+        o.select_set(False)
+    cl.select_set(True)
+    cl.data.uv_layers.new(name='bake')
+    for i, uv in enumerate(cl.data.uv_layers):
+        uv.active = uv.name == 'bake'
+        uv.active_render = uv.name == 'bake'
+    with bpy.context.temp_override(active_object=cl, object=cl, selected_objects=[cl], selected_editable_objects=[cl]):
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.004)
+        bpy.ops.object.mode_set(mode='OBJECT')
+    for uv in list(cl.data.uv_layers):
+        if uv.name != 'bake':
+            cl.data.uv_layers.remove(uv)
+    _cycles(1)
+    img = _bake_target(cl, 'cloth_c', size, False)
+    sc = bpy.context.scene
+    sc.render.bake.use_pass_direct = False
+    sc.render.bake.use_pass_indirect = False
+    sc.render.bake.use_pass_color = True
+    _select(cl, src_parts)
+    bpy.ops.object.bake(type='DIFFUSE', use_selected_to_active=True, cage_extrusion=0.01, max_ray_distance=0.03)
+    img.filepath_raw = os.path.join(folder, 'cloth_c.png'); img.file_format = 'PNG'; img.save()
+    log('옷 색', img.filepath_raw)
+
+
 # ── 미리보기 ─────────────────────────────────────────────────────────────
 
 def preview(objs, folder):
@@ -409,7 +504,8 @@ def main():
         bm = bmesh.new()
         for o in parts:
             bm.from_mesh(o.data)
-            bpy.data.objects.remove(o)
+            if not a.hq:
+                bpy.data.objects.remove(o)
         me = bpy.data.meshes.new('clothes')
         bm.to_mesh(me)
         bm.free()
@@ -427,8 +523,20 @@ def main():
             sm = diffuse(t, cE, len(cP), 40)
             need = np.maximum(0.0, (t * cN).sum(1) - (sm * cN).sum(1))
             cD[key] = sm + cN * need[:, None]
+        if a.hq:
+            os.makedirs(a.hq, exist_ok=True)
+            bake_cloth(parts, cl, a.hq, a.tex // 2)
+            for o in parts:
+                bpy.data.objects.remove(o)
         set_keys(cl, cP, cD)
         outs.append(cl)
+    if a.hq:
+        os.makedirs(a.hq, exist_ok=True)
+        # 키 0(기본 몸) 상태에서 굽는다
+        for o in outs:
+            for kb in o.data.shape_keys.key_blocks[1:]:
+                kb.value = 0.0
+        bake_body(hi, lo, outs[1:], a.hq, a.tex)
     bpy.data.objects.remove(hi)
 
     # 바닥 = 발바닥, 가운데 = 0
@@ -458,7 +566,7 @@ def main():
         filepath=os.path.abspath(a.out), export_format='GLB', use_selection=True,
         export_apply=False, export_skins=False, export_animations=False,
         export_morph=True, export_morph_normal=True, export_materials='NONE',
-        export_texcoords=False, export_vertex_color='NONE', export_yup=True, export_cameras=False, export_lights=False,
+        export_texcoords=bool(a.hq), export_tangents=False, export_vertex_color='NONE', export_yup=True, export_cameras=False, export_lights=False,
     )
     meta = {
         'sex': a.sex, 'heightM': round(H, 3), 'keys': list(KEYS),
