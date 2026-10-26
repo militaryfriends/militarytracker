@@ -120,7 +120,7 @@ VM 은 연결 폴더에서 파일을 지울 수 없어 git 이 `.lock` 파일을
   로 맞춘 뒤 `firebase_get_environment` 로 확인한다(두 값을 한 호출에 바꾸면 smis-mentor 폴더에 이 프로젝트가 남은 적이 있다).
 - `firebase.json` hosting 의 `site` 는 지우지 말 것 — 없으면 MCP 배포가 "no site name" 으로 실패한다.
 
-## 앱 코드 푸시 (EAS Update, 1.2.0 빌드부터)
+## 앱 코드 푸시 (EAS Update, 스토어 첫 빌드 1.0.0 부터)
 
 스토어 심사 없이 JS · 화면 · 문구 · 이미지 같은 **JS 번들 안의 변경**을 이미 깔린 앱에 보낸다. 사용자는 다음에 앱을 켤 때 받는다
 (`updates.checkAutomatically: ON_LOAD`, 기다리지 않음 → 그다음 실행부터 새 코드).

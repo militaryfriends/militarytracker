@@ -171,7 +171,7 @@ export default function CoachScreen() {
           <View style={[s.inRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <TextInput
               style={[s.input, coachEmpty && s.inputOff]}
-              placeholder={coachEmpty ? '다음 달 1일에 다시 채워집니다' : '코치에게 질문하기'}
+              placeholder={coachEmpty ? '오늘 질문을 다 썼어요 · 내일 다시 채워집니다' : '코치에게 질문하기'}
               placeholderTextColor={colors.placeholder}
               value={input}
               onChangeText={setInput}
