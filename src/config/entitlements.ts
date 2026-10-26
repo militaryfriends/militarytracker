@@ -99,5 +99,5 @@ export const LEGAL = {
   terms: 'https://military-tracker-96bdd.web.app/terms',
   privacy: 'https://military-tracker-96bdd.web.app/privacy',
   /** 문의·지원 — 스토어 양식의 지원 URL/이메일과 같은 값으로 둘 것 */
-  support: 'mailto:smiscamp@gmail.com',
+  support: 'mailto:militaryfriends.official@gmail.com',
 } as const;
