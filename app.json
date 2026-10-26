@@ -32,7 +32,10 @@
       },
       "package": "com.militarytracker.app",
       "userInterfaceStyle": "automatic",
-      "edgeToEdgeEnabled": true
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +55,13 @@
       ],
       "expo-font",
       "expo-status-bar",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-notifications",
+        {
+          "color": "#09090A"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
