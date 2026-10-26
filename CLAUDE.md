@@ -116,9 +116,10 @@ VM 은 연결 폴더에서 파일을 지울 수 없어 git 이 `.lock` 파일을
 - 맥 `node_modules` 는 macOS용이라 리눅스 VM 에서 `expo export` 가 안 된다 → 클라우드 컨테이너에서 같은 커밋으로
   `npx expo export --platform web` → `dist` 를 tgz 로 맥에 보내 `dist/` 에 푼다(옛 dist 는 `.cache/` 로 mv — 삭제 권한 없음).
 - 배포는 맥의 Firebase MCP(`firebase_deploy only=hosting`, 로그인 pobredward@gmail.com). **먼저 project_dir 을 이 저장소로,
-  active project 를 `military-tracker-96bdd` 로 바꾼다** — 기본값이 smis-mentor 라 그대로 두면 다른 프로젝트에 배포된다.
-  끝나면 project_dir 을 `/Users/sunwoongshin/Dev/smis-mentor` 로 되돌리고, **따로 한 번 더** active project 를 `smis-mentor`
-  로 맞춘 뒤 `firebase_get_environment` 로 확인한다(두 값을 한 호출에 바꾸면 smis-mentor 폴더에 이 프로젝트가 남은 적이 있다).
+  active project 를 `military-tracker-96bdd` 로 바꾼다** — 기본값이 smiscamp 라 그대로 두면 다른 프로젝트에 배포된다.
+  끝나면 project_dir 을 `/Users/sunwoongshin/Dev/smiscamp` 로 되돌리고, **따로 한 번 더** active project 를 `smiscamp-bacba`
+  로 맞춘 뒤 `firebase_get_environment` 로 확인한다(두 값을 한 호출에 바꾸면 다른 폴더에 이 프로젝트가 남은 적이 있다).
+  기본 환경은 smiscamp(2026-10-26 부터 — SMIS Mentor 이관 후 메인). 예전 기본값 smis-mentor 로 되돌리지 말 것.
 - `firebase.json` hosting 의 `site` 는 지우지 말 것 — 없으면 MCP 배포가 "no site name" 으로 실패한다.
 
 ## 앱 코드 푸시 (EAS Update, 스토어 첫 빌드 1.0.0 부터)
