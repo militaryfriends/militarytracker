@@ -83,6 +83,8 @@ O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 �
   그 뒤로는 2D(`markBroken`). expo-gl 은 네이티브 모듈 — 앱에 반영하려면 새 빌드.
   `AvatarView` 에 `coord`(엔진 연속 좌표)를 주면 그 몸, `live` 면 손으로 돌리는 뷰어(좌표가 바뀌면 몸이 서서히 변함).
   three.js 는 `avatar3d/kit.web.ts` 하나로만 가져온다 — 다른 곳에서 three 를 import 하면 메인 번들에 섞여 웹 첫 로딩이 무거워진다.
+  **three r163+ × expo-gl**: expo-gl 의 WebGL2 컨텍스트가 `instanceof WebGLRenderingContext` 라 three 가 "WebGL 1 미지원" 으로 멈춘다 —
+  `engine.native.ts` 의 `makeRenderer` 가 생성하는 동안만 전역 이름을 치운다(지우지 말 것). 앱에서 3D 가 꺼지면 MY 탭 맨 아래에 이유가 작게 나온다(`avatar3DError`).
   3D 가 없으면(WebGL · GL 불가) 칸 프리셋 `src/data/avatarGrid.ts` → 회색 실루엣(`Silhouette`) 순서.
 - 프로 혜택 문구(O8 "이 몸을 만드는 도구": 코치 하루 10회)는 서버 한도(`functions/src/quota.ts`)와 같아야 한다.
 - 콜러블 배포 이름은 `bodyProjectStart`(명세의 projectStart) · `bodyCheckinReport`(aiReport). **콜러블의 공개 호출 설정은

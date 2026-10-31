@@ -12,6 +12,8 @@ import { cachedSnapshot, mountViewer, snapshot, supports3D, type Viewer } from '
 import { joinYawGroup } from './stage';
 
 export const has3D = (sex: Sex) => supports3D(sex);
+/** 앱 전용 진단(Avatar3D.tsx) — 웹은 없음 */
+export const avatar3DError = (): string | null => null;
 
 export function Avatar3DStill({ sex, coord, width, height, fallback }: {
   sex: Sex; coord: Coord;

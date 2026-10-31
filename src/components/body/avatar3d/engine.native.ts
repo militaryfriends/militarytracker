@@ -53,10 +53,34 @@ async function nativeTexture(T: THREE, mod: number | undefined, color: boolean) 
 }
 
 let broken = false;
+let brokenWhy: string | null = null;
 export const native3D = (sex: Sex) => !broken && MODEL_SEXES.includes(sex) && !!MODEL_SRC[sex];
 export function markBroken(e?: unknown) {
   if (!broken && __DEV__) console.warn('[avatar3d] 3D 를 끄고 2D 로 그립니다', e);
+  if (!broken) brokenWhy = e instanceof Error ? e.message : e == null ? 'unknown' : String(e);
   broken = true;
+}
+/** 3D 를 끈 이유(처음 실패한 오류 메시지) — 없으면 null. MY 탭 아래에 작게 보여 준다(기기 진단용) */
+export const avatar3DError = () => brokenWhy;
+
+/**
+ * three r163+ 는 `context instanceof WebGLRenderingContext` 면 "WebGL 1 은 지원 안 함" 으로 멈춘다.
+ * expo-gl(SDK 57)은 WebGL2 컨텍스트가 스펙대로 WebGLRenderingContext 를 상속해 이 검사에 걸린다 →
+ * 렌더러를 만드는 동안만 전역 WebGLRenderingContext 를 치워 둔다(three 는 생성자에서만 이 이름을 본다).
+ * 진짜 WebGL1(GLES 2) 기기는 supportsWebGL2 로 먼저 걸러 2D 로 보낸다.
+ */
+function makeRenderer(T: THREE, gl: ExpoWebGLRenderingContext, canvas: HTMLCanvasElement) {
+  if ((gl as unknown as { supportsWebGL2?: boolean }).supportsWebGL2 === false) {
+    throw new Error('GLES 3 미지원 기기');
+  }
+  const g = globalThis as unknown as { WebGLRenderingContext?: unknown };
+  const saved = g.WebGLRenderingContext;
+  g.WebGLRenderingContext = undefined;
+  try {
+    return new T.WebGLRenderer({ canvas, context: gl as unknown as WebGL2RenderingContext, antialias: false, alpha: true });
+  } finally {
+    g.WebGLRenderingContext = saved;
+  }
 }
 
 // three 는 처음 3D 를 그릴 때 불러온다(앱 시작을 늦추지 않게)
@@ -112,7 +136,7 @@ export async function attach(
     width: w, height: h, clientWidth: w, clientHeight: h, style: {},
     addEventListener: () => {}, removeEventListener: () => {}, getContext: () => gl,
   } as unknown as HTMLCanvasElement;
-  const r = new T.WebGLRenderer({ canvas, context: gl as unknown as WebGL2RenderingContext, antialias: false, alpha: true });
+  const r = makeRenderer(T, gl, canvas);
   styleRenderer(T, r);
   r.setPixelRatio(1);
   r.setSize(w, h, false);

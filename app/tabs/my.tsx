@@ -1,3 +1,4 @@
+import { avatar3DError } from '../../src/components/body/avatar3d/Avatar3D';
 import { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
@@ -388,6 +389,7 @@ export default function MyScreen() {
         </View>
 
         <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>
+        {avatar3DError() ? <Text style={s.notice} selectable>3D 표시 꺼짐 · {avatar3DError()}</Text> : null}
 
         <TouchableOpacity activeOpacity={0.7} style={s.logoutBtn} onPress={handleLogout} accessibilityRole="button">
           <Text style={s.logoutTxt}>로그아웃</Text>

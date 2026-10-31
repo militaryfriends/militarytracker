@@ -9,6 +9,7 @@ import { PanResponder, StyleSheet, View } from 'react-native';
 import type { ExpoWebGLRenderingContext, GLView as GLViewType } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { attach, markBroken, native3D, type NativeView } from './engine.native';
+export { avatar3DError } from './engine.native';
 import { joinYawGroup } from './stage';
 
 let GLView: typeof GLViewType | null = null;
