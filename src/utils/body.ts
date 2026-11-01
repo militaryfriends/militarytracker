@@ -202,7 +202,7 @@ export function calcBodyStats(
     protein = n.proteinG;
     tagline = `${project.strategy && pt.phase !== 'keep' ? STRATEGY[project.strategy].name : PHASE_WORD[pt.phase]} 단계 · 내 변화 프로젝트`;
   } else {
-    const st = strategyOfGoal(p.goal);
+    const st = p.strategy ?? strategyOfGoal(p.goal);
     const n = phaseNutrition(st ? STRATEGY[st].phase : 'keep', ctx, st ?? undefined);
     kcal = n.kcal;
     protein = n.proteinG;
@@ -227,9 +227,13 @@ export function calcBodyStats(
   };
 }
 
+/** 화면 · 코치에 쓰는 목표 이름 — 카드 방식이 있으면 그 이름(최대 감량 · 근육 유지 감량 · 린매스업 · 벌크업) */
+export const goalLabel = (p: Pick<UserProfile, 'goal' | 'strategy'>): string =>
+  p.goal !== 'habit' && p.strategy ? STRATEGY[p.strategy].name : GOAL_LABEL[p.goal];
+
 export const GOAL_LABEL: Record<UserProfile['goal'], string> = {
-  muscle: '근성장',
-  cut: '체지방 감량',
+  muscle: '린매스업',
+  cut: '근육 유지 감량',
   habit: '운동 습관 만들기',
 };
 

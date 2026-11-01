@@ -20,14 +20,14 @@ import { useAppStore } from '../src/stores/appStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { PART_LABEL, PART_ORDER, exById } from '../src/data/exercises';
-import { calcBodyStats, GOAL_LABEL } from '../src/utils/body';
+import { calcBodyStats, goalLabel } from '../src/utils/body';
 import { setsByPart } from '../src/utils/stats';
 import {
   askCoach, AIUnavailable, SubscriptionRequired, QuotaExceeded, CoachQuota, CoachMessage,
 } from '../src/services/aiService';
 
 /** 처음 화면의 빠른 질문 — 누르면 바로 보낸다 */
-const QUICK = ['지금 뭐 먹어야 해?', '운동 후에 뭐 먹을까?', '오늘 운동 뭐 하지?'];
+const QUICK = ['내 하루 칼로리 얼마야?', '지금 뭐 먹어야 해?', '운동 후에 뭐 먹을까?', '오늘 운동 뭐 하지?'];
 
 const WELCOME: CoachMessage = {
   role: 'assistant',
@@ -74,7 +74,7 @@ export default function CoachScreen() {
       : '신체 정보 없음';
     return [
       `사용자: ${profile?.sex === 'male' ? '남' : '여'} ${profile?.age ?? '-'}세, ${profile?.height ?? '-'}cm/${profile?.weight ?? '-'}kg, ${body}`,
-      `목표: ${profile ? GOAL_LABEL[profile.goal] : '-'}`,
+      `목표: ${profile ? goalLabel(profile) : '-'}`,
       `현재 플랜: ${planTxt}`,
       `최근 기록: ${logTxt}`,
       `이번 주 부위별 세트: ${PART_ORDER.map((p) => `${PART_LABEL[p]} ${vol[p]}`).join(', ')}`,

@@ -14,6 +14,7 @@ import { persistLog } from '../services/sync';
 import { useCountdown, useElapsed } from '../hooks/useCountdown';
 import { fmtClock, fmtSetDetail, lastSetsOf, prIdsIn } from '../utils/stats';
 import ExerciseMedia from './ExerciseMedia';
+import { ProgressRing } from '../ui/ProgressRing';
 
 /** 휴식 종료 알림 — 네이티브는 진동, 웹은 지원 브라우저에서만 */
 function buzz() {
@@ -64,6 +65,10 @@ export default function SessionPlayer() {
   // 무게 → 횟수 → 다음 세트 무게로 키보드 '다음' 이 이동하도록
   const inputRefs = useRef<Record<string, TextInput | null>>({});
 
+  // 원형 휴식 타이머의 전체 길이 — 휴식이 시작될 때(+15초로 늘리면 그만큼) 잡는다
+  const restTotal = useRef(0);
+  if (rest > 0 && (!wasResting.current || rest > restTotal.current)) restTotal.current = rest;
+
   // 휴식이 끝나는 순간 알린다
   useEffect(() => {
     if (rest > 0) {
@@ -89,7 +94,7 @@ export default function SessionPlayer() {
   const last = lastSetsOf(logs, cur.id);
   const usedKey = session.data.map((x) => x.id).join(',');
   // 화면 높이의 38% 까지 — 작은 폰에서도 세트 2~3줄은 보이게
-  const mediaSize = Math.round(Math.min(winW - 32, 480, winH * (kb ? 0.16 : 0.38)));
+  const mediaSize = Math.round(Math.min(winW - 32, 480, winH * (kb ? 0.16 : 0.46)));
   const rx = e ? prescription(e, lv) : null;
 
   /**
@@ -252,8 +257,13 @@ export default function SessionPlayer() {
           {rest > 0 ? (
             <>
               <View style={s.restLeft}>
-                <Text style={s.restLabel}>휴식</Text>
-                <Text style={s.restTime} maxFontSizeMultiplier={1.2}>{fmtClock(rest)}</Text>
+                <View style={s.ringWrap}>
+                  <ProgressRing size={44} stroke={4} progress={restTotal.current ? rest / restTotal.current : 0} animate={false} />
+                </View>
+                <View>
+                  <Text style={s.restLabel}>다음 {Math.min(completedSets + 1, cur.sets.length)}세트</Text>
+                  <Text style={s.restTime} maxFontSizeMultiplier={1.2}>{fmtClock(rest)}</Text>
+                </View>
               </View>
               <View style={s.restBtns}>
                 <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={() => (rest > 15 ? startRest(rest - 15) : stopRest())} accessibilityRole="button" accessibilityLabel="휴식 15초 줄이기">
@@ -570,17 +580,18 @@ const s = themed(() => StyleSheet.create({
   restBox: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.panel2, borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 8, marginBottom: 12, minHeight: 60,
+    paddingHorizontal: 10, paddingVertical: 8, marginBottom: 12, minHeight: 60, gap: 8,
   },
   restBoxOn: { backgroundColor: colors.panel3 },
-  restLeft: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  restLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ringWrap: { width: 44, height: 44 },
   restLabel: { fontSize: 12, color: colors.muted },
   restTime: { fontSize: 22, fontWeight: '800', color: colors.ink },
   restHint: { fontSize: 11, color: colors.muted, flexShrink: 1, textAlign: 'right' },
-  restBtns: { flexDirection: 'row', gap: 6 },
+  restBtns: { flexDirection: 'row', gap: 5, flexShrink: 1 },
   skipBtn: {
     borderWidth: 1, borderColor: colors.line2, borderRadius: 22, minHeight: 44,
-    paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center',
   },
   skipTxt: { fontSize: 13, fontWeight: '600', color: colors.ink },
 

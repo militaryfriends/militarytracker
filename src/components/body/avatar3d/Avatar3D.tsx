@@ -6,9 +6,10 @@
  */
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import type { ExpoWebGLRenderingContext, GLView as GLViewType } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
-import { attach, markBroken, native3D, type NativeView } from './engine.native';
+import { attach, loadModel, markBroken, native3D, type NativeView } from './engine.native';
 export { avatar3DError } from './engine.native';
 import { joinYawGroup } from './stage';
 import { useThemeMode } from '../../../theme/tokens';
@@ -21,6 +22,15 @@ try {
 }
 
 export const has3D = (sex: Sex) => !!GLView && native3D(sex);
+
+/**
+ * 3D 모델을 미리 읽어 둔다(glb 읽기 + Hermes 에서 파싱 + 텍스처 — 첫 표시 때 JS 를 몇 초 붙잡는다).
+ * 온보딩에서 성별을 고르자마자 불러 두면 계산 화면 · 결과 화면에서 3D 가 바로 뜬다(10/31 피드백 1절 "계산 21초").
+ */
+export function preload3D(sex: Sex): void {
+  if (!has3D(sex)) return;
+  loadModel(sex).catch(() => {});
+}
 
 class Guard extends Component<{ fallback: ReactNode; children: ReactNode }, { err: boolean }> {
   state = { err: false };
@@ -44,6 +54,7 @@ function GLBody({
   const w = Math.round(width);
   const h = Math.round(height);
   const mode = useThemeMode(); // 노출이 모드마다 달라 바뀌면 GL 뷰를 새로 만든다
+  const reduce = useReducedMotion();
   const view = useRef<NativeView | null>(null);
   const coordRef = useRef(coord);
   coordRef.current = coord;
@@ -73,7 +84,7 @@ function GLBody({
       view.current = null;
       group.current?.leave();
       group.current = joinYawGroup(yawGroup, {}, (y) => view.current?.setYaw(y));
-      const v = await attach(gl, { sex, coord: from ?? coordRef.current, intro, onYaw: group.current.emit });
+      const v = await attach(gl, { sex, coord: from ?? coordRef.current, intro, onYaw: group.current.emit, breathe: interactive && !reduce });
       if (!alive.current) return v.dispose();
       view.current = v;
       // 이전 칸에서 시작하면(프로젝트 카드 선택) 지금 좌표로 변해 간다

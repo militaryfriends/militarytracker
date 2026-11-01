@@ -21,6 +21,7 @@ import { PRODUCTS, TRIAL_DAYS } from '../../src/config/entitlements';
 import { saveOnboarding, saveProfile } from '../../src/services/authService';
 import { saveAnalysis, setAnalysisDecision } from '../../src/services/bodyService';
 import { buildLocalPlan } from '../../src/utils/planner';
+import { splitLabel } from '../../src/data/planTemplates';
 import { showAlert } from '../../src/utils/alert';
 import { ProjectGridCard } from '../../src/components/body/ProjectCard';
 import { ChangePreview } from '../../src/components/body/ChangePreview';
@@ -74,6 +75,8 @@ export default function ProjectsScreen() {
   }
 
   const sel = picked ?? cards.find((p) => p.recommended)?.id ?? cards[0].id;
+  const selName = (cards.find((p) => p.id === sel) ?? cards[0]).name;
+  const splitName = splitLabel(a.input.env, a.input.days as 2 | 3 | 4 | 5 | 6, a.input.level as 1 | 2 | 3);
   const colW = Math.floor((Math.min(width, 520) - 36 - 10) / 2);
   const running = !!project && project.analysisId === a.id && project.status === 'active';
   const trial = TRIAL_DAYS > 0 && !sub.trialUsed && !pro;
@@ -106,7 +109,9 @@ export default function ProjectsScreen() {
     setBusy(true);
     try {
       const d = useOnboardDraft.getState();
-      const profile = profileFromAnalysis(a, d.seeded ? d.profile : useAppStore.getState().profile);
+      // 고르고 있던 카드(없으면 추천)를 프로필에 — 프로젝트 없이도 식단 숫자가 그 카드와 같다
+      const pickedCard = cards?.find((c) => c.id === sel) ?? cards?.[0];
+      const profile = profileFromAnalysis(a, d.seeded ? d.profile : useAppStore.getState().profile, pickedCard?.strategy);
       // 처음 가입 · "온보딩 처음부터 다시 하기" → 루틴도 새 입력으로. 홈에서 다시 분석 → 프로필만
       if (!user.onboardingDone || d.restart) {
         const plan = d.localPlan ?? buildLocalPlan(profile);
@@ -140,28 +145,10 @@ export default function ProjectsScreen() {
             <Text style={s.backTxt}>←</Text>
           </TouchableOpacity>
         ) : null}
-        <Text style={s.title} accessibilityRole="header">내 변화 프로젝트</Text>
-        <Text style={s.sub}>지금 몸에서 실제로 갈 수 있는 몸 4가지예요. 하나를 고르면 그 몸을 만드는 루틴 · 식단으로 시작해요</Text>
-        <View style={s.acc}>
-          <AccuracyMeter accuracy={a.comp.accuracy} compact />
-        </View>
+        <Text style={s.title} accessibilityRole="header">목표 몸 4가지</Text>
+        <Text style={s.sub}>지금 몸에서 실제로 갈 수 있는 몸이에요. 결제 전에도 숫자는 전부 보여 드려요</Text>
 
-        {(() => {
-          const cur = cards.find((p) => p.id === sel) ?? cards[0];
-          return (
-            <ChangePreview
-              key={cur.id}
-              sex={a.input.sex}
-              title={cur.name}
-              months={cur.months}
-              start={{ cell: a.cell, coord: a.coord, weightKg: a.input.weightKg, bfPct: a.comp.bfPct }}
-              end={cur.end}
-              track={cur.track}
-              width={Math.min(width, 520) - 36}
-            />
-          );
-        })()}
-
+        {/* 카드 4장을 첫 화면에 나란히(10/31 피드백 2절 — 예전엔 두 번째 카드가 스크롤 아래에 있었다) */}
         <View style={s.grid}>
           {cards.map((p) => (
             <ProjectGridCard
@@ -176,8 +163,46 @@ export default function ProjectsScreen() {
         </View>
         {(() => {
           const cur = cards.find((p) => p.id === sel) ?? cards[0];
-          return <Text style={s.practice}>{practiceLine(cur.nutrition, a.input.days)} · 첫 달 기준</Text>;
+          return <Text style={s.practice}>{practiceLine(cur.nutrition, a.input.days)} · {splitName} · 첫 달 기준</Text>;
         })()}
+
+        {/* 고른 카드의 달마다 몸 — 크게, 막대로 달을 바꿔 본다 */}
+        {(() => {
+          const cur = cards.find((p) => p.id === sel) ?? cards[0];
+          return (
+            <View style={{ marginTop: 16 }}>
+              <ChangePreview
+                key={cur.id}
+                sex={a.input.sex}
+                title={cur.name}
+                months={cur.months}
+                start={{ cell: a.cell, coord: a.coord, weightKg: a.input.weightKg, bfPct: a.comp.bfPct }}
+                end={cur.end}
+                track={cur.track}
+                width={Math.min(width, 520) - 36}
+              />
+            </View>
+          );
+        })()}
+
+        <View style={s.acc}>
+          <AccuracyMeter accuracy={a.comp.accuracy} compact />
+        </View>
+
+        {!running ? (
+          <>
+            <Text style={s.toolsHead}>이 몸을 만드는 도구</Text>
+            <View style={s.tools}>
+              {TOOLS.map((t) => (
+                <View key={t.label} style={s.tool}>
+                  <Ionicons name={t.icon} size={15} color={colors.ink} />
+                  <Text style={s.toolTxt} numberOfLines={1}>{t.label}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+        <Text style={s.notice}>목표 몸은 입력값과 보수적인 변화 속도로 계산한 예상이에요. 결과는 개인마다 다르고, 운동 · 식단 실천에 따라 달라져요.</Text>
 
         <TouchableOpacity onPress={() => router.push(redo ? '/project/compare?redo=1' : '/project/compare')} style={s.again} accessibilityRole="button">
           <Text style={s.againTxt}>지금 내 몸 다시 보기</Text>
@@ -194,18 +219,9 @@ export default function ProjectsScreen() {
           </>
         ) : (
           <>
-            <Text style={s.toolsHead}>이 몸을 만드는 도구</Text>
-            <View style={s.tools}>
-              {TOOLS.map((t) => (
-                <View key={t.label} style={s.tool}>
-                  <Ionicons name={t.icon} size={15} color={colors.ink} />
-                  <Text style={s.toolTxt} numberOfLines={1}>{t.label}</Text>
-                </View>
-              ))}
-            </View>
             <PressableScale style={s.cta} onPress={start} disabled={busy}
-              accessibilityLabel={pro ? '맞춤형 프로젝트 바로 시작하기' : '결제하시면 바로 맞춤형 프로젝트 진행합니다'}>
-              <Text style={s.ctaTxt}>{pro ? '맞춤형 프로젝트 바로 시작하기' : '결제하시면 바로 맞춤형 프로젝트 진행합니다!'}</Text>
+              accessibilityLabel={`${selName}${pro ? ' 프로젝트 바로 시작하기' : ' 프로젝트로 시작하기, 결제 후 바로 진행'}`}>
+              <Text style={s.ctaTxt}>{pro ? `${selName} 프로젝트 바로 시작하기` : `${selName}으로 시작하기`}</Text>
             </PressableScale>
             <Text style={s.price}>{priceLine}</Text>
             <TouchableOpacity onPress={askDecline} disabled={busy} style={s.decline} accessibilityRole="button">
@@ -213,7 +229,6 @@ export default function ProjectsScreen() {
             </TouchableOpacity>
           </>
         )}
-        <Text style={s.notice}>예상 몸은 입력값과 보수적인 변화 속도로 계산한 추정치예요. 실제 결과는 운동·식단 실천에 따라 달라져요.</Text>
       </View>
     </SafeAreaView>
   );
@@ -226,15 +241,15 @@ const s = themed(() => StyleSheet.create({
   backTxt: { fontSize: 20, color: colors.ink, fontWeight: '600' },
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   sub: { fontSize: 13.5, color: colors.muted, marginTop: 6, lineHeight: 20 },
-  acc: { marginTop: 10, marginBottom: 16 },
+  acc: { marginTop: 2, marginBottom: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
-  practice: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 10 },
+  practice: { fontSize: 12, color: colors.mid, textAlign: 'center', marginTop: 10, fontWeight: '600' },
   again: { alignItems: 'center', paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
   againTxt: { fontSize: 12.5, color: colors.mid, fontWeight: '600', textDecorationLine: 'underline' },
   foot: {
     paddingHorizontal: 18, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg,
   },
-  toolsHead: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 1 },
+  toolsHead: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 1, marginTop: 4 },
   tools: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 10 },
   tool: {
     flexDirection: 'row', alignItems: 'center', gap: 6, width: '48.8%',
@@ -249,5 +264,5 @@ const s = themed(() => StyleSheet.create({
   // 시작 버튼과 거리를 둔다 — 붙어 있어 시작하려다 거절이 눌렸다(10/31 녹화 0:56)
   decline: { alignItems: 'center', minHeight: 44, justifyContent: 'center', marginTop: 14 },
   declineTxt: { fontSize: 13, color: colors.mid, fontWeight: '600' },
-  notice: { fontSize: 11, color: colors.muted, lineHeight: 16, textAlign: 'center', marginTop: 2 },
+  notice: { fontSize: 11, color: colors.muted, lineHeight: 16, textAlign: 'center', marginTop: 12 },
 }));

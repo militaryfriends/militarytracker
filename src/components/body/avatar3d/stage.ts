@@ -168,9 +168,13 @@ export const mixMorph = (a: Morph, b: Morph, e: number): Morph => ({
   mus_down: a.mus_down + (b.mus_down - a.mus_down) * e,
 });
 
-/** 처음 나타날 때 살짝 돌며 들어오는 각도 · 시간 */
-export const INTRO_FROM = -0.55;
-export const INTRO_MS = 1400;
+/** 처음 나타날 때 천천히 한 바퀴 돌며 들어온다(3D 피드백 P4 — 배 · 등 두께를 한 번에 보여 준다) */
+export const INTRO_FROM = -Math.PI * 2;
+export const INTRO_MS = 3200;
+/** 숨쉬기 — 몸통 폭 · 두께만 아주 조금(발은 그대로), 4초 주기, 가만히 있을 때 15fps 로만 */
+const BREATH_AMP = 0.006;
+const BREATH_MS = 4000;
+const BREATH_FRAME_MS = 66;
 /** 손가락 1px 당 회전(라디안) */
 export const DRAG_RAD = 0.012;
 
@@ -206,6 +210,8 @@ export interface Driver {
 /** draw 는 매 프레임 그린 뒤 호출된다(앱은 gl.endFrameEXP). 바쁠 때만 프레임을 돌린다 — 가만히 있으면 배터리를 쓰지 않는다 */
 export function makeDriver(st: Stage, start: Morph, opts: {
   draw: () => void; yaw?: number; intro?: boolean; onYaw?: (y: number) => void;
+  /** 손으로 돌리는 뷰어에서만 — 줄이기 모션 설정이면 끈다 */
+  breathe?: boolean;
 }): Driver {
   let cur = start;
   let from = start;
@@ -218,6 +224,8 @@ export function makeDriver(st: Stage, start: Morph, opts: {
   let raf = 0;
   let dead = false;
   let introUntil = opts.intro ? Date.now() + INTRO_MS : 0;
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  const t00 = Date.now();
 
   const frameFn = () => {
     raf = 0;
@@ -232,7 +240,7 @@ export function makeDriver(st: Stage, start: Morph, opts: {
     }
     if (introUntil) {
       const k = 1 - Math.max(0, (introUntil - now) / INTRO_MS);
-      st.pivot.rotation.y = INTRO_FROM + (yaw - INTRO_FROM) * ease(k);
+      st.pivot.rotation.y = yaw + INTRO_FROM * (1 - ease(k));
       if (k >= 1) introUntil = 0;
       else busy = true;
     } else {
@@ -244,9 +252,21 @@ export function makeDriver(st: Stage, start: Morph, opts: {
       }
       st.pivot.rotation.y = yaw;
     }
+    if (opts.breathe) {
+      const b = 1 + BREATH_AMP * Math.sin(((now - t00) / BREATH_MS) * Math.PI * 2);
+      st.pivot.scale.x = b;
+      st.pivot.scale.z = b;
+    }
     applyMorph(st, cur);
     opts.draw();
     if (busy || dragging) raf = requestAnimationFrame(frameFn);
+    else if (opts.breathe && !idleTimer) {
+      // 가만히 있을 때는 숨쉬기만 — 프레임을 줄여 배터리를 아낀다
+      idleTimer = setTimeout(() => {
+        idleTimer = null;
+        kick();
+      }, BREATH_FRAME_MS);
+    }
   };
   const kick = () => {
     if (!raf && !dead) raf = requestAnimationFrame(frameFn);
@@ -293,6 +313,7 @@ export function makeDriver(st: Stage, start: Morph, opts: {
     dispose() {
       dead = true;
       if (raf) cancelAnimationFrame(raf);
+      if (idleTimer) clearTimeout(idleTimer);
     },
   };
 }

@@ -21,6 +21,7 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { AvatarView } from '../../src/components/body/AvatarView';
 import { kg, pct1 } from '../../src/components/body/format';
+import { ProgressChart } from '../../src/components/body/ProgressChart';
 import { projectNow } from '../../src/components/body/progress';
 import { coordOf } from '../../src/components/body/avatar3d/morph';
 import { cellWithHysteresis, toCoord, updateComp } from '../../src/utils/bodyComp';
@@ -179,6 +180,12 @@ export default function CheckinScreen() {
             ))}
           </View>
 
+          {/* 진행률 — 예상 vs 실제 체중, 단계 띠(10/31 피드백 5절 "진행률 보기") */}
+          <View style={s.chartBox}>
+            <SectionLabel>진행 그래프</SectionLabel>
+            <ProgressChart project={project} checkins={checkins} weights={weights} />
+          </View>
+
           {!pro ? (
             <View style={s.paused}>
               <Text style={s.pausedTitle}>프로젝트가 멈춰 있어요</Text>
@@ -226,6 +233,19 @@ export default function CheckinScreen() {
               <Text style={s.nextTxt}>그동안 주에 한 번 체중을 기록하면 "지금" 몸이 따라 바뀌어요.</Text>
             </View>
           )}
+
+          {checkins.length > 1 ? (
+            <View style={s.last}>
+              <SectionLabel>체크인 기록</SectionLabel>
+              {checkins.map((c) => (
+                <View key={c.id} style={s.histRow}>
+                  <Text style={s.histDate}>{c.monthIndex}개월 · {c.date.slice(5).replace('-', '/')}</Text>
+                  <Text style={s.histNum}>{kg(c.weightKg)}kg · 체지방 {pct1(c.comp.bfPct)}%</Text>
+                  <Text style={s.histStatus}>{STATUS_TEXT[c.status]}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {now.latest && !result ? (
             <View style={s.last}>
@@ -284,6 +304,11 @@ function ReportBody({ r, statusText }: { r: BodyReportBody; statusText?: string 
 }
 
 const s = themed(() => StyleSheet.create({
+  chartBox: { marginTop: 18 },
+  histRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.line },
+  histDate: { fontSize: 12, color: colors.muted, width: 82 },
+  histNum: { fontSize: 13, color: colors.ink, fontWeight: '700', flex: 1 },
+  histStatus: { fontSize: 11.5, color: colors.mid, fontWeight: '700' },
   name: { fontSize: 21, fontWeight: '800', color: colors.ink, marginTop: 4 },
   meta: { fontSize: 12.5, color: colors.muted, marginTop: 4 },
   trio: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, marginBottom: 6 },

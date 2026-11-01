@@ -8,7 +8,7 @@ import { functions } from './firebase';
 import { BodyProject, BodyReportBody, CheckinResult, DietPlan, Plan, UserProfile } from '../types';
 import { buildLocalPlan, conformToTemplates, planFromAI } from '../utils/planner';
 import { DANGER, splitTemplates } from '../data/planTemplates';
-import { calcBodyStats, FOOD_LABEL, GOAL_LABEL } from '../utils/body';
+import { calcBodyStats, FOOD_LABEL, goalLabel } from '../utils/body';
 import type { BodyStats } from '../types';
 import { exById, PART_LABEL } from '../data/exercises';
 
@@ -179,7 +179,7 @@ export async function generateDiet(
       st
         ? {
             bodyType: st.bodyType,
-            goal: GOAL_LABEL[p.goal],
+            goal: goalLabel(p),
             kcal: st.kcal,
             protein: st.protein,
             carb: st.carb,

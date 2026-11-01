@@ -66,7 +66,7 @@ service cloud.firestore {
       return p is map
         && p.keys().hasOnly([
           'sex', 'age', 'height', 'weight', 'goal', 'env', 'days', 'level', 'food', 'allergy',
-          'waistCm', 'goalArchetypeId', 'focus'
+          'waistCm', 'goalArchetypeId', 'focus', 'strategy'
         ])
         && p.sex in ['male', 'female']
         && p.age is string && p.age.size() <= 4
@@ -82,7 +82,9 @@ service cloud.firestore {
         && (!('waistCm' in p) || (p.waistCm is number && p.waistCm >= 50 && p.waistCm <= 200))
         && (!('goalArchetypeId' in p) || (p.goalArchetypeId is string && p.goalArchetypeId.size() <= 20))
         // 신경 쓰이는 부위(2026-11-01 온보딩 10단계) — 선택
-        && (!('focus' in p) || (p.focus is list && p.focus.size() <= 6));
+        && (!('focus' in p) || (p.focus is list && p.focus.size() <= 6))
+        // 고른 프로젝트 카드 방식(2026-11-02) — 프로젝트 없이도 식단 칼로리가 카드와 같게
+        && (!('strategy' in p) || p.strategy in ['cut_fast', 'cut', 'leanmass', 'bulk']);
     }
 
     // users 문서의 허용 키. update 의 request.resource.data 는 쓰기 후 문서 전체라

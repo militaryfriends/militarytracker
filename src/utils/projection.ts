@@ -385,16 +385,19 @@ export interface CardFit {
 /** 지금 칸 → 추천 카드 (남녀 같은 칸 기준) — F4 · F5 최대 감량, F3 근육 유지 감량, F2 · (F1 + M4 이상) 린매스업, F1 + M1~3 벌크업 */
 export function recommendedStrategy(sex: Sex, start: BodyComp): Strategy {
   const { f, m } = parseCell(toCell(sex, start.bfPct, start.nffmi));
-  if (f >= 4) return 'cut_fast';
+  if (f >= 5) return 'cut_fast';
+  // F4 인데 근육이 적은 몸(M1~M2, 이른바 마른 비만)은 주 1% 감량이면 근손실이 커서 마른 몸으로 끝난다 → 근육 유지 감량
+  if (f === 4) return m <= 2 ? 'cut' : 'cut_fast';
   if (f === 3) return 'cut';
   if (f === 2 || m >= 4) return 'leanmass';
   return 'bulk';
 }
 
 export function strategyFit(sex: Sex, start: BodyComp, s: Strategy): CardFit {
-  const { f } = parseCell(toCell(sex, start.bfPct, start.nffmi));
+  const { f, m } = parseCell(toCell(sex, start.bfPct, start.nffmi));
   if (s === 'cut_fast' && f <= 2) return { ok: false, reason: '체지방이 이미 낮아 빠른 감량은 근손실 위험이 커요' };
-  if (s === 'cut' && f <= 1) return { ok: false, reason: '지금 체지방이 충분히 낮아요 — 근육을 채울 때예요' };
+  // 마른 몸(F2 · 근육 M1~M2)이 더 빼면 더 마른 몸이 된다
+  if (s === 'cut' && (f <= 1 || (f === 2 && m <= 2))) return { ok: false, reason: '지금 체지방이 충분히 낮아요 — 근육을 채울 때예요' };
   if (s === 'leanmass' && f >= 4) return { ok: false, reason: '지금은 감량 먼저가 빠릅니다' };
   if (s === 'bulk' && f >= 3) return { ok: false, reason: '지금은 살이 근육보다 더 붙기 쉬워요 — 감량이나 린매스업을 권해요' };
   return { ok: true };

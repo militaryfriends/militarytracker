@@ -24,7 +24,7 @@ import { saveOnboarding } from '../../src/services/authService';
 import { buildLocalPlan } from '../../src/utils/planner';
 import { profileFromAnalysis } from '../../src/components/body/format';
 import type { BodyProject, DietPlan, Plan } from '../../src/types';
-import { STRATEGIES, legacyGoalOf, type Strategy } from '../../src/utils/projection';
+import { STRATEGIES, type Strategy } from '../../src/utils/projection';
 
 const STEPS = [
   '계산 결과를 확인하는 중입니다',
@@ -95,7 +95,7 @@ export default function ProjectStartScreen() {
 
       const d = useOnboardDraft.getState();
       // 고른 카드의 방식이 프로필 목표가 된다(감량 카드 → cut, 증량 카드 → muscle) — 식단 · 코치 · 루틴이 같은 방향
-      const profile = { ...profileFromAnalysis(a, d.seeded ? d.profile : st.profile), goal: legacyGoalOf(ref) };
+      const profile = profileFromAnalysis(a, d.seeded ? d.profile : st.profile, ref);
 
       // 3) 루틴 — 실패해도 자동 구성으로 시작한다
       let plan: Plan;

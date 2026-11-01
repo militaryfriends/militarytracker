@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
@@ -31,6 +32,7 @@ function dateOfBest(logs: WorkoutLog[], exId: string, best: SetDetail, stats?: U
 
 export default function RecordsScreen() {
   const mode = useThemeMode();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const goBack = useSafeBack();
   const logs = useAppStore((s) => s.logs);
@@ -100,7 +102,7 @@ export default function RecordsScreen() {
         // 모드가 바뀌면 줄도 다시 그린다 (renderItem 안에서 색을 읽는다)
         extraData={mode}
         keyExtractor={(r) => r.id}
-        contentContainerStyle={s.listInner}
+        contentContainerStyle={[s.listInner, { paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         initialNumToRender={14}
         ListHeaderComponent={

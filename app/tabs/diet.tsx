@@ -8,7 +8,7 @@ import { FONT } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { calcBodyStats, effectiveWeight, FOOD_LABEL, GOAL_LABEL } from '../../src/utils/body';
+import { calcBodyStats, effectiveWeight, FOOD_LABEL, goalLabel } from '../../src/utils/body';
 import { generateDiet, SubscriptionRequired, QuotaExceeded } from '../../src/services/aiService';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProLock, ProBadge } from '../../src/components/ProLock';
@@ -117,7 +117,7 @@ export default function DietScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.basisLabel}>계산 기준</Text>
             <Text style={s.basisMain}>
-              {st.weightUsed}kg · {profile.height}cm · {profile.age}세 · {GOAL_LABEL[profile.goal]}
+              {st.weightUsed}kg · {profile.height}cm · {profile.age}세 · {goalLabel(profile)}
             </Text>
             <Text style={s.basisSub}>
               {st.weightSrc === 'trend'

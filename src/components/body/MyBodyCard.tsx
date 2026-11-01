@@ -68,6 +68,10 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
     const totalDays = Math.max(1, Math.round(project.months * 30.44));
     const pctDone = Math.min(100, Math.round((now.days / totalDays) * 100));
     const stopped = project.status === 'paused' || !pro;
+    const totalWeeks = Math.max(1, Math.round((project.months * 30.44) / 7));
+    // 최근 7일 안에 체중 기록이 없으면 한 줄 안내
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const weighDue = !weights.some((r) => r.date >= weekAgo);
     const one = Math.round(Math.min(220, inner * 0.62));
     const two = Math.round(Math.min(150, (inner - 16) / 2));
     return (
@@ -102,14 +106,28 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
         </View>
 
         <View style={s.proj}>
-          <Text style={s.projName} numberOfLines={1}>{project.name}</Text>
-          <Text style={s.projSub}>{stopped ? '멈춤 · 다시 구독하면 이어서' : `${now.week}주차 · 기간의 ${pctDone}%`}</Text>
+          <Text style={s.projName} numberOfLines={1}>{project.name} · {project.months}개월</Text>
+          <Text style={s.projSub}>{stopped ? '멈춤 · 다시 구독하면 이어서' : `${Math.min(now.week, totalWeeks)}주차 / 전체 ${totalWeeks}주 · ${pctDone}%`}</Text>
           <View style={s.bar}><View style={[s.barFill, { width: `${Math.max(3, pctDone)}%` }]} /></View>
+          <View style={s.kgRow}>
+            {[['시작', project.input.weightKg], ['지금', nowKg], ['예상', project.end.weightKg]].map(([k, v]) => (
+              <View key={k as string} style={s.kgCell}>
+                <Text style={s.kgK}>{k}</Text>
+                <Text style={s.kgV}>{kg(v as number)}kg</Text>
+              </View>
+            ))}
+          </View>
         </View>
+        {/* 체크인은 4주마다라 그 사이엔 주 1회 체중이 "지금" 몸을 움직이는 유일한 장면이다(10/31 피드백 8절 2) */}
+        {weighDue && !stopped ? (
+          <TouchableOpacity activeOpacity={0.7} onPress={onWeigh} style={s.nudge} accessibilityRole="button">
+            <Text style={s.nudgeTxt}>이번 주 체중을 기록하면 "지금" 몸과 진행 막대가 바로 움직여요 ›</Text>
+          </TouchableOpacity>
+        ) : null}
         <View style={s.btnRow}>
-          <Btn title="진행률" sub={`${pctDone}%`} onPress={() => router.push('/project/checkin')} />
+          <Btn title="진행률 보기" sub="그래프 · 기록" onPress={() => router.push('/project/checkin')} />
           <Btn title="체크인" sub={now.dueIn <= 0 ? '오늘' : `D-${now.dueIn}`} onPress={() => router.push('/project/checkin')} />
-          <Btn title="체중 기록" sub="오늘 몸무게" onPress={onWeigh} />
+          <Btn title="체중 기록" sub={weighDue ? '이번 주 아직' : '오늘 몸무게'} onPress={onWeigh} />
         </View>
       </View>
     );
@@ -174,6 +192,12 @@ const s = themed(() => StyleSheet.create({
   bar: { height: 6, borderRadius: 3, backgroundColor: colors.panel3, marginTop: 10, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
   btnRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  kgRow: { flexDirection: 'row', marginTop: 12, gap: 8 },
+  kgCell: { flex: 1, alignItems: 'center' },
+  kgK: { fontSize: 11, color: colors.muted, fontWeight: '700' },
+  kgV: { fontSize: 15, color: colors.ink, fontWeight: '800', marginTop: 2 },
+  nudge: { marginTop: 12, backgroundColor: colors.panel2, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.line2 },
+  nudgeTxt: { fontSize: 12.5, color: colors.ink, fontWeight: '700', lineHeight: 18 },
   btn: {
     flex: 1, backgroundColor: colors.panel2, borderRadius: 12, paddingVertical: 11, alignItems: 'center',
     borderWidth: 1, borderColor: colors.line,

@@ -6,13 +6,18 @@
 import { useThemeMode } from '../../../theme/tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { coordKey } from './morph';
-import { cachedSnapshot, mountViewer, snapshot, supports3D, type Viewer } from './engine.web';
+import { cachedSnapshot, loadModel, mountViewer, snapshot, supports3D, type Viewer } from './engine.web';
 import { joinYawGroup } from './stage';
 
 export const has3D = (sex: Sex) => supports3D(sex);
+/** 모델을 미리 받아 둔다(온보딩에서 성별을 고르면) — 계산 · 결과 화면에서 바로 뜨게 */
+export function preload3D(sex: Sex): void {
+  if (!supports3D(sex)) return;
+  loadModel(sex).catch(() => {});
+}
 /** 앱 전용 진단(Avatar3D.tsx) — 웹은 없음 */
 export const avatar3DError = (): string | null => null;
 
@@ -64,6 +69,7 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
   fallback: ReactNode;
 }) {
   const host = useRef<View>(null);
+  const reduce = useReducedMotion();
   const viewer = useRef<Viewer | null>(null);
   const coordRef = useRef(coord);
   coordRef.current = coord;
@@ -76,7 +82,7 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
     const el = host.current as unknown as HTMLElement | null;
     if (!el) return;
     const group = joinYawGroup(yawGroup, {}, (y) => viewer.current?.setYaw(y));
-    mountViewer(el, { sex, coord: coordRef.current, w, h, intro, onYaw: group.emit })
+    mountViewer(el, { sex, coord: coordRef.current, w, h, intro, onYaw: group.emit, breathe: !reduce })
       .then((v) => {
         if (!alive) return v.dispose();
         viewer.current = v;

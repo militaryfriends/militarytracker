@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
+  InteractionManager, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,6 +26,7 @@ import { StepFood } from './basicSteps';
 import { StepDays, StepFocus, StepLevel, StepNumber, StepPlace, StepSex } from './questionSteps';
 import { StepBody, type BodyErrors } from './StepBody';
 import { o } from './styles';
+import { preload3D } from '../body/avatar3d/Avatar3D';
 
 const BODY_PATH: StepKey[] = ['sex', 'age', 'height', 'weight', 'body', 'level', 'place', 'days', 'food', 'focus'];
 /** 계산 · 결과까지 합친 전체 단계 수(진행 막대 · STEP n / 12) */
@@ -77,6 +78,16 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
     if (i >= 0) setIdx(i);
     d.patch({ resume: null });
   }, [d.resume, path, d]);
+
+  // 3D 모델을 미리 읽어 둔다 — 숫자 입력(키패드)이 끝난 '현재 체형' 단계부터, 화면 전환이 끝난 뒤.
+  // 첫 3D 표시(glb 파싱 · 텍스처)가 계산 화면에서 JS 를 몇 초 붙잡던 것(10/31 피드백 1절 "계산 21초")을 미리 치운다.
+  const sex = d.profile.sex;
+  const warm = idx >= path.indexOf('body');
+  useEffect(() => {
+    if (!warm || !sex) return;
+    const t = InteractionManager.runAfterInteractions(() => preload3D(sex));
+    return () => t.cancel();
+  }, [warm, sex]);
 
   const accuracy = useMemo(() => draftAccuracy(d), [d]);
 

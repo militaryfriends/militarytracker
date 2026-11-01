@@ -83,6 +83,11 @@ export interface UserProfile {
   goalArchetypeId?: string;
   /** 신경 쓰이는 부위(온보딩 10단계, 선택) — 루틴 보조 종목 가중치에만 쓴다 */
   focus?: FocusPart[];
+  /**
+   * 고른(또는 추천) 프로젝트 카드 방식 — 프로젝트를 시작하지 않았어도 식단 · 내 정보 · 코치의 하루 칼로리가
+   * 카드에서 본 숫자와 같게(10/31 피드백 2절 "숫자는 한 곳에서만"). 없으면 goal 로 짐작(cut → 0.5% 감량, muscle → 린매스업).
+   */
+  strategy?: Strategy;
 }
 
 export type FocusPart = 'chest' | 'back' | 'shoulders' | 'arms' | 'abs' | 'legs';

@@ -136,7 +136,7 @@ export interface Viewer {
 
 export async function mountViewer(
   host: HTMLElement,
-  opts: { sex: Sex; coord: Coord; w: number; h: number; yaw?: number; onYaw?: (y: number) => void; intro?: boolean },
+  opts: { sex: Sex; coord: Coord; w: number; h: number; yaw?: number; onYaw?: (y: number) => void; intro?: boolean; breathe?: boolean },
 ): Promise<Viewer> {
   const m = await loadModel(opts.sex);
   const { T } = m;
@@ -152,7 +152,7 @@ export async function mountViewer(
   const st = buildStage(m, opts.w / opts.h);
 
   const drv = makeDriver(st, morphFor(opts.sex, opts.coord), {
-    draw: () => r.render(st.scene, st.camera), yaw: opts.yaw, intro: opts.intro, onYaw: opts.onYaw,
+    draw: () => r.render(st.scene, st.camera), yaw: opts.yaw, intro: opts.intro, onYaw: opts.onYaw, breathe: opts.breathe,
   });
   let dragging = false;
 

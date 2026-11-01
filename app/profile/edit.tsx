@@ -11,6 +11,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { saveProfile } from '../../src/services/authService';
 import { calcBodyStats, effectiveWeight, validateProfile } from '../../src/utils/body';
 import { UserProfile } from '../../src/types';
+import { STRATEGIES, STRATEGY, legacyGoalOf, strategyOfGoal } from '../../src/utils/projection';
 
 export default function ProfileEditScreen() {
   useThemeMode();
@@ -107,10 +108,24 @@ export default function ProfileEditScreen() {
             </View>
           )}
 
-          <SectionLabel>목표</SectionLabel>
-          <Opt label="근성장" sub="점진적 과부하 · 증량 식단" on={p.goal === 'muscle'} onPress={() => update('goal', 'muscle')} />
-          <Opt label="체지방 감량" sub="볼륨 유지 · 감량 식단" on={p.goal === 'cut'} onPress={() => update('goal', 'cut')} />
-          <Opt label="운동 습관 만들기" sub="짧은 루틴 · 꾸준함 우선" on={p.goal === 'habit'} onPress={() => update('goal', 'habit')} />
+          <SectionLabel>목표 방식</SectionLabel>
+          {/* 프로젝트 카드 4장과 같은 이름 · 같은 계산기(10/31 피드백 2절) — 진행 중인 프로젝트가 있으면 칼로리는 프로젝트 단계가 정한다 */}
+          {STRATEGIES.map((sid) => {
+            const cur = p.strategy ?? strategyOfGoal(p.goal);
+            return (
+              <Opt key={sid} label={STRATEGY[sid].name} sub={STRATEGY[sid].how} on={p.goal !== 'habit' && cur === sid}
+                onPress={() => setP((prev) => (prev ? { ...prev, strategy: sid, goal: legacyGoalOf(sid) } : prev))} />
+            );
+          })}
+          <Opt label="운동 습관 만들기" sub="유지 칼로리 · 짧은 루틴 · 꾸준함 우선" on={p.goal === 'habit'}
+            onPress={() => setP((prev) => {
+              if (!prev) return prev;
+              const { strategy: _s, ...rest } = prev;
+              return { ...rest, goal: 'habit' };
+            })} />
+          {bodyProject?.status === 'active' ? (
+            <Text style={s.projNote}>진행 중인 프로젝트({bodyProject.name})가 있어 하루 칼로리는 프로젝트 단계 값을 씁니다.</Text>
+          ) : null}
 
           <SectionLabel>운동 환경</SectionLabel>
           <View style={s.grid2}>
@@ -211,6 +226,7 @@ function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boo
 
 const s = themed(() => StyleSheet.create({
   errTxt: { color: colors.wrong, fontSize: 12, marginTop: 8 },
+  projNote: { fontSize: 12, color: colors.muted, marginTop: 6, lineHeight: 18 },
 
   label: { fontSize: 12, color: colors.muted, marginTop: 14, marginBottom: 6 },
   input: {

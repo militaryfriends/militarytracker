@@ -12,6 +12,8 @@ import { exById } from '../../src/data/exercises';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/utils/stats';
 import { HomeProjectCard } from '../../src/components/body/HomeProjectCard';
+import { ProgressRing } from '../../src/ui/ProgressRing';
+import { localDate } from '../../src/services/workoutService';
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -62,6 +64,8 @@ export default function HomeScreen() {
   // 목표 일수는 플랜(루틴)의 데이 수 — 프로필의 주 N일과 프리셋 루틴이 다를 수 있다
   const weekGoal = Math.max(1, plan.days.length);
   const goalPct = Math.min(100, Math.round((weekDone / weekGoal) * 100));
+  const todayStr = localDate(new Date());
+  const todaySets = logs.filter((l) => l.date === todayStr).reduce((a, l) => a + l.totalSets, 0);
 
   const lastLog = logs[0];
   const comment = lastLog && lastLog.totalSets > 0
@@ -136,16 +140,25 @@ export default function HomeScreen() {
             <Text style={s.cardMeta}>{weekSets}세트 ›</Text>
           </View>
 
-          <View style={s.goalRow}>
-            <Text style={s.goalTxt}>
-              <Text style={s.goalNum}>{weekDone}</Text>
-              <Text style={s.goalSlash}> / {weekGoal}일</Text>
-              {weekDone >= weekGoal ? <Text style={s.goalDone}>  목표 달성</Text> : null}
-            </Text>
-            {streakDays > 1 && <Text style={s.goalStreak}>{streakDays}일 연속</Text>}
-          </View>
-          <View style={s.goalBar}>
-            <View style={[s.goalFill, { width: `${goalPct}%` }]} />
+          {/* 원형 % 고리 + 이번 주 n/n일 + 오늘 세트(광고 UI B "세트 진행 카드") */}
+          <View style={s.ringRow}>
+            <View style={s.ringBox}>
+              <ProgressRing size={64} stroke={6} progress={goalPct / 100} />
+              <View style={s.ringCenter} pointerEvents="none">
+                <Text style={s.ringPct}>{goalPct}%</Text>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.goalTxt}>
+                <Text style={s.goalNum}>{weekDone}</Text>
+                <Text style={s.goalSlash}> / {weekGoal}일</Text>
+                {weekDone >= weekGoal ? <Text style={s.goalDone}>  목표 달성</Text> : null}
+              </Text>
+              <Text style={s.todaySets}>
+                {todaySets > 0 ? `오늘 ${todaySets}세트 완료` : '오늘은 아직 기록이 없어요'}
+                {streakDays > 1 ? ` · ${streakDays}일 연속` : ''}
+              </Text>
+            </View>
           </View>
 
           <View style={s.streakRow}>
@@ -244,6 +257,11 @@ const s = themed(() => StyleSheet.create({
     letterSpacing: 2, marginBottom: 14,
   },
   goalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 },
+  ringRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
+  ringBox: { width: 64, height: 64 },
+  ringCenter: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  ringPct: { fontSize: 14, fontWeight: '800', color: colors.ink },
+  todaySets: { fontSize: 12.5, color: colors.mid, marginTop: 4, fontWeight: '600' },
   goalTxt: { fontSize: 13, color: colors.muted },
   goalNum: { fontSize: 20, fontWeight: '800', color: colors.ink },
   goalSlash: { fontSize: 13, color: colors.muted },

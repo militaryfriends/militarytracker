@@ -3,7 +3,7 @@
  * 반올림 규칙은 엔진의 roundTo(검산표와 같은 "딱 절반이면 짝수 쪽").
  */
 import { roundTo } from '../../utils/bodyComp';
-import { legacyGoal, muscleLabel, type Nutrition, type Phase } from '../../utils/projection';
+import { legacyGoal, legacyGoalOf, muscleLabel, type Nutrition, type Phase, type Strategy } from '../../utils/projection';
 import type { BodyAnalysis, StoredProject, UserProfile } from '../../types';
 import type { AnalysisInput } from '../../utils/bodyAnalysis';
 
@@ -39,15 +39,20 @@ export const practiceLine = (n: Nutrition, days: number): string =>
 
 export const muscleOf = (cell: string): string => muscleLabel(cell);
 
-/** 분석 → 저장할 프로필. 화면 밖 값(알레르기)은 base 에서, profile.goal 은 엔진이 정한다(cut / muscle) */
-export function profileFromAnalysis(a: Pick<BodyAnalysis, 'input' | 'goal' | 'comp'>, base?: UserProfile | null): UserProfile {
+/**
+ * 계산 → 저장할 프로필. 화면 밖 값(알레르기 · 신경 쓰이는 부위)은 base 에서.
+ * strategy(고른 카드, 없으면 추천 카드)가 profile.goal · strategy 를 정한다 — 식단 · 코치 칼로리가 카드와 같아진다.
+ */
+export function profileFromAnalysis(
+  a: Pick<BodyAnalysis, 'input' | 'goal' | 'comp'>, base?: UserProfile | null, strategy?: Strategy,
+): UserProfile {
   const i: AnalysisInput = a.input;
   return {
     sex: i.sex,
     age: String(i.age),
     height: String(i.heightCm),
     weight: String(i.weightKg),
-    goal: legacyGoal(a.comp, a.goal),
+    goal: strategy ? legacyGoalOf(strategy) : legacyGoal(a.comp, a.goal),
     env: i.env,
     days: i.days as UserProfile['days'],
     level: i.level,
@@ -55,5 +60,8 @@ export function profileFromAnalysis(a: Pick<BodyAnalysis, 'input' | 'goal' | 'co
     allergy: base?.allergy ?? '',
     ...(i.waistCm ? { waistCm: i.waistCm } : {}),
     ...(a.goal.mode === 'pick' ? { goalArchetypeId: a.goal.archetypeId } : {}),
+    // 온보딩 10단계에서 고른 부위 — 빠뜨리면 루틴 보조 종목이 사라진다
+    ...(base?.focus?.length ? { focus: base.focus } : {}),
+    ...(strategy ? { strategy } : {}),
   };
 }

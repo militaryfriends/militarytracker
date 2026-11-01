@@ -125,7 +125,7 @@ export interface NativeView {
 /** GLView 의 컨텍스트에 몸을 그린다 */
 export async function attach(
   gl: ExpoWebGLRenderingContext,
-  opts: { sex: Sex; coord: Coord; yaw?: number; intro?: boolean; onYaw?: (y: number) => void },
+  opts: { sex: Sex; coord: Coord; yaw?: number; intro?: boolean; onYaw?: (y: number) => void; breathe?: boolean },
 ): Promise<NativeView> {
   const m = await loadModel(opts.sex);
   const { T } = m;
@@ -148,7 +148,7 @@ export async function attach(
       r.render(st.scene, st.camera);
       gl.endFrameEXP();
     },
-    yaw: opts.yaw, intro: opts.intro, onYaw: opts.onYaw,
+    yaw: opts.yaw, intro: opts.intro, onYaw: opts.onYaw, breathe: opts.breathe,
   });
   drv.kick();
   return {

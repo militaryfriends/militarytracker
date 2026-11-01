@@ -22,6 +22,7 @@ import { buildAnalysisInput } from '../../src/components/onboard/draftInput';
 import { analyzeBody, type AnalysisCore } from '../../src/utils/bodyAnalysis';
 import { validateProfile } from '../../src/utils/body';
 import { buildLocalPlan } from '../../src/utils/planner';
+import { splitLabel } from '../../src/data/planTemplates';
 import { saveAnalysis, toAnalysis } from '../../src/services/bodyService';
 import { kg, kcal, pct0, profileFromAnalysis, signedKg } from '../../src/components/body/format';
 import { AvatarView } from '../../src/components/body/AvatarView';
@@ -43,11 +44,6 @@ const TOTAL = ENDS[ENDS.length - 1];
 /** "계산이 끝났어요" 를 보여 주는 시간 */
 const DONE_HOLD = 800;
 
-/** 주 N일 → 자동 구성 플랜(buildLocalPlan)의 분할 이름 */
-const SPLIT_LABEL: Record<number, string> = {
-  2: '상하체 분할', 3: '푸시·풀·레그 분할', 4: '푸시·풀·레그·상체 분할', 5: '부위별 5분할', 6: '푸시·풀·레그 2회전',
-};
-
 /** 단계마다 보여 줄 실제 계산값 한 줄 */
 function stepLines(core: AnalysisCore): string[] {
   const i = core.input;
@@ -63,11 +59,12 @@ function stepLines(core: AnalysisCore): string[] {
   return [
     body.join(' · '),
     comp,
-    `${fat} · ${lean}`,
-    `주 ${i.days}회 · ${SPLIT_LABEL[i.days] ?? `${i.days}분할`}`,
-    `하루 ${kcal(rec.nutrition.kcal)} · 단백질 ${rec.nutrition.proteinG}g`,
-    `${core.track.length - 1}개월 변화 계산 완료`,
-    `프로젝트 ${core.projects.length}개 준비 완료`,
+    `추천 ${rec.name} · ${fat} · ${lean}`,
+    // 루틴 화면과 같은 분할 이름(정석 템플릿)
+    `주 ${i.days}회 · ${splitLabel(i.env, i.days, i.level as 1 | 2 | 3)}`,
+    `${rec.name} 기준 하루 ${kcal(rec.nutrition.kcal)} · 단백질 ${rec.nutrition.proteinG}g`,
+    `${rec.months}개월 변화 계산 완료`,
+    `최대 감량 · 근육 유지 감량 · 린매스업 · 벌크업`,
   ];
 }
 
@@ -85,7 +82,8 @@ export default function AnalysisScreen() {
     const input = buildAnalysisInput(d);
     const core = analyzeBody(input);
     // 거절 경로에서 쓸 무료 자동 구성 플랜도 지금 만들어 둔다(O6 "맞춤 루틴" 단계)
-    const profile = profileFromAnalysis(core, d.profile);
+    const rec = core.projects.find((x) => x.recommended) ?? core.projects[0];
+    const profile = profileFromAnalysis(core, d.profile, rec.strategy);
     return { core, lines: stepLines(core), plan: buildLocalPlan(profile) };
   }, []);
 
