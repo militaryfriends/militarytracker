@@ -1,5 +1,5 @@
 /**
- * 운동 종목 DB — 180종
+ * 운동 종목 DB — 181종 (2026-11-01 숄더프레스 머신 추가 · 기본 종목 난이도 3→2: 바벨로우 · 풀업 · 바벨 스쿼트 · 데드리프트 · 가슴 딥스)
  * 가슴 30 · 등 30 · 하체 30 · 어깨 30 · 이두 15 · 삼두 15 · 복근 30
  *
  * 필드
@@ -82,7 +82,7 @@ export const EX: Exercise[] = [
   { id: 'highcablefly',    n: '하이 케이블 플라이',     part: 'chest', g: '가슴 하부', eq: ['cb'],        pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'push' },
   { id: 'pecdeck',         n: '펙덱 플라이',            part: 'chest', g: '가슴 내측', eq: ['mc'],        pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'push' },
   { id: 'chestpressmc',    n: '체스트프레스 머신',      part: 'chest', g: '가슴 중부', eq: ['mc'],        pl: ['gym'],         s: 3, r: '10-12', rest: 75, lv: 1, ppl: 'push' },
-  { id: 'dipschest',       n: '딥스 (가슴)',            part: 'chest', g: '가슴 하부', eq: ['bw'],        pl: ['gym'],         s: 3, r: '8-12',  rest: 90, lv: 3, ppl: 'push' },
+  { id: 'dipschest',       n: '딥스 (가슴)',            part: 'chest', g: '가슴 하부', eq: ['bw'],        pl: ['gym'],         s: 3, r: '8-12',  rest: 90, lv: 2, ppl: 'push' },
   { id: 'smithbench',      n: '스미스머신 벤치프레스',  part: 'chest', g: '가슴 중부', eq: ['sm'],        pl: ['gym'],         s: 4, r: '8-12',  rest: 90, lv: 1, ppl: 'push' },
   { id: 'svend',           n: '스벤드 프레스',          part: 'chest', g: '가슴 내측', eq: ['plate'],        pl: ['gym', 'home'], s: 3, r: '15-20', rest: 75, lv: 1, ppl: 'push' },
   { id: 'floorpress',      n: '플로어 프레스',          part: 'chest', g: '가슴 중부', eq: ['bb', 'db'],  pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 90, lv: 2, ppl: 'push' },
@@ -96,15 +96,15 @@ export const EX: Exercise[] = [
   { id: 'guillotine',      n: '길로틴 프레스',          part: 'chest', g: '가슴 상부', eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 90, lv: 3, ppl: 'push' },
 
   // ─── 등 (30) ──────────────────────────────────────────────────────────────
-  { id: 'pullup',            n: '풀업',                  part: 'back', g: '광배',      eq: ['bw'],        pl: ['gym', 'home'], s: 4, r: '5-10',  rest: 120, lv: 3, ppl: 'pull' },
+  { id: 'pullup',            n: '풀업',                  part: 'back', g: '광배',      eq: ['bw'],        pl: ['gym', 'home'], s: 4, r: '5-10',  rest: 120, lv: 2, ppl: 'pull' },
   { id: 'chinup',            n: '친업',                  part: 'back', g: '광배·이두', eq: ['bw'],        pl: ['gym', 'home'], s: 4, r: '6-10',  rest: 120, lv: 2, ppl: 'pull' },
   { id: 'latpull',           n: '랫풀다운',              part: 'back', g: '광배',      eq: ['cb', 'mc'],  pl: ['gym'],         s: 4, r: '10-12', rest: 90, lv: 1, ppl: 'pull' },
   { id: 'widelatpull',       n: '와이드그립 랫풀다운',   part: 'back', g: '광배 상부', eq: ['cb', 'mc'],  pl: ['gym'],         s: 3, r: '10-12', rest: 90, lv: 1, ppl: 'pull' },
   { id: 'closelatpull',      n: '클로즈그립 랫풀다운',   part: 'back', g: '광배 하부', eq: ['cb', 'mc'],  pl: ['gym'],         s: 3, r: '10-12', rest: 90, lv: 1, ppl: 'pull' },
   { id: 'revlatpull',        n: '리버스그립 랫풀다운',   part: 'back', g: '광배·이두', eq: ['cb', 'mc'],  pl: ['gym'],         s: 3, r: '10-12', rest: 90, lv: 1, ppl: 'pull' },
-  { id: 'deadlift',          n: '데드리프트',            part: 'back', g: '후면사슬',  eq: ['bb'],        pl: ['gym'],         s: 4, r: '3-6',   rest: 180, lv: 3, ppl: 'pull' },
+  { id: 'deadlift',          n: '데드리프트',            part: 'back', g: '후면사슬',  eq: ['bb'],        pl: ['gym'],         s: 4, r: '3-6',   rest: 180, lv: 2, ppl: 'pull' },
   { id: 'rdl',               n: '루마니안 데드리프트',   part: 'back', g: '후면사슬',  eq: ['bb', 'db'],  pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 120, lv: 2, ppl: 'pull' },
-  { id: 'bbrow',             n: '바벨로우',              part: 'back', g: '등 두께',   eq: ['bb'],        pl: ['gym'],         s: 4, r: '8-10',  rest: 120, lv: 3, ppl: 'pull' },
+  { id: 'bbrow',             n: '바벨로우',              part: 'back', g: '등 두께',   eq: ['bb'],        pl: ['gym'],         s: 4, r: '8-10',  rest: 120, lv: 2, ppl: 'pull' },
   { id: 'pendlay',           n: '펜들레이로우',          part: 'back', g: '등 두께',   eq: ['bb'],        pl: ['gym'],         s: 4, r: '5-8',   rest: 120, lv: 3, ppl: 'pull' },
   { id: 'dbrow',             n: '덤벨로우',              part: 'back', g: '등 두께',   eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '10-12', rest: 90, lv: 1, ppl: 'pull' },
   { id: 'onearmdbrow',       n: '원암 덤벨로우',         part: 'back', g: '광배',      eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '10-12', rest: 75, lv: 1, ppl: 'pull' },
@@ -129,7 +129,7 @@ export const EX: Exercise[] = [
 
   // ─── 하체 (30) ────────────────────────────────────────────────────────────
   { id: 'bwsquat',       n: '맨몸 스쿼트',              part: 'legs', g: '대퇴사두',  eq: ['bw'],       pl: ['gym', 'home'], s: 3, r: '15-20', rest: 75, lv: 1, ppl: 'legs' },
-  { id: 'backsquat',     n: '바벨 스쿼트',              part: 'legs', g: '대퇴사두',  eq: ['bb'],       pl: ['gym'],         s: 4, r: '6-10',  rest: 150, lv: 3, ppl: 'legs' },
+  { id: 'backsquat',     n: '바벨 스쿼트',              part: 'legs', g: '대퇴사두',  eq: ['bb'],       pl: ['gym'],         s: 4, r: '6-10',  rest: 150, lv: 2, ppl: 'legs' },
   { id: 'frontsquat',    n: '프론트 스쿼트',            part: 'legs', g: '대퇴사두',  eq: ['bb'],       pl: ['gym'],         s: 3, r: '6-10',  rest: 150, lv: 3, ppl: 'legs' },
   { id: 'sumosquat',     n: '스모 스쿼트',              part: 'legs', g: '내전근·둔근', eq: ['bw', 'db'], pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'legs' },
   { id: 'bulgarian',     n: '불가리안 스플릿 스쿼트',   part: 'legs', g: '대퇴사두·둔근', eq: ['bw', 'db'], pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 90, lv: 2, ppl: 'legs' },
@@ -175,6 +175,7 @@ export const EX: Exercise[] = [
   { id: 'uprow',              n: '업라이트로우',           part: 'shoulders', g: '측면삼각·승모', eq: ['bb', 'db'], pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'push' },
   { id: 'facepullsh',         n: '페이스풀 (어깨)',        part: 'shoulders', g: '후면삼각', eq: ['cb', 'band'], pl: ['gym', 'home'], s: 3, r: '15-20', rest: 75, lv: 1, ppl: 'push' },
   { id: 'smithshoulderpress', n: '스미스머신 숄더프레스',  part: 'shoulders', g: '전면삼각', eq: ['sm'],         pl: ['gym'],         s: 3, r: '8-12',  rest: 90, lv: 1, ppl: 'push' },
+  { id: 'shoulderpressmc', n: '숄더프레스 머신',        part: 'shoulders', g: '전면삼각', eq: ['mc'],         pl: ['gym'],         s: 3, r: '8-12',  rest: 90, lv: 1, ppl: 'push' },
   { id: 'landminepress',      n: '랜드마인 프레스',        part: 'shoulders', g: '전면삼각', eq: ['bb'],         pl: ['gym'],         s: 3, r: '10-12', rest: 75, lv: 2, ppl: 'push' },
   { id: 'platefrontraise',    n: '플레이트 프론트레이즈',  part: 'shoulders', g: '전면삼각', eq: ['plate'],         pl: ['gym'],         s: 3, r: '12-15', rest: 75, lv: 1, ppl: 'push' },
   { id: 'sixwayraise',        n: '6웨이 레이즈',           part: 'shoulders', g: '삼각근 전체', eq: ['db'],      pl: ['gym', 'home'], s: 3, r: '8-10',  rest: 60, lv: 2, ppl: 'push' },

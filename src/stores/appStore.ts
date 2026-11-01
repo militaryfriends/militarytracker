@@ -1,3 +1,4 @@
+import { prescription } from '../utils/prescription';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -205,14 +206,16 @@ export const useAppStore = create<AppState>()(
       setPlan: (plan) => set({ plan }),
 
       startSession: (dayIdx, replace = false) => {
-        const { plan, session } = get();
+        const { plan, session, profile } = get();
         if (session && !replace) return false;
+        const lv = (profile?.level ?? 2) as 1 | 2 | 3;
         const day = plan?.days[dayIdx];
         if (!day || !day.ids.length) return false;
         const data: ExerciseSession[] = day.ids
           .filter((id) => !!exById(id))
           .map((id) => {
-            const count = exById(id)?.s ?? 3;
+            const ex = exById(id);
+            const count = ex ? prescription(ex, lv).sets : 3;
             return { id, sets: Array.from({ length: count }, () => ({ w: '', r: '', done: false })) };
           });
         if (!data.length) return false;
@@ -304,7 +307,7 @@ export const useAppStore = create<AppState>()(
         if (s.data.some((x, i) => x.id === newId && i !== s.exIdx)) return; // 중복 방지
         const data = s.data.map((ex, ei) => {
           if (ei !== s.exIdx) return ex;
-          const keep = ex.sets.length || target.s;
+          const keep = ex.sets.length || prescription(target, (get().profile?.level ?? 2) as 1 | 2 | 3).sets;
           return {
             id: newId,
             sets: Array.from({ length: keep }, () => ({ w: '', r: '', done: false })),
@@ -320,7 +323,7 @@ export const useAppStore = create<AppState>()(
         if (s.data.some((x) => x.id === newId)) return false; // 이미 있는 종목
         const data = [
           ...s.data,
-          { id: newId, sets: Array.from({ length: target.s }, () => ({ w: '', r: '', done: false })) },
+          { id: newId, sets: Array.from({ length: prescription(target, (get().profile?.level ?? 2) as 1 | 2 | 3).sets }, () => ({ w: '', r: '', done: false })) },
         ];
         set({ session: { ...s, data, exIdx: data.length - 1 } });
         return true;

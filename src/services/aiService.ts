@@ -6,10 +6,11 @@
 import { httpsCallable, FunctionsError } from 'firebase/functions';
 import { functions } from './firebase';
 import { BodyProject, BodyReportBody, CheckinResult, DietPlan, Plan, UserProfile } from '../types';
-import { buildLocalPlan, planFromAI } from '../utils/planner';
+import { buildLocalPlan, conformToTemplates, planFromAI } from '../utils/planner';
+import { DANGER, splitTemplates } from '../data/planTemplates';
 import { calcBodyStats, FOOD_LABEL, GOAL_LABEL } from '../utils/body';
 import type { BodyStats } from '../types';
-import { exFilter, PART_LABEL } from '../data/exercises';
+import { exById, PART_LABEL } from '../data/exercises';
 
 export const FALLBACK_DIET: DietPlan = {
   meals: [
@@ -107,9 +108,19 @@ function isUnavailable(e: unknown): boolean {
   );
 }
 
-/** AI 가 선택할 수 있는 종목 목록 (환경·난이도로 축소해 토큰 절약) */
+/**
+ * AI 가 선택할 수 있는 종목 — 이 사용자 분할의 템플릿 슬롯 후보만(정석 종목 · 위험 종목 제외).
+ * AI 는 슬롯 안의 대체 종목을 고르는 개인화만 하고, 결과는 conformToTemplates 가 슬롯에 다시 맞춘다.
+ */
 function buildCatalog(p: UserProfile): string {
-  return exFilter({ place: p.env, maxLevel: p.level })
+  const level = (p.level ?? 2) as 1 | 2 | 3;
+  const ids = new Set<string>();
+  for (const t of splitTemplates(p.env, p.days, level)) {
+    for (const sl of t.slots) for (const id of [...sl.opts, ...(sl.beginner ?? [])]) if (!DANGER.has(id)) ids.add(id);
+  }
+  return [...ids]
+    .map((id) => exById(id))
+    .filter((e): e is NonNullable<typeof e> => !!e && e.pl.includes(p.env))
     .map((e) => `${e.id}|${e.n}|${PART_LABEL[e.part]}|lv${e.lv}`)
     .join('\n');
 }
@@ -138,7 +149,7 @@ export async function generatePlan(p: UserProfile, opts?: { projectId?: string }
       ...(opts?.projectId ? { projectId: opts.projectId } : {}),
     });
     const plan = planFromAI(res.data, p);
-    if (plan) return { plan, fallback: false };
+    if (plan) return { plan: conformToTemplates(plan, p), fallback: false };
     return { plan: buildLocalPlan(p), fallback: true, reason: 'AI 응답을 해석하지 못했습니다.' };
   } catch (e) {
     const need = asSubRequired(e);

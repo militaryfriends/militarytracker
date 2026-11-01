@@ -1,3 +1,4 @@
+import { prescription, repsText } from '../../src/utils/prescription';
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
@@ -26,6 +27,7 @@ export default function PlanScreen() {
   const hydrating = useAuthStore((s) => s.hydrating);
   const plan = useAppStore((s) => s.plan);
   const profile = useAppStore((s) => s.profile);
+  const lv = (profile?.level ?? 2) as 1 | 2 | 3;
   const session = useAppStore((s) => s.session);
   const startSession = useAppStore((s) => s.startSession);
   const setPlan = useAppStore((s) => s.setPlan);
@@ -173,6 +175,7 @@ export default function PlanScreen() {
         {day.ids.map((id, i) => {
           const e = exById(id);
           if (!e) return null;
+          const rx = prescription(e, lv);
           return (
             <TouchableOpacity
               key={`${id}-${i}`}
@@ -189,9 +192,9 @@ export default function PlanScreen() {
                 </Text>
               </View>
               <View style={s.exSetsWrap}>
-                <Text style={s.exSetsNum}>{e.s}</Text>
+                <Text style={s.exSetsNum}>{rx.sets}</Text>
                 <Text style={s.exSetsSub}>세트</Text>
-                <Text style={s.exRep}>{e.r}</Text>
+                <Text style={s.exRep}>{repsText(rx.reps)}</Text>
               </View>
             </TouchableOpacity>
           );

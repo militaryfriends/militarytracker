@@ -1,3 +1,4 @@
+import { prescription, rxText } from '../../src/utils/prescription';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator,
 } from 'react-native';
@@ -18,6 +19,7 @@ export default function HomeScreen() {
   useThemeMode();
   const router = useRouter();
   const plan = useAppStore((s) => s.plan);
+  const profile = useAppStore((s) => s.profile);
   const logs = useAppStore((s) => s.logs);
   const startSession = useAppStore((s) => s.startSession);
   const hydrating = useAuthStore((s) => s.hydrating);
@@ -64,7 +66,13 @@ export default function HomeScreen() {
   const lastLog = logs[0];
   const comment = lastLog && lastLog.totalSets > 0
     ? `최근 ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 완료했습니다. 오늘은 ${day.name} 차례예요.`
-    : `오늘은 ${day.name}입니다. 무게는 12회를 안정적으로 수행 가능한 수준으로 시작하세요.`;
+    : (() => {
+      const first = day.ids.map((id) => exById(id)).find(Boolean);
+      const rx = first ? prescription(first, (profile?.level ?? 2) as 1 | 2 | 3) : null;
+      return rx
+        ? `오늘은 ${day.name}입니다. 첫 종목 ${first!.n}은 ${rxText(rx)} — 세트마다 ${rx.rir}회쯤 여유가 남는 무게로 시작하세요.`
+        : `오늘은 ${day.name}입니다.`;
+    })();
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>

@@ -1,5 +1,7 @@
-import { Exercise, exById, exFilter, Part } from '../data/exercises';
-import { recommendRoutine, routineById } from '../data/routines';
+import { exById, exFilter, type Place } from '../data/exercises';
+import { DANGER, LUMBAR, WEEKLY_ONCE, splitLabel, splitTemplates, type DayTemplate, type Slot } from '../data/planTemplates';
+import mediaSnapshot from '../data/mediaManifest.json';
+import { routineById } from '../data/routines';
 import { Plan, PlanDay, UserProfile } from '../types';
 
 // ─── 시드 난수 (재생성 시마다 다른 구성) ───────────────────────────────────
@@ -14,15 +16,6 @@ function mulberry32(seed: number) {
   };
 }
 
-function shuffle<T>(arr: T[], rnd: () => number): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 // ─── 프리셋 루틴 → 플랜 ────────────────────────────────────────────────────
 export function planFromRoutine(routineId: string): Plan | null {
   const r = routineById(routineId);
@@ -35,86 +28,95 @@ export function planFromRoutine(routineId: string): Plan | null {
   };
 }
 
-// ─── 자동 생성 플랜 (AI 실패 시 폴백 / 다시 생성) ──────────────────────────
-type DaySpec = { id: string; name: string; focus: string; parts: Part[] };
+// ─── 자동 생성 플랜 — 정석 템플릿 (AI 실패 시 폴백 / 무료 기본값 / 다시 생성) ───────────
+// 무작위 생성은 쓰지 않는다: 레벨이 높을수록 변형 · 고난도 종목(길로틴 · 아처 · 플라이오)만 뽑히던 문제(10/31 피드백 3절).
+// 템플릿(src/data/planTemplates.ts)의 슬롯을 채운다. seed 를 주면 슬롯 안의 대체 종목으로 바꾼다('자동 재구성').
 
-const SPECS: Record<string, DaySpec> = {
-  push: { id: 'push', name: '푸시데이', focus: '가슴 · 어깨 · 삼두', parts: ['chest', 'shoulders', 'triceps'] },
-  pull: { id: 'pull', name: '풀데이', focus: '등 · 이두', parts: ['back', 'biceps'] },
-  legs: { id: 'legs', name: '레그데이', focus: '하체 · 코어', parts: ['legs', 'abs'] },
-  upper: { id: 'upper', name: '상체', focus: '가슴 · 등 · 어깨', parts: ['chest', 'back', 'shoulders'] },
-  lower: { id: 'lower', name: '하체', focus: '하체 · 코어', parts: ['legs', 'abs'] },
-  chest: { id: 'chest', name: '가슴', focus: '가슴 집중', parts: ['chest'] },
-  back: { id: 'back', name: '등', focus: '등 집중', parts: ['back'] },
-  shoulders: { id: 'shoulders', name: '어깨', focus: '삼각근 전체', parts: ['shoulders'] },
-  arms: { id: 'arms', name: '팔', focus: '이두 · 삼두', parts: ['biceps', 'triceps'] },
-};
+const HAS_VIDEO: Set<string> = new Set(Object.keys((mediaSnapshot as { items?: Record<string, unknown> }).items ?? {}));
 
-const SPLITS: Record<number, string[]> = {
-  2: ['upper', 'lower'],
-  3: ['push', 'pull', 'legs'],
-  4: ['push', 'pull', 'legs', 'upper'],
-  5: ['chest', 'back', 'legs', 'shoulders', 'arms'],
-  6: ['push', 'pull', 'legs', 'upper', 'lower', 'arms'],
-};
+/** 이 슬롯에서 고를 수 있는 종목(장소 · 존재 · 위험 제외) — 영상 있는 것이 앞 */
+function slotCandidates(slot: Slot, level: 1 | 2 | 3, place: Place): string[] {
+  const base = level === 1 && slot.beginner ? slot.beginner : slot.opts;
+  const ok = base.filter((id) => {
+    const e = exById(id);
+    return !!e && e.pl.includes(place) && !DANGER.has(id);
+  });
+  // 영상 있는 종목을 앞으로 — 같은 그룹 안에서는 원래 순서(정석 우선) 유지
+  return [...ok.filter((id) => HAS_VIDEO.has(id)), ...ok.filter((id) => !HAS_VIDEO.has(id))];
+}
 
-export function buildLocalPlan(p: UserProfile, seed = Date.now()): Plan {
-  const rnd = mulberry32(seed);
-  const maxLevel = p.level;
-  const perDay = p.goal === 'habit' ? 3 : 5;
-
-  const poolFor = (parts: Part[]): Exercise[] => {
-    const list = parts.flatMap((part) => exFilter({ place: p.env, maxLevel, part }));
-    // 난이도가 맞는 종목이 부족하면 한 단계 위까지 허용
-    if (list.length >= perDay) return list;
-    return parts.flatMap((part) =>
-      exFilter({ place: p.env, maxLevel: Math.min(3, maxLevel + 1) as 1 | 2 | 3, part })
-    );
-  };
-
-  const used = new Set<string>();
-
-  const buildDay = (specKey: string): PlanDay => {
-    const spec = SPECS[specKey];
-    // 난이도는 '상한' 만 있으면 상급자에게 입문 종목이 절반 넘게 배정된다 —
-    // 셔플한 뒤 사용자 레벨에 가까운 종목이 앞에 오도록 안정 정렬한다
-    const pool = shuffle(poolFor(spec.parts), rnd)
-      .map((e, i) => ({ e, i }))
-      .sort((a, b) => (Math.abs(b.e.lv - maxLevel) < Math.abs(a.e.lv - maxLevel) ? 1 : Math.abs(b.e.lv - maxLevel) > Math.abs(a.e.lv - maxLevel) ? -1 : a.i - b.i))
-      .map((x) => x.e);
+/**
+ * 템플릿 → 플랜. variant 0 = 기본(각 슬롯 첫 후보), 그 밖에는 슬롯마다 seed 로 다른 후보.
+ * 허리 부하 종목은 같은 날 하나, 데드리프트 · 랙풀은 주 1회 — 어기면 그 슬롯의 다음 후보.
+ */
+export function planFromTemplates(
+  templates: DayTemplate[], o: { level: 1 | 2 | 3; place: Place; perDay: number; seed?: number },
+): PlanDay[] {
+  const rnd = o.seed !== undefined ? mulberry32(o.seed) : null;
+  const weekly = new Set<string>();
+  return templates.map((t) => {
     const ids: string[] = [];
-
-    // 부위를 고르게 섞기 위해 부위별로 한 종목씩 라운드로빈
-    const byPart = new Map<Part, Exercise[]>();
-    spec.parts.forEach((part) => byPart.set(part, pool.filter((e) => e.part === part)));
-
-    let guard = 0;
-    while (ids.length < perDay && guard++ < 50) {
-      for (const part of spec.parts) {
-        if (ids.length >= perDay) break;
-        const bucket = byPart.get(part) ?? [];
-        const next = bucket.find((e) => !ids.includes(e.id) && !used.has(e.id));
-        const fallback = bucket.find((e) => !ids.includes(e.id));
-        const chosen = next ?? fallback;
-        if (chosen) ids.push(chosen.id);
-      }
+    let lumbar = false;
+    const slots = t.slots.filter((sl) => !sl.optional || o.perDay > 5).slice(0, o.perDay);
+    for (const sl of slots) {
+      let cands = slotCandidates(sl, o.level, o.place).filter((id) => !ids.includes(id));
+      cands = cands.filter((id) => !(LUMBAR.has(id) && lumbar) && !(WEEKLY_ONCE.has(id) && weekly.has(id)));
+      if (!cands.length) continue;
+      const pick = rnd ? cands[Math.floor(rnd() * cands.length)] : cands[0];
+      ids.push(pick);
+      if (LUMBAR.has(pick)) lumbar = true;
+      if (WEEKLY_ONCE.has(pick)) weekly.add(pick);
     }
-    ids.forEach((id) => used.add(id));
-    return { id: spec.id, name: spec.name, focus: spec.focus, ids };
-  };
+    return { id: t.id, name: t.name, focus: t.focus, ids };
+  }).filter((d) => d.ids.length > 0);
+}
 
-  const keys = SPLITS[p.days] ?? SPLITS[3];
-  const days = keys.map(buildDay);
-
+/** seed 없으면 기본 정석 구성, 있으면 슬롯 안에서만 바꾼 구성('자동 재구성') */
+export function buildLocalPlan(p: UserProfile, seed?: number): Plan {
+  const level = (p.level ?? 2) as 1 | 2 | 3;
+  const perDay = p.goal === 'habit' ? 3 : 5;
+  const templates = splitTemplates(p.env, p.days, level);
+  const days = planFromTemplates(templates, { level, place: p.env, perDay, seed });
   return {
     routineId: null,
     days,
     planSrc: 'LOCAL',
     planReason:
       p.goal === 'habit'
-        ? '습관 형성 목표에 맞춰 하루 3종목으로 짧게 구성했습니다.'
-        : `주 ${p.days}일 · ${p.env === 'home' ? '홈트' : '헬스장'} 환경에 맞춰 자동 구성했습니다.`,
+        ? `습관 형성 목표 — ${splitLabel(p.env, p.days, level)} 구성을 하루 3종목으로 짧게 줄였습니다.`
+        : `${p.env === 'home' ? '홈트' : '헬스장'} 주 ${p.days}일 · ${splitLabel(p.env, p.days, level)} 정석 구성입니다.`,
   };
+}
+
+/**
+ * AI 플랜을 템플릿 슬롯에 맞춘다 — AI 는 같은 슬롯 안의 대체 종목만 고를 수 있다(프로 개인화).
+ * 슬롯에 없는 종목 · 위험 종목 · 허리 부하 중복은 그 슬롯의 기본 종목으로 되돌린다.
+ */
+export function conformToTemplates(ai: Plan, p: UserProfile): Plan {
+  const level = (p.level ?? 2) as 1 | 2 | 3;
+  const perDay = p.goal === 'habit' ? 3 : 5;
+  const templates = splitTemplates(p.env, p.days, level);
+  const base = planFromTemplates(templates, { level, place: p.env, perDay });
+  const weekly = new Set<string>();
+  const days: PlanDay[] = base.map((bd, di) => {
+    const t = templates.find((x) => x.id === bd.id)!;
+    const aiIds = new Set(ai.days[di]?.ids ?? []);
+    const slots = t.slots.filter((sl) => !sl.optional || perDay > 5).slice(0, perDay);
+    let lumbar = false;
+    const ids: string[] = [];
+    slots.forEach((sl, si) => {
+      const cands = slotCandidates(sl, level, p.env);
+      const want = cands.find((id) => aiIds.has(id)) ?? bd.ids[si] ?? cands[0];
+      const ok = (id: string) => !!id && !ids.includes(id) && !(LUMBAR.has(id) && lumbar) && !(WEEKLY_ONCE.has(id) && weekly.has(id));
+      const pick = ok(want) ? want : cands.find(ok);
+      if (!pick) return;
+      ids.push(pick);
+      if (LUMBAR.has(pick)) lumbar = true;
+      if (WEEKLY_ONCE.has(pick)) weekly.add(pick);
+    });
+    return { ...bd, ids };
+  });
+  return { ...ai, days };
 }
 
 const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');

@@ -1,3 +1,4 @@
+import { prescription, repsText } from '../../../src/utils/prescription';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../../src/theme';
@@ -15,6 +16,7 @@ export default function RoutineDayScreen() {
   const goBack = useSafeBack();
   const plan = useAppStore((s) => s.plan);
   const session = useAppStore((s) => s.session);
+  const lv = (useAppStore((s) => s.profile)?.level ?? 2) as 1 | 2 | 3;
   const startSession = useAppStore((s) => s.startSession);
 
   const routine = routineById(String(routineId));
@@ -35,9 +37,9 @@ export default function RoutineDayScreen() {
     ? plan.days.findIndex((d) => d.id === day.id)
     : -1;
 
-  const totalSets = list.reduce((a, e) => a + e.s, 0);
+  const totalSets = list.reduce((a, e) => a + prescription(e, lv).sets, 0);
   // 세트당 수행 ~40초 + 종목별 권장 휴식 — 휴식을 빼고 계산하면 120초 휴식 종목에서 크게 빗나간다
-  const estMin = Math.round(list.reduce((a, e) => a + e.s * (e.rest + 40), 0) / 60);
+  const estMin = Math.round(list.reduce((a, e) => a + prescription(e, lv).sets * (e.rest + 40), 0) / 60);
 
   return (
     <Screen>
@@ -92,9 +94,9 @@ export default function RoutineDayScreen() {
               </View>
             </View>
             <View style={s.exSets}>
-              <Text style={s.exSetsNum}>{e.s}</Text>
+              <Text style={s.exSetsNum}>{prescription(e, lv).sets}</Text>
               <Text style={s.exSetsSub}>세트</Text>
-              <Text style={s.exRep}>{e.r}</Text>
+              <Text style={s.exRep}>{repsText(e.r)}</Text>
             </View>
           </TouchableOpacity>
         ))}

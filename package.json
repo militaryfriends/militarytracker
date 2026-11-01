@@ -56,7 +56,8 @@
     "deploy:hosting": "npx expo export --platform web && firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
     "media:upload": "node scripts/upload-videos.mjs",
-    "media:r2": "node scripts/media-r2.mjs"
+    "media:r2": "node scripts/media-r2.mjs",
+    "check:plans": "npx -y esbuild@0.24.0 scripts/plan-check.ts --bundle --platform=node --outfile=.cache/plan-check.cjs --loader:.json=json --log-level=error && node .cache/plan-check.cjs"
   },
   "private": true
 }

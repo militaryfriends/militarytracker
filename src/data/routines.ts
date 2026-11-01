@@ -99,6 +99,21 @@ export const ROUTINES: Routine[] = [
     ],
   },
   {
+    id: 'ul2',
+    name: '상하체 2일',
+    short: '2일',
+    subtitle: '주 2일 · 상체 / 하체',
+    desc: '바쁜 주에 맞춘 최소 루틴. 상체 하루 · 하체 하루로 큰 근육을 모두 한 번씩 자극합니다.',
+    daysPerWeek: 2,
+    level: 1,
+    place: ['gym'],
+    tags: ['2분할', '주2일', '바쁜 주'],
+    days: [
+      { id: 'upper2', name: '상체', focus: '가슴 · 등 · 어깨 · 팔', desc: '미는 동작과 당기는 동작을 짝지어 배치합니다.', exIds: ['bench', 'latpull', 'dbshoulderpress', 'cablerow', 'bbcurl', 'pushdown'] },
+      { id: 'lower2', name: '하체', focus: '하체 · 코어', desc: '스쿼트와 힌지를 하나씩, 고립 종목으로 마무리합니다.', exIds: ['backsquat', 'rdlleg', 'legpress', 'legcurl', 'calfraise'] },
+    ],
+  },
+  {
     id: 'bro5',
     name: '부위별 5분할',
     short: '5분할',
@@ -109,11 +124,11 @@ export const ROUTINES: Routine[] = [
     place: ['gym'],
     tags: ['5분할', '고볼륨', '부위별'],
     days: [
-      { id: 'chest', name: '가슴', focus: '상부 · 중부 · 하부', desc: '각도를 바꿔가며 가슴 전 영역을 덮습니다.', exIds: ['bench', 'incdbpress', 'dbfly', 'crossover', 'dipschest'] },
-      { id: 'back', name: '등', focus: '광배 · 두께', desc: '수직·수평 당기기를 모두 포함합니다.', exIds: ['pullup', 'bbrow', 'latpull', 'cablerow', 'straightarmpull'] },
-      { id: 'legs', name: '하체', focus: '전면 · 후면 · 종아리', desc: '스쿼트·힌지·고립을 한 세션에 담습니다.', exIds: ['backsquat', 'legpress', 'rdlleg', 'legcurl', 'calfraise'] },
-      { id: 'shoulders', name: '어깨', focus: '전·측·후면 삼각', desc: '프레스 1개 + 세 방향 레이즈로 삼각근을 두릅니다.', exIds: ['ohp', 'latraise', 'bentoverraise', 'facepullsh', 'shrug'] },
-      { id: 'arms', name: '팔', focus: '이두 · 삼두', desc: '이두와 삼두를 번갈아 수행하면 밀도가 올라갑니다.', exIds: ['bbcurl', 'incdbcurl', 'hammercurl', 'closegripbench', 'ropepushdown', 'benchdip'] },
+      { id: 'chest', name: '가슴', focus: '벤치 · 인클라인 · 플라이', desc: '고중량 프레스 → 각도 변화 → 머신 → 플라이 → 딥스 순서로 가슴 전 영역을 덮습니다.', exIds: ['bench', 'inclinebench', 'chestpressmc', 'pecdeck', 'dipschest'] },
+      { id: 'back', name: '등', focus: '로우 · 랫풀다운 · 케이블', desc: '바벨로우로 두께를 먼저 잡고 수직 · 수평 당기기를 더합니다.', exIds: ['bbrow', 'latpull', 'cablerow', 'onearmdbrow', 'straightarmpull'] },
+      { id: 'legs', name: '하체', focus: '스쿼트 · 레그프레스 · 힌지', desc: '스쿼트 · 힌지 · 고립을 한 세션에 담습니다.', exIds: ['backsquat', 'legpress', 'rdlleg', 'legext', 'legcurl', 'calfraise'] },
+      { id: 'shoulders', name: '어깨', focus: '전·측·후면 삼각', desc: '프레스 1개 + 측면 두 번 + 후면으로 삼각근을 두릅니다.', exIds: ['dbshoulderpress', 'latraise', 'cablelatraise', 'reardeltfly', 'facepullsh'] },
+      { id: 'arms', name: '팔', focus: '이두 · 삼두', desc: '이두와 삼두를 번갈아 수행하면 밀도가 올라갑니다.', exIds: ['bbcurl', 'closegripbench', 'hammercurl', 'pushdown', 'ohext'] },
     ],
   },
   {
@@ -192,6 +207,7 @@ export function recommendRoutine(opts: {
   if (place === 'home') return routineById('home3')!;
   // 입문자는 주 4일 이하까지 풀바디 — 바벨 복합운동 위주 분할은 중급부터
   if (level === 1 && days <= 4) return routineById('fullbody')!;
+  if (days <= 2) return routineById('ul2')!;
   if (days >= 6) return routineById('ppl6')!;
   if (days === 5) return routineById('bro5')!;
   if (days === 4) return routineById('upperlower')!;

@@ -1,3 +1,4 @@
+import { prescription, repsText } from '../utils/prescription';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList,
@@ -30,6 +31,7 @@ export default function SessionPlayer() {
   const user = useAuthStore((s) => s.user);
   const session = useAppStore((s) => s.session);
   const profile = useAppStore((s) => s.profile);
+  const lv = (profile?.level ?? 2) as 1 | 2 | 3;
   const logs = useAppStore((s) => s.logs);
   const setVal = useAppStore((s) => s.setVal);
   const toggleSet = useAppStore((s) => s.toggleSet);
@@ -196,7 +198,7 @@ export default function SessionPlayer() {
         <ExerciseMedia exId={cur.id} autoPlay rounded={24} dim={0.25} style={s.media} />
         <View style={s.mediaMeta}>
           <Text style={s.exName}>{e?.n ?? ''}</Text>
-          <Text style={s.exPart}>{e ? `${PART_LABEL[e.part]} · ${e.g} · 권장 ${e.r}` : ''}</Text>
+          <Text style={s.exPart}>{e ? `${PART_LABEL[e.part]} · ${e.g} · 권장 ${repsText(e.r)} · 세트마다 ${prescription(e, lv).rir}회 여유` : ''}</Text>
         </View>
 
         <View style={s.lastRow}>
@@ -477,7 +479,7 @@ function PickerRow({ ex, onPick }: { ex: Exercise; onPick: () => void }) {
       <ExerciseMedia exId={ex.id} rounded={10} style={p.thumb} dim={0.3} />
       <View style={{ flex: 1 }}>
         <Text style={p.name}>{ex.n}</Text>
-        <Text style={p.meta}>{PART_LABEL[ex.part]} · {ex.g} · {ex.s}세트 {ex.r}</Text>
+        <Text style={p.meta}>{PART_LABEL[ex.part]} · {ex.g} · {repsText(ex.r)}</Text>
       </View>
       <Text style={p.pick}>선택</Text>
     </TouchableOpacity>
