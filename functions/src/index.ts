@@ -75,6 +75,26 @@ interface AnthropicMessage {
   content: string;
 }
 
+/**
+ * Anthropic 워크스페이스 ID — 워크스페이스에 묶이지 않은 키(조직 단위 키)는 요청마다 `anthropic-workspace-id` 헤더가
+ * 있어야 한다(없으면 400 "not scoped to a workspace"). Firestore `serverConfig/anthropic { workspaceId }` 에 넣으면 붙인다.
+ * 워크스페이스에 만든 키를 쓰면 이 값은 비워 두면 된다. 10분 캐시.
+ */
+let wsCache: { id: string | null; at: number } | null = null;
+async function anthropicWorkspace(): Promise<string | null> {
+  if (wsCache && Date.now() - wsCache.at < 600_000) return wsCache.id;
+  let id: string | null = null;
+  try {
+    const snap = await db.collection('serverConfig').doc('anthropic').get();
+    const v = snap.get('workspaceId');
+    id = typeof v === 'string' && /^wrkspc_[A-Za-z0-9]+$/.test(v.trim()) ? v.trim() : null;
+  } catch (e) {
+    logger.warn('serverConfig/anthropic read failed', e);
+  }
+  wsCache = { id, at: Date.now() };
+  return id;
+}
+
 async function callAnthropic(opts: {
   system: string;
   messages: AnthropicMessage[];
@@ -84,6 +104,7 @@ async function callAnthropic(opts: {
   /** 있으면 이 사용자의 이번 달 AI 원가(aiCost/{uid})에 더한다 */
   uid?: string;
 }): Promise<string> {
+  const workspace = await anthropicWorkspace();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55_000);
 
@@ -94,6 +115,7 @@ async function callAnthropic(opts: {
         'content-type': 'application/json',
         'x-api-key': opts.apiKey,
         'anthropic-version': API_VERSION,
+        ...(workspace ? { 'anthropic-workspace-id': workspace } : {}),
       },
       body: JSON.stringify({
         model: opts.model,
