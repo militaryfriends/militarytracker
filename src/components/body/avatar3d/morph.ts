@@ -16,12 +16,11 @@ export type Morph = Record<MorphKey, number>;
 export const MODEL_SEXES: readonly Sex[] = ['male', 'female'];
 
 /**
- * 기본 몸의 좌표. 남성 모델(.blend 원본)은 복근이 선명한 근육질 — 체지방 약 11% · 근육 M4.
- * 남성 모프는 스크립트가 만든 임시 모프(셰이프 키를 조각하면 교체). 여성은 MakeHuman 근육 0.55 · 체중 0.38 기본 몸 +
- * 실제 체중 · 근육 타깃(scripts/build-avatar-female.py).
+ * 기본 몸의 좌표. 남녀 모두 MakeHuman(CC0) 기본 메시 + 진짜 체중 · 근육 매크로 타깃(scripts/build-avatar-mh.py, 2026-11-01).
+ * 남 = 중간 체형(근육 0.5 · 체중 0.5 ≈ F3M3) — 근육 결이 은은한 몸에서 빼고 더한다. 여 = 근육 0.55 · 체중 0.38 ≈ F2M3.
  */
 export const BASE: Record<Sex, Coord> = {
-  male: { f: 1.6, m: 4.0 },
+  male: { f: 3.0, m: 3.0 },
   female: { f: 2.0, m: 3.0 },
 };
 

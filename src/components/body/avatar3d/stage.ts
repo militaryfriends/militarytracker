@@ -41,7 +41,8 @@ const isCloth = (mesh: THREE_NS.Mesh) => /cloth/i.test(mesh.name) || /cloth/i.te
 
 /** 불러온 glTF 장면에 재질을 입히고 키를 잰다 (성별마다 한 번) */
 export function prepareModel(T: THREE, scene: THREE_NS.Object3D, tex: ModelTex = {}): Loaded {
-  const body = new T.MeshStandardMaterial({ color: BODY_COLOR, roughness: 0.5, metalness: 0 });
+  // 무광 클레이(광고 렌더) — 번들거리지 않게 거칠기를 높게
+  const body = new T.MeshStandardMaterial({ color: BODY_COLOR, roughness: 0.78, metalness: 0 });
   if (tex.normal) body.normalMap = tex.normal;
   if (tex.ao) {
     body.aoMap = tex.ao;
@@ -83,9 +84,10 @@ export function buildStage(m: Loaded, aspect: number): Stage {
   key.position.set(-1.5, 3, 3);
   const fill = new T.DirectionalLight(0xffffff, 0.25);
   fill.position.set(2.5, 1.0, 2.0);
-  const rim = new T.DirectionalLight(0xffffff, 1.6);
+  // 테두리 빛은 약하게 — 강하면 살이 붙은 둥근 면마다 하이라이트가 생겨 비닐처럼 보인다
+  const rim = new T.DirectionalLight(0xffffff, 0.8);
   rim.position.set(0.8, 2.6, -4);
-  const rim2 = new T.DirectionalLight(0xffffff, 1.0);
+  const rim2 = new T.DirectionalLight(0xffffff, 0.5);
   rim2.position.set(-1.2, 2.0, -3);
   scene.add(spot, spot.target, key, fill, rim, rim2);
   const pivot = new T.Group();
@@ -96,8 +98,9 @@ export function buildStage(m: Loaded, aspect: number): Stage {
     const mesh = o as THREE_NS.Mesh;
     if (!mesh.isMesh) return;
     if (mesh.morphTargetInfluences) meshes.push(mesh);
-    // 몸 재질은 뷰어마다 따로 — 노멀맵 세기를 이 뷰어의 몸에 맞춰 바꾼다
-    if (!isCloth(mesh) && (mesh.material as THREE_NS.MeshStandardMaterial).normalMap) {
+    // 몸 재질은 뷰어마다 따로 — 노멀맵 · AO 세기를 이 뷰어의 몸에 맞춰 바꾼다
+    const mat0 = mesh.material as THREE_NS.MeshStandardMaterial;
+    if (!isCloth(mesh) && (mat0.normalMap || mat0.aoMap)) {
       const mat = (mesh.material as THREE_NS.MeshStandardMaterial).clone();
       mesh.material = mat;
       bodyMats.push(mat);
@@ -132,18 +135,29 @@ export function applyMorph(st: Stage, mo: Morph) {
       if (i !== undefined) inf[i] = mo[k];
     });
   }
-  // 노멀맵은 기본 몸(복근 선명)의 결이다 — 살이 붙거나 근육이 줄면 결이 묻히게 약하게
+  // 노멀맵 · AO 는 기본 몸의 결 · 그늘이다 — 살이 붙거나 근육이 줄면 결도 그늘도 묻히게 같이 약하게
+  // (AO 를 그대로 두면 복근 · 가슴 아래 그림자가 살 위에 남는다)
   const ns = Math.min(1, Math.max(0.08, 1 - 0.9 * mo.fat_up - 0.6 * mo.mus_down));
-  for (const mat of st.bodyMats) mat.normalScale.set(ns, ns);
+  const ao = Math.max(0.35, ns);
+  for (const mat of st.bodyMats) {
+    mat.normalScale.set(ns, ns);
+    mat.aoMapIntensity = ao;
+  }
 }
 
+/** 노출 — 어두운 화면 기준(광고 렌더). 밝은 화면에서는 같은 값이면 몸이 탁해 보여 올린다 */
+export const EXPOSURE = { dark: 0.75, light: 1.0 } as const;
+
 /** 렌더러 공통 설정 — 투명 배경 · sRGB · 하이라이트가 하얗게 날아가지 않게 */
-export function styleRenderer(T: THREE, r: THREE_NS.WebGLRenderer) {
+export function styleRenderer(T: THREE, r: THREE_NS.WebGLRenderer, light = false) {
   r.setClearColor(0x000000, 0);
   r.outputColorSpace = T.SRGBColorSpace;
   r.toneMapping = T.NeutralToneMapping;
-  r.toneMappingExposure = 0.75;
+  r.toneMappingExposure = light ? EXPOSURE.light : EXPOSURE.dark;
 }
+
+/** 기본 각도 — 정면이 아니라 3/4(약 23°): 배 · 가슴 두께와 등 넓이가 보여야 체형 차이가 읽힌다 */
+export const DEFAULT_YAW = 0.4;
 
 export const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -198,7 +212,7 @@ export function makeDriver(st: Stage, start: Morph, opts: {
   let to = start;
   let t0 = 0;
   let dur = 0;
-  let yaw = opts.yaw ?? 0;
+  let yaw = opts.yaw ?? DEFAULT_YAW;
   let vel = 0;
   let dragging = false;
   let raf = 0;

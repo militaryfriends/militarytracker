@@ -6,6 +6,7 @@
  *  · 한 번이라도 GL 초기화가 실패하면 그 뒤로는 2D 로 그린다(broken) — 3D 때문에 화면이 깨지지 않게.
  * 장면 · 조명 · 움직임은 웹과 같은 stage.ts.
  */
+import { getThemeMode } from '../../../theme/tokens';
 import { Asset } from 'expo-asset';
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
@@ -19,7 +20,6 @@ const MODEL_SRC: Partial<Record<Sex, number>> = {
 };
 const TEX_SRC: Partial<Record<Sex, { normal?: number; ao?: number; cloth?: number }>> = {
   male: {
-    normal: require('../../../../assets/avatar/m_body_n.jpg'),
     ao: require('../../../../assets/avatar/m_body_ao.jpg'),
     cloth: require('../../../../assets/avatar/m_cloth.jpg'),
   },
@@ -137,7 +137,7 @@ export async function attach(
     addEventListener: () => {}, removeEventListener: () => {}, getContext: () => gl,
   } as unknown as HTMLCanvasElement;
   const r = makeRenderer(T, gl, canvas);
-  styleRenderer(T, r);
+  styleRenderer(T, r, getThemeMode() === 'light');
   r.setPixelRatio(1);
   r.setSize(w, h, false);
   const st = buildStage(m, w / h);

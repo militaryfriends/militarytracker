@@ -5,10 +5,11 @@
  *  · 큰 아바타(분석 · 비교 · 프로젝트)는 캔버스를 붙여 손가락으로 돌리고, 모프를 부드럽게 바꾼다.
  * 그리는 일만 한다 — 좌표는 엔진(bodyComp · projection)이 정하고 morph.ts 가 모프 값으로 바꾼다.
  */
+import { getThemeMode } from '../../../theme/tokens';
 import { Asset } from 'expo-asset';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { MODEL_SEXES, morphFor } from './morph';
-import { applyMorph, buildStage, frame, makeDriver, prepareModel, styleRenderer, texSetup, type Loaded, type Stage, type THREE } from './stage';
+import { DEFAULT_YAW, EXPOSURE, applyMorph, buildStage, frame, makeDriver, prepareModel, styleRenderer, texSetup, type Loaded, type Stage, type THREE } from './stage';
 
 const MODEL_SRC: Partial<Record<Sex, number>> = {
   male: require('../../../../assets/avatar/avatar_m.glb'),
@@ -17,7 +18,6 @@ const MODEL_SRC: Partial<Record<Sex, number>> = {
 /** 모델과 같이 구운 텍스처 — 못 받아도 색만으로 그린다 */
 const TEX_SRC: Partial<Record<Sex, { normal?: number; ao?: number; cloth?: number }>> = {
   male: {
-    normal: require('../../../../assets/avatar/m_body_n.jpg'),
     ao: require('../../../../assets/avatar/m_body_ao.jpg'),
     cloth: require('../../../../assets/avatar/m_cloth.jpg'),
   },
@@ -78,7 +78,7 @@ export function loadModel(sex: Sex): Promise<Loaded> {
 
 function makeRenderer(T: THREE, canvas?: HTMLCanvasElement, keep = false) {
   const r = new T.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: keep, powerPreference: 'low-power' });
-  styleRenderer(T, r);
+  styleRenderer(T, r, getThemeMode() === 'light');
   r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   return r;
 }
@@ -91,11 +91,13 @@ let shooter: { r: import('three').WebGLRenderer; stages: Map<Sex, Stage> } | nul
 let queue: Promise<unknown> = Promise.resolve();
 
 export function cachedSnapshot(key: string): string | undefined {
-  return shots.get(key);
+  return shots.get(`${key}|${getThemeMode() === 'light' ? 'L' : 'D'}`);
 }
 
-/** 좌표의 몸을 정면(yaw 라디안)에서 찍은 PNG data URL */
-export function snapshot(sex: Sex, c: Coord, w: number, h: number, key: string, yaw = 0): Promise<string> {
+/** 좌표의 몸을 yaw(라디안, 기본 3/4 각도)에서 찍은 PNG data URL — 밝은 · 어두운 화면은 노출이 달라 따로 찍는다 */
+export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string, yaw = DEFAULT_YAW): Promise<string> {
+  const light = getThemeMode() === 'light';
+  const key = `${key0}|${light ? 'L' : 'D'}`;
   const hit = shots.get(key);
   if (hit) return Promise.resolve(hit);
   const job = queue.then(async () => {
@@ -108,6 +110,7 @@ export function snapshot(sex: Sex, c: Coord, w: number, h: number, key: string, 
       st = buildStage(m, w / h);
       shooter.stages.set(sex, st);
     }
+    shooter.r.toneMappingExposure = light ? EXPOSURE.light : EXPOSURE.dark;
     shooter.r.setSize(w, h, false);
     frame(st.camera, st.height, w / h);
     st.pivot.rotation.y = yaw;

@@ -1,5 +1,14 @@
 # 3D 아바타 (웹에서 지금 쓰는 방식)
 
+> **2026-11-01 — 남녀 모두 `scripts/build-avatar-mh.py`(MakeHuman CC0 + 진짜 체중 · 근육 매크로 타깃)로 바꿨다.**
+> 남성 기본 몸 = 중간 체형(F3M3), 살은 몸 전체에(아랫배 한 덩어리 · 옆구리 · 엉덩이 · 팔다리 · 목/턱 밑), 근육 결은 살에 묻힌다.
+> 자세 = 힘 뺀 선 자세(팔 9°, 살 · 근육 모프에서 더 벌림, 팔꿈치 8°, 쇄골 4° 내림, 옆에서 위팔 수직). 노멀맵은 쓰지 않고 AO 만.
+> 옛 남성 모델(.blend 조각 + 임시 모프, `build-avatar-3d.py`)은 셰이프 키를 조각한 .blend 가 오면 그쪽으로 다시 바꿀 수 있다.
+> 검수 시트: `scripts/avatar-review/README.md`.
+> ```bash
+> cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/build-avatar-mh.py -- --sex m --mh ~/mh --out /tmp/avatar_m.raw.glb --tex /tmp/m_tex
+> ```
+
 사진 50장 대신 **모델 하나 + 모프 4개**로 엔진 좌표(체지방 f · 근육 m)의 몸을 그대로 그린다 — 칸 사이도 끊기지 않고, 손으로 돌려 보고,
 개월마다 몸이 변하는 걸 보여 줄 수 있다. 앱 코드: `src/components/body/avatar3d/` (morph.ts · engine.web.ts · Avatar3D.web.tsx).
 

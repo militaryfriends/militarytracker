@@ -11,6 +11,7 @@ import type { Coord, Sex } from '../../../utils/bodyComp';
 import { attach, markBroken, native3D, type NativeView } from './engine.native';
 export { avatar3DError } from './engine.native';
 import { joinYawGroup } from './stage';
+import { useThemeMode } from '../../../theme/tokens';
 
 let GLView: typeof GLViewType | null = null;
 try {
@@ -42,6 +43,7 @@ function GLBody({
 }) {
   const w = Math.round(width);
   const h = Math.round(height);
+  const mode = useThemeMode(); // 노출이 모드마다 달라 바뀌면 GL 뷰를 새로 만든다
   const view = useRef<NativeView | null>(null);
   const coordRef = useRef(coord);
   coordRef.current = coord;
@@ -66,6 +68,10 @@ function GLBody({
 
   const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
     try {
+      // 모드가 바뀌어 GL 뷰를 새로 만들 때 — 옛 뷰를 먼저 치운다
+      view.current?.dispose();
+      view.current = null;
+      group.current?.leave();
       group.current = joinYawGroup(yawGroup, {}, (y) => view.current?.setYaw(y));
       const v = await attach(gl, { sex, coord: from ?? coordRef.current, intro, onYaw: group.current.emit });
       if (!alive.current) return v.dispose();
@@ -103,7 +109,7 @@ function GLBody({
   return (
     <View style={{ width: w, height: h }} {...(interactive ? pan.panHandlers : null)}>
       {state !== 'ready' ? <View style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} pointerEvents="none">{fallback}</View> : null}
-      <GL key={`${w}x${h}`} style={{ width: w, height: h, backgroundColor: 'transparent' }} onContextCreate={onContextCreate} msaaSamples={4} />
+      <GL key={`${w}x${h}|${mode}`} style={{ width: w, height: h, backgroundColor: 'transparent' }} onContextCreate={onContextCreate} msaaSamples={4} />
     </View>
   );
 }

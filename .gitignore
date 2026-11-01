@@ -68,3 +68,5 @@ media/r2.env
 
 # 폴더 연결(FUSE) 중 생기는 임시 파일 — 커밋하지 않는다
 .fuse_hidden*
+scripts/avatar-review/web/
+scripts/avatar-review/out/

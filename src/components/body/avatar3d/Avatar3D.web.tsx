@@ -3,6 +3,7 @@
  * 모델이 없는 성별 · WebGL 이 안 되는 브라우저 · 불러오기 실패 → fallback(2D 실루엣)을 그대로 보여 준다.
  * 네이티브는 Avatar3D.tsx (지금은 항상 fallback — expo-gl 연결 전).
  */
+import { useThemeMode } from '../../../theme/tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -23,7 +24,8 @@ export function Avatar3DStill({ sex, coord, width, height, fallback }: {
 }) {
   const w = Math.round(width);
   const h = Math.round(height);
-  const key = `${sex}|${coordKey(coord)}|${w}x${h}`;
+  const mode = useThemeMode(); // 밝은 · 어두운 화면은 노출이 달라 다시 찍는다
+  const key = `${sex}|${coordKey(coord)}|${w}x${h}|${mode}`;
   const [url, setUrl] = useState<string | undefined>(() => cachedSnapshot(key));
   const [failed, setFailed] = useState(false);
   useEffect(() => {
