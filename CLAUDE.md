@@ -61,10 +61,11 @@ npm run deploy:hosting            # 웹 export + hosting
 
 ## 내 변화 프로젝트 (체형 예측 → 결제)
 
-명세: "아바타 체형 변화 예측 기능 — 개발 인수인계 명세 v1". 흐름: 온보딩 O1 기본 → O2 원하는 체형 → O3 현재 체형
-(허리 권장 · 인바디 선택 · 정확도 미터) → O4 환경 → O5 식사 → O6 분석 `/project/analysis` → O7 "분석이 완료되었습니다"
-`/project/compare` → O8 프로젝트 2개 `/project` → 결제 `/subscribe?f=body_project&project=p1|p2` → `/project/start` →
-홈 카드 · 4주 체크인 `/project/checkin`. 습관 경로(O2 "체형보다 운동 습관이 먼저예요")는 O3 · O6~O8 없이 예전 루틴 선택.
+명세: "아바타 체형 변화 예측 기능 — 개발 인수인계 명세 v1" + 대표 피드백 10/31 · 11/1. 흐름(2026-11-01, 12단계 — 질문 하나에 화면 하나):
+성별 → 나이 → 키 → 체중 → 현재 체형(허리 권장 · 인바디 선택) → 경력 → 장소 → 일수 → 식사 → 신경 쓰이는 부위(`profile.focus`)
+→ 계산 `/project/analysis`(약 7초, 문구는 '분석'이 아니라 '계산') → 지금 내 몸 `/project/compare` → 카드 4장 `/project`
+→ 결제 `/subscribe?f=body_project&project=<strategy>` → `/project/start` → 홈 카드 · MY 맨 위 내 몸 · 4주 체크인 `/project/checkin`.
+목표를 직접 고르는 단계와 습관 경로는 없다 — 목표는 엔진 추천 카드(`recommendedStrategy`).
 O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 연다(라우팅 가드가 온보딩 중에도 `/project` 를 허용).
 
 - **숫자는 엔진만 만든다** — `src/utils/bodyComp.ts` · `projection.ts` · `bodyAnalysis.ts` · `src/data/archetypes.ts`(결정론적,
