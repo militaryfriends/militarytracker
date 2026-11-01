@@ -1,5 +1,5 @@
 import { UserProfile, BodyStats, WeightRecord, BodyProject } from '../types';
-import { expectedPoint, phaseNutrition } from './projection';
+import { STRATEGY, expectedPoint, phaseNutrition, strategyOfGoal } from './projection';
 
 // ─── 추세 체중 ──────────────────────────────────────────────────────────────
 /** 추세 계산에 사용할 기간과 표본 수 */
@@ -150,14 +150,12 @@ export function activityFactor(days: number): number {
   return 1.725;
 }
 
-/** 감량 시 하한 — 이 아래로 내려가면 식단 제안이 위험해진다 */
-const KCAL_FLOOR = { male: 1500, female: 1200 } as const;
 
 /** 단계 이름 — 칼로리 줄에 붙인다 */
-const PHASE_WORD = { cut: '감량', gain: '린벌크', keep: '유지' } as const;
+const PHASE_WORD = { cut: '감량', gain: '린매스업', keep: '유지' } as const;
 
 /**
- * project: 진행 중인 내 변화 프로젝트가 있으면 목표 ± 고정값 대신 지금 단계(감량 · 린벌크 · 유지)의 칼로리 ·
+ * project: 진행 중인 내 변화 프로젝트가 있으면 목표 ± 고정값 대신 지금 단계(감량 · 린매스업 · 유지)의 칼로리 ·
  * 단백질을 엔진(phaseNutrition)으로 쓴다 — 같은 TDEE 에서 출발한다. 없으면 예전 그대로.
  */
 export function calcBodyStats(
@@ -183,31 +181,25 @@ export function calcBodyStats(
   const factor = activityFactor(p.days);
   const tdee = Math.round(bmr * factor);
 
-  let kcal = tdee;
-  let tagline = '유지 칼로리';
-  if (p.goal === 'muscle') {
-    kcal = tdee + 300;
-    tagline = '증량 (+300kcal)';
-  }
-  if (p.goal === 'cut') {
-    kcal = tdee - 400;
-    tagline = '감량 (-400kcal)';
-    const floor = Math.max(KCAL_FLOOR[p.sex], Math.round(bmr));
-    if (kcal < floor) {
-      kcal = floor;
-      tagline = `감량 (하한 ${floor}kcal 적용)`;
-    }
-  }
-
-  let protein = Math.round(W * (p.goal === 'cut' ? 2.0 : 1.8));
-
+  // 하루 칼로리 · 단백질은 엔진 계산기 하나(phaseNutrition)에서 — 프로젝트가 없을 때도 같은 함수 · 같은 속도.
+  // (예전엔 여기서 +300 / −400 을 따로 써서 프로젝트 · 식단 · 코치 숫자가 서로 달랐다)
+  const ctx = { sex: p.sex, age: A, heightCm: H, weightKg: W, days: p.days, level: p.level };
+  let kcal: number;
+  let protein: number;
+  let tagline: string;
   if (project && project.status === 'active') {
     const monthIndex = Math.round((Date.now() - Date.parse(project.startedAt)) / (30.44 * 86_400_000));
     const pt = expectedPoint(project.track, project.trackOffset, monthIndex);
-    const n = phaseNutrition(pt.phase, { sex: p.sex, age: A, heightCm: H, weightKg: W, days: p.days, level: p.level });
+    const n = phaseNutrition(pt.phase, ctx, project.strategy);
     kcal = n.kcal;
     protein = n.proteinG;
-    tagline = `${PHASE_WORD[pt.phase]} 단계 · 내 변화 프로젝트`;
+    tagline = `${project.strategy && pt.phase !== 'keep' ? STRATEGY[project.strategy].name : PHASE_WORD[pt.phase]} 단계 · 내 변화 프로젝트`;
+  } else {
+    const st = strategyOfGoal(p.goal);
+    const n = phaseNutrition(st ? STRATEGY[st].phase : 'keep', ctx, st ?? undefined);
+    kcal = n.kcal;
+    protein = n.proteinG;
+    tagline = st ? `${STRATEGY[st].name} (${STRATEGY[st].how})` : '유지 칼로리';
   }
 
   const fat = Math.round((kcal * 0.25) / 9);

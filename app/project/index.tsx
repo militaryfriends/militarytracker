@@ -1,5 +1,6 @@
 /**
- * O8 프로젝트 제안 — 지금 몸에서 실제로 도달할 수 있는 프로젝트 2개(기간 + 예상 몸). 결제 화면.
+ * 프로젝트 제안 — 지금 몸에서 엔진이 갈 수 있는 몸 4개(최대 감량 · 근육 유지 감량 · 린매스업 · 벌크업). 결제 화면.
+ * 카드는 항상 4장, 추천은 1장. 지금 몸에 안 맞는 카드는 흐리게 + 이유(숨기지 않는다 — 골라도 된다).
  *
  * 블러 없음: 예상 몸 · 숫자는 결제 전에도 전부 보인다. 잠그는 건 그 몸을 만드는 실행(루틴 · 식단 · 체크인)뿐.
  * 결제 버튼 바로 위에 프로 혜택을 "이 몸을 만드는 도구"로 나열한다.
@@ -21,12 +22,12 @@ import { saveOnboarding, saveProfile } from '../../src/services/authService';
 import { saveAnalysis, setAnalysisDecision } from '../../src/services/bodyService';
 import { buildLocalPlan } from '../../src/utils/planner';
 import { showAlert } from '../../src/utils/alert';
-import { ProjectCard } from '../../src/components/body/ProjectCard';
+import { ProjectGridCard } from '../../src/components/body/ProjectCard';
 import { ChangePreview } from '../../src/components/body/ChangePreview';
 import { analyzeBody } from '../../src/utils/bodyAnalysis';
-import type { MonthPoint } from '../../src/utils/projection';
+import type { CardProject } from '../../src/utils/projection';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
-import { profileFromAnalysis } from '../../src/components/body/format';
+import { practiceLine, profileFromAnalysis } from '../../src/components/body/format';
 import { EmptyState, useSafeBack } from '../../src/components/ui';
 
 /** 이 몸을 만드는 도구 — 프로 혜택 (서버 한도와 같은 값: 코치 하루 10회 = functions/src/quota.ts) */
@@ -53,19 +54,18 @@ export default function ProjectsScreen() {
   const [busy, setBusy] = useState(false);
   const { width } = useWindowDimensions();
 
-  // 저장된 분석에는 프로젝트별 트랙이 없다 — 같은 입력 · 같은 엔진이면 같은 결과라 다시 계산해 달마다 몸을 보여 준다
-  const tracks = useMemo<Record<string, MonthPoint[]> | null>(() => {
+  // 카드 4장은 저장된 값이 아니라 입력으로 다시 계산한다(결정론적) — 옛 엔진으로 저장된 분석도 지금 카드로 보인다.
+  // 서버(bodyProjectStart)도 같은 입력으로 다시 계산해 고른 카드를 만든다.
+  const cards = useMemo<CardProject[] | null>(() => {
     if (!a) return null;
     try {
-      const core = analyzeBody(a.input, { mode: a.goal.mode, archetypeId: a.goal.archetypeId });
-      if (core.engineVersion !== a.engineVersion) return null;
-      return Object.fromEntries(core.projects.map((p) => [p.id, p.track]));
+      return analyzeBody(a.input).projects;
     } catch {
       return null;
     }
   }, [a]);
 
-  if (!a) {
+  if (!a || !cards) {
     return (
       <SafeAreaView style={s.root}>
         <EmptyState text="분석 결과가 없어요." cta="내 몸 분석하기" onCta={() => router.replace('/project/new')} />
@@ -73,7 +73,8 @@ export default function ProjectsScreen() {
     );
   }
 
-  const sel = picked ?? a.projects.find((p) => p.recommended)?.id ?? a.projects[0].id;
+  const sel = picked ?? cards.find((p) => p.recommended)?.id ?? cards[0].id;
+  const colW = Math.floor((Math.min(width, 520) - 36 - 10) / 2);
   const running = !!project && project.analysisId === a.id && project.status === 'active';
   const trial = TRIAL_DAYS > 0 && !sub.trialUsed && !pro;
   const monthly = PRODUCTS.find((p) => p.id === 'mt_pro_monthly') ?? PRODUCTS[0];
@@ -90,7 +91,16 @@ export default function ProjectsScreen() {
     else router.push(`/subscribe?f=body_project&project=${sel}`);
   }
 
-  // "아니에요, 괜찮아요 운동 자세만 볼래요" — 분석은 그대로 저장, 무료로 들어간다(착지는 자세 탭)
+  // "아니에요, 괜찮아요 운동 자세만 볼래요" — 시작 버튼 바로 아래라 잘못 눌리기 쉬워 한 번 확인한다(10/31 피드백 7-5)
+  function askDecline() {
+    if (busy) return;
+    showAlert('프로젝트 없이 둘러볼까요?', '계산 결과는 저장돼요. 홈의 "내 변화 프로젝트" 카드에서 언제든 다시 고를 수 있어요.', [
+      { text: '돌아가기', style: 'cancel' },
+      { text: '자세만 볼게요', onPress: () => { void decline(); } },
+    ]);
+  }
+
+  // 분석은 그대로 저장, 무료로 들어간다(착지는 자세 탭)
   async function decline() {
     if (!user || !a || busy) return;
     setBusy(true);
@@ -131,13 +141,13 @@ export default function ProjectsScreen() {
           </TouchableOpacity>
         ) : null}
         <Text style={s.title} accessibilityRole="header">내 변화 프로젝트</Text>
-        <Text style={s.sub}>지금 몸에서 실제로 도달할 수 있는 프로젝트 2가지예요</Text>
+        <Text style={s.sub}>지금 몸에서 실제로 갈 수 있는 몸 4가지예요. 하나를 고르면 그 몸을 만드는 루틴 · 식단으로 시작해요</Text>
         <View style={s.acc}>
           <AccuracyMeter accuracy={a.comp.accuracy} compact />
         </View>
 
         {(() => {
-          const cur = a.projects.find((p) => p.id === sel) ?? a.projects[0];
+          const cur = cards.find((p) => p.id === sel) ?? cards[0];
           return (
             <ChangePreview
               key={cur.id}
@@ -146,23 +156,28 @@ export default function ProjectsScreen() {
               months={cur.months}
               start={{ cell: a.cell, coord: a.coord, weightKg: a.input.weightKg, bfPct: a.comp.bfPct }}
               end={cur.end}
-              track={tracks?.[cur.id] ?? null}
+              track={cur.track}
               width={Math.min(width, 520) - 36}
             />
           );
         })()}
 
-        {a.projects.map((p) => (
-          <ProjectCard
-            key={p.id}
-            sex={a.input.sex}
-            project={p}
-            fromCell={a.cell}
-            selected={p.id === sel}
-            onPress={running ? undefined : () => setPicked(p.id)}
-            days={a.input.days}
-          />
-        ))}
+        <View style={s.grid}>
+          {cards.map((p) => (
+            <ProjectGridCard
+              key={p.id}
+              sex={a.input.sex}
+              project={p}
+              selected={p.id === sel}
+              onPress={running ? undefined : () => setPicked(p.id)}
+              width={colW}
+            />
+          ))}
+        </View>
+        {(() => {
+          const cur = cards.find((p) => p.id === sel) ?? cards[0];
+          return <Text style={s.practice}>{practiceLine(cur.nutrition, a.input.days)} · 첫 달 기준</Text>;
+        })()}
 
         <TouchableOpacity onPress={() => router.push(redo ? '/project/compare?redo=1' : '/project/compare')} style={s.again} accessibilityRole="button">
           <Text style={s.againTxt}>지금 몸 vs 목표 몸 다시 보기</Text>
@@ -193,7 +208,7 @@ export default function ProjectsScreen() {
               <Text style={s.ctaTxt}>{pro ? '맞춤형 프로젝트 바로 시작하기' : '결제하시면 바로 맞춤형 프로젝트 진행합니다!'}</Text>
             </PressableScale>
             <Text style={s.price}>{priceLine}</Text>
-            <TouchableOpacity onPress={decline} disabled={busy} style={s.decline} accessibilityRole="button">
+            <TouchableOpacity onPress={askDecline} disabled={busy} style={s.decline} accessibilityRole="button">
               <Text style={s.declineTxt}>아니에요, 괜찮아요 운동 자세만 볼래요</Text>
             </TouchableOpacity>
           </>
@@ -212,6 +227,8 @@ const s = themed(() => StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   sub: { fontSize: 13.5, color: colors.muted, marginTop: 6, lineHeight: 20 },
   acc: { marginTop: 10, marginBottom: 16 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  practice: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 10 },
   again: { alignItems: 'center', paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
   againTxt: { fontSize: 12.5, color: colors.mid, fontWeight: '600', textDecorationLine: 'underline' },
   foot: {
@@ -229,7 +246,8 @@ const s = themed(() => StyleSheet.create({
   cta: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 12, alignItems: 'center' },
   ctaTxt: { color: colors.bg, fontSize: 15, fontWeight: '800', textAlign: 'center' },
   price: { fontSize: 11.5, color: colors.muted, textAlign: 'center', marginTop: 6 },
-  decline: { alignItems: 'center', minHeight: 40, justifyContent: 'center' },
+  // 시작 버튼과 거리를 둔다 — 붙어 있어 시작하려다 거절이 눌렸다(10/31 녹화 0:56)
+  decline: { alignItems: 'center', minHeight: 44, justifyContent: 'center', marginTop: 14 },
   declineTxt: { fontSize: 13, color: colors.mid, fontWeight: '600' },
   notice: { fontSize: 11, color: colors.muted, lineHeight: 16, textAlign: 'center', marginTop: 2 },
 }));

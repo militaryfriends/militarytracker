@@ -8,7 +8,7 @@
  *
  * 명세: "아바타 체형 변화 예측 기능 — 개발 인수인계 명세 v1" 3장.
  */
-export const ENGINE_VERSION = 'body-1.0.0';
+export const ENGINE_VERSION = 'body-2.0.0';
 
 export type Sex = 'male' | 'female';
 

@@ -10,10 +10,11 @@ import {
   type BodyComp, type Coord, type InbodyInput, type Sex,
 } from './bodyComp';
 import {
-  autoGoalCell, buildProjects, clampGoal, goalGap, legacyGoal, orderLine, phaseSpans,
-  type GoalSpec, type Level, type MonthPoint, type Project,
+  autoGoalCell, buildCards, simulate, clampGoal, goalGap, legacyGoal, legacyGoalOf, orderLine, phaseSpans,
+  type CardProject, type GoalSpec, type Level, type MonthPoint,
 } from './projection';
 import { archetypeById, cellLabel } from '../data/archetypes';
+export type { CardProject };
 
 export interface AnalysisInput {
   sex: Sex;
@@ -60,10 +61,11 @@ export interface AnalysisCore {
   gap: AnalysisGap;
   /** "감량 먼저 → 근육 채우기 순서가 가장 빠릅니다" */
   order: string;
-  /** 목표까지 0~24개월 */
+  /** 목표(추천 카드)까지의 트랙 */
   track: MonthPoint[];
   reachedAt: number | null;
-  projects: [Project, Project];
+  /** 카드 4장 — 최대 감량 · 근육 유지 감량 · 린매스업 · 벌크업 (2026-11-01). 추천은 1장 */
+  projects: CardProject[];
   /** 기존 profile.goal (calcBodyStats · 플래너가 깨지지 않게) */
   legacyGoal: 'cut' | 'muscle';
 }
@@ -80,19 +82,22 @@ export function resolveGoal(input: AnalysisInput, comp: BodyComp, pick: GoalPick
   return { mode: 'auto', archetypeId: 'auto', name: cellLabel(input.sex, cell), cell, ...g };
 }
 
-export function analyzeBody(input: AnalysisInput, pick: GoalPick): AnalysisCore {
+/**
+ * pick 을 주면 예전처럼 그 목표 카드(명세 예시 · 옛 분석 재현)로 목표 · 차이를 잡는다.
+ * pick 이 없으면(지금 온보딩) 목표 = 추천 카드가 실제로 도달하는 몸 — 결과 · 프로젝트 · 식단 숫자가 한 값에서 나온다.
+ */
+export function analyzeBody(input: AnalysisInput, pick?: GoalPick): AnalysisCore {
   const comp = estimateBodyComp(input);
   const coord = toCoord(input.sex, comp.bfPct, comp.nffmi);
   const cell = toCell(input.sex, comp.bfPct, comp.nffmi);
-  const g = resolveGoal(input, comp, pick);
+  const ctx = { sex: input.sex, age: input.age, heightCm: input.heightCm, level: input.level, days: input.days, start: comp, waistCm: input.waistCm };
+  const cards = buildCards(ctx);
+  const rec = cards.find((c) => c.recommended) ?? cards[0];
+  const g = pick ? resolveGoal(input, comp, pick) : { mode: 'auto' as const, ...rec.goal, name: rec.name };
   const gap = goalGap(input.heightCm, comp, g);
-  const goal: AnalysisGoal = { ...g, weightKg: gap.targetWeightKg };
-  const built = buildProjects(
-    { sex: input.sex, age: input.age, heightCm: input.heightCm, level: input.level, days: input.days, start: comp, waistCm: input.waistCm },
-    goal,
-    (c) => cellLabel(input.sex, c),
-  );
-  const longest = Math.max(...built.projects.map((p) => p.months));
+  const goal: AnalysisGoal = { ...g, weightKg: pick ? gap.targetWeightKg : rec.end.weightKg };
+  // 목표를 직접 고른 경우(옛 흐름)는 그 목표로 가는 트랙 · 순서
+  const legacy = pick ? simulate(input.sex, input.heightCm, input.level, comp, goal) : null;
   return {
     engineVersion: ENGINE_VERSION,
     input,
@@ -100,16 +105,23 @@ export function analyzeBody(input: AnalysisInput, pick: GoalPick): AnalysisCore 
     coord,
     cell,
     goal,
-    gap: { fatKg: gap.fatKg, leanKg: gap.leanKg, muscleAhead: gap.muscleAhead },
-    order: orderLine(phaseSpans(built.track, Math.max(longest, built.reachedAt ?? 0))),
-    track: built.track,
-    reachedAt: built.reachedAt,
-    projects: built.projects,
-    legacyGoal: legacyGoal(comp, goal),
+    gap: pick
+      ? { fatKg: gap.fatKg, leanKg: gap.leanKg, muscleAhead: gap.muscleAhead }
+      // 카드 몸까지의 실제 변화(체지방량 · 제지방량) — 도달할 수 없는 증가량이 나오지 않는다
+      : {
+        fatKg: (rec.end.weightKg * rec.end.bfPct) / 100 - comp.fmKg,
+        leanKg: rec.end.weightKg * (1 - rec.end.bfPct / 100) - comp.ffmKg,
+        muscleAhead: false,
+      },
+    order: legacy ? orderLine(phaseSpans(legacy.track, legacy.reachedAt ?? 24)) : orderLine(phaseSpans(rec.track, rec.months)),
+    track: legacy ? legacy.track : rec.track,
+    reachedAt: legacy ? legacy.reachedAt : rec.reachedAt,
+    projects: cards,
+    legacyGoal: pick ? legacyGoal(comp, goal) : legacyGoalOf(rec.strategy),
   };
 }
 
 /** 저장용 — 프로젝트마다 들고 있는 트랙은 빼고(같은 입력으로 다시 계산된다) 크기를 줄인다 */
-export function stripTracks(projects: readonly Project[]): Omit<Project, 'track'>[] {
+export function stripTracks(projects: readonly CardProject[]): Omit<CardProject, 'track'>[] {
   return projects.map(({ track: _t, ...rest }) => rest);
 }

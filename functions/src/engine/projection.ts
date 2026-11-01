@@ -2,7 +2,7 @@
 /**
  * 체성분 계산 엔진 (2/2) — 매달 몸이 지도 위 어디로 움직일지, 그리고 프로젝트 2개.
  *
- * 매달 현재 상태를 보고 감량(cut) · 린벌크(gain) · 유지(keep) 중 하나를 고른다.
+ * 매달 현재 상태를 보고 감량(cut) · 린매스업(gain) · 유지(keep) 중 하나를 고른다.
  * 속도는 근거 범위의 하단 × 보수계수 0.8 — 말한 것보다 빨리 좋아지는 건 괜찮지만, 느리면 신뢰를 잃는다.
  * 숫자는 표시할 때만 반올림한다(계산 중간에 반올림하면 검산 예시와 어긋난다).
  *
@@ -127,23 +127,28 @@ export interface Nutrition {
   tdee: number;
 }
 
-/** Mifflin-St Jeor × 활동계수 — calcBodyStats 와 같은 TDEE 에서 목표 ± 고정값 대신 단계로 계산한다 */
-export function phaseNutrition(phase: Phase, c: NutritionCtx): Nutrition {
+/**
+ * Mifflin-St Jeor × 활동계수 — 앱의 모든 하루 칼로리(식단 탭 · 내 정보 · 코치 · 프로젝트 카드)가 이 함수 하나에서 나온다.
+ * strategy 를 주면 그 카드의 속도: 감량 주 체중의 1% · 0.5%, 증량 유지 +300(린매스업) · +500(벌크업).
+ * strategy 가 없으면 예전 값(감량 0.5%, 증량 +250/+150) — 명세 예시 A~E 와 기존 프로젝트가 그대로 나오게.
+ */
+export function phaseNutrition(phase: Phase, c: NutritionCtx, strategy?: Strategy): Nutrition {
   const bmr = 10 * c.weightKg + 6.25 * c.heightCm - 5 * c.age + (c.sex === 'male' ? 5 : -161);
   const tdee = Math.round(bmr * activityFactorOf(c.days));
   let kcal = tdee;
   let protein = c.weightKg * 1.8;
+  const st = strategy ? STRATEGY[strategy] : null;
   if (phase === 'cut') {
-    kcal = tdee - (c.weightKg * CUT_RATE * 7700) / 7;
+    kcal = tdee - (c.weightKg * (st?.cutRate ?? CUT_RATE) * 7700) / 7;
     kcal = Math.max(kcal, KCAL_FLOOR[c.sex], Math.round(bmr));
     protein = c.weightKg * 2.0;
   } else if (phase === 'gain') {
-    kcal = tdee + (c.level === 1 ? 250 : 150);
+    kcal = tdee + (st?.surplus ?? (c.level === 1 ? 250 : 150));
   }
   return { phase, kcal: Math.round(kcal / 10) * 10, proteinG: Math.round(protein), tdee };
 }
 
-/** 트랙에서 단계가 바뀌는 구간 — "1~6개월 감량, 7~12개월 린벌크" (AI 플랜 입력 · 순서 문구) */
+/** 트랙에서 단계가 바뀌는 구간 — "1~6개월 감량, 7~12개월 린매스업" (AI 플랜 입력 · 순서 문구) */
 export interface PhaseSpan {
   phase: Phase;
   /** 시작 달(1부터) */
@@ -293,6 +298,167 @@ export function buildProjects(ctx: ProjectCtx, goal: GoalSpec, nameFor: (cell: s
   }
   return { projects, track: sim.track, reachedAt: T };
 }
+
+// ─── 프로젝트 카드 4장 (2026-11-01, 대표 피드백 10/31 2절) ─────────────────────
+// 지금 몸을 계산한 뒤 엔진이 갈 수 있는 몸 4개를 만든다. 카드마다 한 가지 방식(감량 1% · 0.5% · 린매스업 · 벌크업)으로
+// 시뮬레이션해 "그 방식으로 몇 개월 뒤 실제로 도달하는 몸"을 보여 준다 — 도달할 수 없는 목표는 만들지 않는다.
+
+export type Strategy = 'cut_fast' | 'cut' | 'leanmass' | 'bulk';
+export const STRATEGIES: readonly Strategy[] = ['cut_fast', 'cut', 'leanmass', 'bulk'];
+
+export interface StrategySpec {
+  phase: Phase;
+  name: string;
+  /** 카드 아래 한 줄 — 속도 · 칼로리 */
+  how: string;
+  /** 감량: 주 체중의 비율 */
+  cutRate?: number;
+  /** 증량: 유지 칼로리 + kcal */
+  surplus?: number;
+  /** 증량: 근육 증가 한도 중 실제로 붙는 비율 (잉여가 작을수록 덜 붙는다) */
+  leanShare?: number;
+  /** 감량 중 근육 증가(재구성) 계수 — 빠른 감량은 절반 */
+  recompShare?: number;
+}
+
+export const STRATEGY: Record<Strategy, StrategySpec> = {
+  cut_fast: { phase: 'cut', name: '최대 감량', how: '주 체중의 약 1% 감량', cutRate: 0.01, recompShare: 0.5 },
+  cut: { phase: 'cut', name: '근육 유지 감량', how: '주 체중의 약 0.5% 감량', cutRate: CUT_RATE, recompShare: 1 },
+  leanmass: { phase: 'gain', name: '린매스업', how: '유지 칼로리 + 300kcal', surplus: 300, leanShare: 0.85 },
+  bulk: { phase: 'gain', name: '벌크업', how: '유지 칼로리 + 500kcal', surplus: 500, leanShare: 1 },
+};
+
+/** 증량 잉여 칼로리 중 몸에 저장되는 비율(나머지는 활동 · 열로 소모 — 보수적), 근육 1kg 을 만드는 데 드는 kcal */
+const SURPLUS_STORED = 0.5;
+const LEAN_KCAL = 4000;
+const DAYS_PER_MONTH = 30.44;
+
+/** 한 가지 방식으로만 months 개월 — 감량은 stopBf(기본: 체지방 하한 + 1)에 닿으면 멈추고 유지 */
+export function simulateStrategy(
+  sex: Sex, heightCm: number, level: Level, start: BodyComp, strategy: Strategy, months = 18, stopBf?: number,
+): MonthPoint[] {
+  const g = GRID[sex];
+  const st = STRATEGY[strategy];
+  const floor = Math.max(g.bfMin + 1, stopBf ?? 0);
+  let fm = start.fmKg;
+  let ffm = start.ffmKg;
+  const track: MonthPoint[] = [];
+  for (let m = 0; m <= months; m++) {
+    const W = fm + ffm;
+    const BF = (fm / W) * 100;
+    const NF = nffmiOf(ffm, heightCm);
+    const dim = NF <= g.base ? 1 : Math.max(0, (g.ceil - NF) / (g.ceil - g.base));
+    const gain = GAIN[sex][level] * K * dim;
+    let dF = 0;
+    let dL = 0;
+    let phase: Phase = st.phase;
+    if (st.phase === 'cut') {
+      if (BF <= floor + 0.05) {
+        phase = 'keep';
+      } else {
+        const dW = -W * (st.cutRate ?? CUT_RATE) * WEEKS;
+        dL = gain * RECOMP[level] * (st.recompShare ?? 1);
+        dF = dW - dL;
+        const minF = ((floor / 100) * (ffm + dL)) / (1 - floor / 100);
+        if (fm + dF < minF) dF = minF - fm;
+      }
+    } else {
+      dL = gain * (st.leanShare ?? 1);
+      const stored = (st.surplus ?? 300) * DAYS_PER_MONTH * SURPLUS_STORED;
+      dF = Math.max(0, (stored - dL * LEAN_KCAL) / 7700);
+    }
+    track.push({ m, weightKg: W, bfPct: BF, nffmi: NF, cell: toCell(sex, BF, NF), phase });
+    fm += dF;
+    ffm += dL;
+  }
+  return track;
+}
+
+/** 카드 기간: 목표에 처음 닿는 달을 3개월 단위로 올림, 최소 3 · 최대 12 */
+const cardMonths = (hit: number | null): number => (hit === null ? 12 : Math.min(12, Math.max(3, Math.ceil(hit / 3) * 3)));
+
+export interface CardFit {
+  /** 지금 몸에 맞는지 — 아니면 흐리게 + 이유 (숨기지 않는다) */
+  ok: boolean;
+  reason?: string;
+}
+
+/** 지금 칸 → 추천 카드 (남녀 같은 칸 기준) — F4 · F5 최대 감량, F3 근육 유지 감량, F2 · (F1 + M4 이상) 린매스업, F1 + M1~3 벌크업 */
+export function recommendedStrategy(sex: Sex, start: BodyComp): Strategy {
+  const { f, m } = parseCell(toCell(sex, start.bfPct, start.nffmi));
+  if (f >= 4) return 'cut_fast';
+  if (f === 3) return 'cut';
+  if (f === 2 || m >= 4) return 'leanmass';
+  return 'bulk';
+}
+
+export function strategyFit(sex: Sex, start: BodyComp, s: Strategy): CardFit {
+  const { f } = parseCell(toCell(sex, start.bfPct, start.nffmi));
+  if (s === 'cut_fast' && f <= 2) return { ok: false, reason: '체지방이 이미 낮아 빠른 감량은 근손실 위험이 커요' };
+  if (s === 'cut' && f <= 1) return { ok: false, reason: '지금 체지방이 충분히 낮아요 — 근육을 채울 때예요' };
+  if (s === 'leanmass' && f >= 4) return { ok: false, reason: '지금은 감량 먼저가 빠릅니다' };
+  if (s === 'bulk' && f >= 3) return { ok: false, reason: '지금은 살이 근육보다 더 붙기 쉬워요 — 감량이나 린매스업을 권해요' };
+  return { ok: true };
+}
+
+export interface CardProject extends Project {
+  strategy: Strategy;
+  fit: CardFit;
+  /** 카드 아래 한 줄 — "주 체중의 약 1% 감량" */
+  how: string;
+}
+
+/**
+ * 카드 4장. 감량 카드의 목표 = F2 칸 가운데(남 13% · 여 22%; 이미 F2 면 F1, F1 이면 하한 + 1) — 닿으면 거기서 멈춘다,
+ * 증량 카드의 목표 = 근육 한 단계 위 칸 가운데(M5 면 +0.5). 그 목표에 처음 닿는 달(3개월 단위, 최대 12개월)의 몸이 카드의 예상 몸이다.
+ */
+export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string): CardProject[] {
+  const g = GRID[ctx.sex];
+  const cur = parseCell(toCell(ctx.sex, ctx.start.bfPct, ctx.start.nffmi));
+  const rec = recommendedStrategy(ctx.sex, ctx.start);
+  const cutTarget = cur.f >= 3 ? g.fat[1] : cur.f === 2 ? g.fat[0] : g.bfMin + 1;
+  const musTarget = cur.m < 5 ? g.mus[cur.m] : ctx.start.nffmi + 0.5;
+  return STRATEGIES.map((sId) => {
+    const st = STRATEGY[sId];
+    const track = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, sId, 18, st.phase === 'cut' ? cutTarget : undefined);
+    const hitIdx = track.findIndex((pt) => (st.phase === 'cut' ? pt.bfPct <= Math.max(cutTarget, g.bfMin + 1) + 0.3 : pt.nffmi >= musTarget - 0.05));
+    const months = cardMonths(hitIdx < 0 ? null : hitIdx);
+    const pt = track[months];
+    const first = track[0];
+    const goal: GoalSpec = {
+      archetypeId: `card:${sId}`,
+      name: nameFor ? nameFor(pt.cell) : st.name,
+      cell: pt.cell, bfPct: pt.bfPct, nffmi: pt.nffmi,
+    };
+    return {
+      id: sId,
+      strategy: sId,
+      name: st.name,
+      how: st.how,
+      months,
+      kind: 'complete' as ProjectKind,
+      goal,
+      end: endOf(ctx, pt),
+      reachesGoal: true,
+      progressPct: 100,
+      recommended: sId === rec,
+      fit: strategyFit(ctx.sex, ctx.start, sId),
+      nutrition: phaseNutrition(st.phase, {
+        sex: ctx.sex, age: ctx.age, heightCm: ctx.heightCm, weightKg: first.weightKg, days: ctx.days, level: ctx.level,
+      }, sId),
+      phases: phaseSpans(track, months),
+      track,
+      reachedAt: hitIdx < 0 ? null : hitIdx,
+    };
+  });
+}
+
+/** 프로필 목표(카드를 고르기 전 · 습관 경로) → 같은 계산기의 방식 */
+export const strategyOfGoal = (goal: 'cut' | 'muscle' | 'habit' | string): Strategy | null =>
+  goal === 'cut' ? 'cut' : goal === 'muscle' ? 'leanmass' : null;
+
+/** 카드 방식 → 기존 profile.goal(플래너 · 코치 문구) */
+export const legacyGoalOf = (s: Strategy): 'cut' | 'muscle' => (STRATEGY[s].phase === 'cut' ? 'cut' : 'muscle');
 
 // ─── 목표 ──────────────────────────────────────────────────────────────────
 /** "잘 모르겠어요" — 현재 칸에서 체지방 한 칸↓, 근육 한 칸↑ */

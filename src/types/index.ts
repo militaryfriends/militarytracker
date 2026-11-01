@@ -1,6 +1,6 @@
 import type { Part, Place } from '../data/exercises';
 import type { BodyComp, Coord, InbodyInput } from '../utils/bodyComp';
-import type { MonthPoint, Nutrition, Phase, PhaseSpan, Project } from '../utils/projection';
+import type { CardProject, MonthPoint, Nutrition, Phase, PhaseSpan, Project, Strategy } from '../utils/projection';
 import type { AnalysisGap, AnalysisGoal, AnalysisInput } from '../utils/bodyAnalysis';
 
 // ─── Auth / User ───────────────────────────────────────────────────────────
@@ -210,7 +210,7 @@ export type PartVolume = Record<Part, number>;
 export type AnalysisDecision = 'pending' | 'started' | 'declined';
 
 /** 저장용 프로젝트 — 트랙은 빼고(같은 입력으로 다시 계산된다) */
-export type StoredProject = Omit<Project, 'track'>;
+export type StoredProject = Omit<Project, 'track'> & Partial<Pick<CardProject, 'strategy' | 'fit' | 'how'>>;
 
 /** bodyAnalyses/{id} — 온보딩 O6 결과. 재분석할 때마다 새 문서. 본인이 쓴다 */
 export interface BodyAnalysis {
@@ -261,6 +261,8 @@ export interface BodyProject {
   nutrition: Nutrition;
   lastCheckinId?: string | null;
   engineVersion: string;
+  /** 카드 방식(2.0) — 하루 칼로리의 속도(감량 1% · 0.5%, 증량 +300 · +500). 옛 프로젝트는 없다 */
+  strategy?: Strategy;
 }
 
 export type CheckinStatus = 'ahead' | 'on' | 'behind';

@@ -21,7 +21,7 @@ export const signedKg = (v: number): string => `${v < 0 ? '−' : '+'}${kg(Math.
 
 export const kcal = (v: number): string => `${Math.round(v).toLocaleString('ko-KR')}kcal`;
 
-export const PHASE_LABEL: Record<Phase, string> = { cut: '감량', gain: '린벌크', keep: '유지' };
+export const PHASE_LABEL: Record<Phase, string> = { cut: '감량', gain: '린매스업', keep: '유지' };
 
 /** "목표 체형 도달" · "목표 체형 거의 도달 (83%)" · "목표의 70% 지점" — 다음 목표 프로젝트는 "다음 목표…" */
 export function reachLine(p: StoredProject): string {

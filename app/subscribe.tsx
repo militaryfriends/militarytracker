@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { analyzeBody } from '../src/utils/bodyAnalysis';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
@@ -38,7 +39,15 @@ export default function SubscribeScreen() {
   const { f, project } = useLocalSearchParams<{ f?: string; project?: string }>();
   const analysis = useAppStore((st) => st.analysis);
   // O8 에서 고른 프로젝트 — 위에 요약을 보여 주고, 구독이 되면 바로 프로젝트를 시작한다
-  const chosen = f === 'body_project' && project ? analysis?.projects.find((p) => p.id === project) ?? null : null;
+  // 카드는 입력으로 다시 계산한다(프로젝트 화면 · 서버와 같은 값) — 저장된 옛 분석에도 카드 4장이 있다
+  const chosen = useMemo(() => {
+    if (f !== 'body_project' || !project || !analysis) return null;
+    try {
+      return analyzeBody(analysis.input).projects.find((p) => p.id === project) ?? null;
+    } catch {
+      return null;
+    }
+  }, [f, project, analysis]);
   const patchUser = useAuthStore((s) => s.patchUser);
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const { sub, pro, left } = useEntitlement();

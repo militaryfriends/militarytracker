@@ -25,12 +25,13 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { analyzeBody } from './engine/bodyAnalysis';
 import { cellWithHysteresis, targetBody, toCell, toCoord, updateComp } from './engine/bodyComp';
 import {
-  STATUS_TEXT, checkinStatus, expectedPoint, muscleLabel, phaseNutrition, progressPct, recalcFrom,
+  STATUS_TEXT, STRATEGIES, checkinStatus, expectedPoint, muscleLabel, phaseNutrition, progressPct, recalcFrom,
+  type Strategy,
 } from './engine/projection';
 import {
   BodyProjectDoc, BodyReportDoc, FOOD_LABEL, Judgement, LEVEL_LABEL, MealTarget, PHASE_LABEL, ReportBody,
   docId, loadActiveProject, macrosOf, mealK, mealTargets, mergePhases, monthsElapsed, r1, sanitizeInput,
-  sanitizePick, signed, templateReport, timelineText, validateReport,
+  signed, templateReport, timelineText, validateReport,
 } from './bodyProject';
 import { COACH_OUTPUT_RULES, normalizeMeal, normalizeWarning, CoachMeal } from './coachMeal';
 
@@ -314,7 +315,7 @@ async function projectPlanHead(uid: string, projectId: unknown): Promise<{ head:
       `목표 체형: ${pj.goal.name} (체지방률 약 ${Math.round(pj.goal.bfPct)}%, 근육 '${muscleLabel(pj.goal.cell)}' 칸)`,
       `단계: ${timelineText(pj.phases ?? [])}`,
       `현재 단계: ${PHASE_LABEL[now.phase]} (${month + 1}개월째)`,
-      '현재 단계에 맞춰라 — 감량: 무게를 지키는 근력 위주, 린벌크: 점진적 과부하, 유지: 균형.',
+      '현재 단계에 맞춰라 — 감량: 무게를 지키는 근력 위주, 린매스업: 점진적 과부하, 유지: 균형.',
     ],
   };
 }
@@ -427,7 +428,7 @@ async function projectDiet(acc: { uid: string; isAdmin: boolean }, projectId: un
   const pt = expectedPoint(pj.track, pj.trackOffset, month);
   const n = phaseNutrition(pt.phase, {
     sex: i.sex, age: i.age, heightCm: i.heightCm, weightKg: pt.weightKg, days: i.days, level: i.level,
-  });
+  }, pj.strategy);
   const { fat, carb } = macrosOf(n.kcal, n.proteinG);
   const targets = mealTargets(n.kcal, n.proteinG);
 
@@ -577,7 +578,8 @@ export const aiCoach = onCall(
 // ─── 4. 내 변화 프로젝트 — 시작 ─────────────────────────────────────────────
 interface ProjectStartReq {
   analysisId: string;
-  projectId: 'p1' | 'p2';
+  /** 카드 방식(엔진 2.0) — cut_fast · cut · leanmass · bulk. 옛 앱의 p1 · p2 는 추천 카드로 받는다 */
+  projectId: Strategy | 'p1' | 'p2';
 }
 
 /**
@@ -598,8 +600,9 @@ export const bodyProjectStart = onCall(
     const acc = await requirePro(req, 'body_project');
     const uid = acc.uid;
     const analysisId = docId(req.data?.analysisId, '분석');
-    const projectId = req.data?.projectId;
-    if (projectId !== 'p1' && projectId !== 'p2') {
+    const raw = req.data?.projectId;
+    const legacy = raw === 'p1' || raw === 'p2';
+    if (!legacy && !(STRATEGIES as readonly string[]).includes(String(raw))) {
       throw new HttpsError('invalid-argument', '프로젝트를 골라주세요.');
     }
 
@@ -610,9 +613,11 @@ export const bodyProjectStart = onCall(
     if (a.userId !== uid) throw new HttpsError('permission-denied', '본인의 분석 결과로만 시작할 수 있습니다.');
 
     const input = sanitizeInput(a.input);
-    const core = analyzeBody(input, sanitizePick(a.goal));
-    const p = core.projects.find((x) => x.id === projectId);
+    // 카드 4장은 입력만으로 정해진다 — 앱이 보낸 숫자는 쓰지 않는다
+    const core = analyzeBody(input);
+    const p = legacy ? core.projects.find((x) => x.recommended) : core.projects.find((x) => x.id === raw);
     if (!p) throw new HttpsError('not-found', '프로젝트를 찾을 수 없습니다.');
+    const projectId = p.id;
 
     // 프로젝트가 향하는 목표 — '다음 목표(next)' 는 분석 목표와 달라 목표 체중을 그 목표로 다시 구한다
     const goalWeight = targetBody(input.heightCm, p.goal.bfPct, p.goal.nffmi, core.comp.ffmKg).weightKg;
@@ -644,6 +649,7 @@ export const bodyProjectStart = onCall(
       nutrition: p.nutrition,
       lastCheckinId: null,
       engineVersion: core.engineVersion,
+      strategy: p.strategy,
     };
 
     const id = `${uid}_${analysisId}_${projectId}`;

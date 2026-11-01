@@ -41,7 +41,7 @@ function run(input: BodyInput, level: Level, days: number, goalId: string, e: Ex
   return out;
 }
 
-test('engine version', () => assert.equal(ENGINE_VERSION, 'body-1.0.0'));
+test('engine version', () => assert.equal(ENGINE_VERSION, 'body-2.0.0'));
 
 test('표시 반올림은 참조 구현과 같다 (딱 절반이면 짝수 쪽)', () => {
   assert.equal(roundTo(35.25), 35.2);
@@ -157,7 +157,9 @@ test('analyzeBody(A) — 목표까지 체지방 11.6kg 감량 + 제지방 4.2kg 
   assert.equal(roundTo(a.goal.weightKg), 74.6);
   assert.equal(a.order, '감량 먼저 → 근육 채우기 순서가 가장 빠릅니다');
   assert.equal(a.legacyGoal, 'cut');
-  assert.equal(a.projects[1].name, '린 머슬 완성');
+  // 2.0: 프로젝트는 카드 4장(목표 선택과 무관) — 체지방 F5 라 최대 감량 추천
+  assert.equal(a.projects.length, 4);
+  assert.equal(a.projects.find((p) => p.recommended)?.strategy, 'cut_fast');
 });
 
 test('analyzeBody(E) — 근육이 목표보다 많으면 근육은 빼지 않는다', () => {

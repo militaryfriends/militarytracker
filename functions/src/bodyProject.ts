@@ -12,7 +12,7 @@ import { db } from './entitlement';
 import { roundTo, type BodyComp, type Coord } from './engine/bodyComp';
 import {
   phaseSpans, type CheckinStatus, type MonthPoint, type Nutrition, type Phase, type PhaseSpan,
-  type ProjectEnd, type ProjectKind,
+  type ProjectEnd, type ProjectKind, type Strategy,
 } from './engine/projection';
 import type { AnalysisGoal, AnalysisInput, GoalPick } from './engine/bodyAnalysis';
 
@@ -39,6 +39,8 @@ export interface BodyProjectDoc {
   nutrition: Nutrition;
   lastCheckinId: string | null;
   engineVersion: string;
+  /** 카드 방식(엔진 2.0) — 하루 칼로리 속도. 옛 프로젝트는 없다 */
+  strategy?: Strategy;
 }
 
 export interface ReportBody {
@@ -77,7 +79,7 @@ export interface BodyReportDoc {
   judged: Judgement;
 }
 
-export const PHASE_LABEL: Record<Phase, string> = { cut: '감량', gain: '린벌크', keep: '유지' };
+export const PHASE_LABEL: Record<Phase, string> = { cut: '감량', gain: '린매스업', keep: '유지' };
 export const LEVEL_LABEL: Record<number, string> = { 1: '입문', 2: '중급', 3: '상급' };
 export const FOOD_LABEL: Record<AnalysisInput['food'], string> = {
   convenience: '편의점', self: '자취 요리', family: '집밥', out: '외식',
@@ -171,7 +173,7 @@ export function monthsElapsed(startedAt: string, now = Date.now()): number {
   return Math.max(0, Math.floor((now - t) / 86_400_000 / 30.44));
 }
 
-/** "1~6개월 감량, 7~12개월 린벌크" */
+/** "1~6개월 감량, 7~12개월 린매스업" */
 export function timelineText(spans: readonly PhaseSpan[]): string {
   if (!spans.length) return '유지';
   return spans

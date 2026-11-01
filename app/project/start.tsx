@@ -24,6 +24,7 @@ import { saveOnboarding } from '../../src/services/authService';
 import { buildLocalPlan } from '../../src/utils/planner';
 import { profileFromAnalysis } from '../../src/components/body/format';
 import type { BodyProject, DietPlan, Plan } from '../../src/types';
+import { STRATEGIES, legacyGoalOf, type Strategy } from '../../src/utils/projection';
 
 const STEPS = [
   '분석 결과를 확인하는 중입니다',
@@ -62,7 +63,7 @@ export default function ProjectStartScreen() {
     setLines([]);
     const st = useAppStore.getState();
     const a = st.analysis;
-    const ref = projectRef === 'p1' || projectRef === 'p2' ? projectRef : null;
+    const ref = (STRATEGIES as readonly string[]).includes(projectRef ?? '') ? (projectRef as Strategy) : null;
     const note = (i: number, t: string) => setLines((l) => { const n = [...l]; n[i] = t; return n; });
     const timed = async <T,>(fn: () => Promise<T>): Promise<T> => {
       const t0 = Date.now();
@@ -93,7 +94,8 @@ export default function ProjectStartScreen() {
       setStep(2);
 
       const d = useOnboardDraft.getState();
-      const profile = profileFromAnalysis(a, d.seeded ? d.profile : st.profile);
+      // 고른 카드의 방식이 프로필 목표가 된다(감량 카드 → cut, 증량 카드 → muscle) — 식단 · 코치 · 루틴이 같은 방향
+      const profile = { ...profileFromAnalysis(a, d.seeded ? d.profile : st.profile), goal: legacyGoalOf(ref) };
 
       // 3) 루틴 — 실패해도 자동 구성으로 시작한다
       let plan: Plan;

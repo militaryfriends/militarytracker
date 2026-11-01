@@ -81,7 +81,7 @@ export default function CoachScreen() {
       ...(bodyProject && bodyProject.status === 'active'
         ? [`내 변화 프로젝트: ${bodyProject.name}(${bodyProject.months}개월, ${bodyProject.startedAt.slice(0, 10)} 시작). `
           + `목표 ${bodyProject.goal.name} 체지방 ${Math.round(bodyProject.goal.bfPct)}%, 예상 끝 체중 ${Math.round(bodyProject.end.weightKg * 10) / 10}kg. `
-          + `단계: ${bodyProject.phases.map((x) => `${x.from}~${x.to}개월 ${x.phase === 'cut' ? '감량' : x.phase === 'gain' ? '린벌크' : '유지'}`).join(', ')}.`]
+          + `단계: ${bodyProject.phases.map((x) => `${x.from}~${x.to}개월 ${x.phase === 'cut' ? '감량' : x.phase === 'gain' ? '린매스업' : '유지'}`).join(', ')}.`]
         : []),
     ].join('\n');
   }, [profile, weights, logs, plan, bodyProject]);
