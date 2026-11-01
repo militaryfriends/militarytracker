@@ -81,7 +81,11 @@ export interface UserProfile {
   waistCm?: number;
   /** O2 에서 고른 목표 체형 카드 id ('m_lean' 등). 습관 경로·추천받기면 없음 */
   goalArchetypeId?: string;
+  /** 신경 쓰이는 부위(온보딩 10단계, 선택) — 루틴 보조 종목 가중치에만 쓴다 */
+  focus?: FocusPart[];
 }
+
+export type FocusPart = 'chest' | 'back' | 'shoulders' | 'arms' | 'abs' | 'legs';
 
 // ─── Plan ──────────────────────────────────────────────────────────────────
 export interface PlanDay {

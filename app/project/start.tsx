@@ -27,7 +27,7 @@ import type { BodyProject, DietPlan, Plan } from '../../src/types';
 import { STRATEGIES, legacyGoalOf, type Strategy } from '../../src/utils/projection';
 
 const STEPS = [
-  '분석 결과를 확인하는 중입니다',
+  '계산 결과를 확인하는 중입니다',
   '프로젝트를 확정하는 중입니다',
   '프로젝트 루틴을 완성하는 중입니다',
   '단계별 식단을 완성하는 중입니다',
@@ -72,7 +72,7 @@ export default function ProjectStartScreen() {
       return r;
     };
     try {
-      if (!a || !ref) throw new Error('선택한 프로젝트를 찾지 못했습니다. 분석 화면에서 다시 골라주세요.');
+      if (!a || !ref) throw new Error('선택한 프로젝트를 찾지 못했습니다. 프로젝트 화면에서 다시 골라주세요.');
 
       // 1) 분석 문서가 서버에 있어야 서버가 다시 계산할 수 있다
       await timed(async () => {

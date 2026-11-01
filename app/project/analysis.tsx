@@ -1,6 +1,6 @@
 /**
- * O6 분석 로딩 — 체크리스트 7단계. 끝난 단계마다 그 사용자의 실제 계산값이 회색 한 줄로 남는다.
- * "바빠 보이되 거짓은 없다": 계산(엔진)은 수십 ms 면 끝나지만, 단계마다 최소 표시 시간을 지킨다(총 약 11.7초).
+ * O6 계산 로딩 — 체크리스트 7단계. 끝난 단계마다 그 사용자의 실제 계산값이 회색 한 줄로 남는다.
+ * "바빠 보이되 거짓은 없다": 계산(엔진)은 수십 ms 면 끝나지만, 단계마다 최소 표시 시간을 지킨다(총 약 6.2초 + 0.8초 — 대표 피드백 10/31: 6~8초).
  *  · 퍼센트 진행바는 없다 — 체크리스트가 진행 표시다.
  *  · 단계 완료마다 가벼운 햅틱, 끝나면 성공 햅틱.
  *  · 뒤로가기 막음. 앱이 백그라운드에 가 있으면 시계가 멈췄다가 남은 단계부터 이어서.
@@ -30,18 +30,18 @@ import { coordOf } from '../../src/components/body/avatar3d/morph';
 
 /** [문구, 최소 표시 ms] — 명세 O6 표 */
 const STEPS: [string, number][] = [
-  ['입력한 신체 정보를 확인하는 중입니다', 900],
-  ['현재 체형을 분석하는 중입니다', 1600],
-  ['목표 체형과 비교하는 중입니다', 1400],
-  ['맞춤 루틴을 고안하는 중입니다', 1800],
-  ['맞춤 식단을 제작하는 중입니다', 1800],
-  ['변화 과정을 시뮬레이션하는 중입니다', 1800],
-  ['프로젝트를 구성하는 중입니다', 1400],
+  ['입력한 신체 정보를 확인하고 있어요', 600],
+  ['지금 체지방 · 근육량을 계산하고 있어요', 900],
+  ['4가지 목표 몸을 계산하고 있어요', 800],
+  ['경력 · 장소에 맞춰 루틴을 짜고 있어요', 1000],
+  ['하루 칼로리 · 단백질을 계산하고 있어요', 900],
+  ['달마다 몸이 어떻게 변할지 계산하고 있어요', 1300],
+  ['프로젝트 4가지를 준비하고 있어요', 700],
 ];
 const ENDS = STEPS.reduce<number[]>((acc, [, ms]) => [...acc, (acc[acc.length - 1] ?? 0) + ms], []);
 const TOTAL = ENDS[ENDS.length - 1];
-/** "분석이 완료되었습니다" 를 보여 주는 시간 */
-const DONE_HOLD = 1000;
+/** "계산이 끝났어요" 를 보여 주는 시간 */
+const DONE_HOLD = 800;
 
 /** 주 N일 → 자동 구성 플랜(buildLocalPlan)의 분할 이름 */
 const SPLIT_LABEL: Record<number, string> = {
@@ -83,7 +83,7 @@ export default function AnalysisScreen() {
     const d = useOnboardDraft.getState();
     if (!d.seeded || validateProfile(d.profile)) return null;
     const input = buildAnalysisInput(d);
-    const core = analyzeBody(input, d.pick ?? { mode: 'auto' });
+    const core = analyzeBody(input);
     // 거절 경로에서 쓸 무료 자동 구성 플랜도 지금 만들어 둔다(O6 "맞춤 루틴" 단계)
     const profile = profileFromAnalysis(core, d.profile);
     return { core, lines: stepLines(core), plan: buildLocalPlan(profile) };
@@ -165,7 +165,7 @@ export default function AnalysisScreen() {
     router.replace(redo ? '/project/compare?redo=1' : '/project/compare');
   }, [elapsed, router, redo]);
 
-  // 3D 몸 — 현재 체형 분석이 끝나면 지금 몸, 시뮬레이션 단계 동안 추천 프로젝트 기간만큼 달마다 변한다
+  // 3D 몸 — 현재 체형 계산이 끝나면 지금 몸, 시뮬레이션 단계 동안 추천 프로젝트 기간만큼 달마다 변한다
   const { height: winH } = useWindowDimensions();
   const body = useMemo(() => {
     if (!work) return null;
@@ -200,14 +200,14 @@ export default function AnalysisScreen() {
         {done ? (
           <Animated.View entering={FadeIn.duration(260)} style={s.doneHead}>
             <Ionicons name="checkmark-circle" size={30} color={colors.ink} />
-            <Text style={s.title} accessibilityRole="header" accessibilityLiveRegion="polite">분석이 완료되었습니다</Text>
+            <Text style={s.title} accessibilityRole="header" accessibilityLiveRegion="polite">계산이 끝났어요</Text>
           </Animated.View>
         ) : (
-          <Text style={s.title} accessibilityRole="header">몸을 분석하고 있어요</Text>
+          <Text style={s.title} accessibilityRole="header">몸을 계산하고 있어요</Text>
         )}
 
         {showBody && body ? (
-          <View style={s.hero} accessibilityLabel={body.shown ? body.line : '몸을 읽는 중'}>
+          <View style={s.hero} accessibilityLabel={body.shown ? body.line : '몸을 계산하는 중'}>
             <View style={{ opacity: body.shown ? 1 : 0.28 }}>
               <AvatarView sex={body.sex} cell={body.cell} coord={body.coord} width={Math.round(avH / 1.5)} live morphMs={260} />
             </View>

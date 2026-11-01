@@ -335,7 +335,7 @@ export default function MyScreen() {
           accessibilityLabel="온보딩 처음부터 다시 하기">
           <View style={{ flex: 1 }}>
             <Text style={s.subTitle}>온보딩 처음부터 다시 하기</Text>
-            <Text style={s.subSub}>원하는 체형 선택부터 분석 · 프로젝트까지 다시 해요</Text>
+            <Text style={s.subSub}>성별 · 키부터 몸 계산 · 프로젝트까지 다시 해요</Text>
           </View>
           <Text style={s.subChev}>›</Text>
         </TouchableOpacity>

@@ -8,7 +8,7 @@ import type { Plan, UserProfile } from '../types';
 import type { GoalPick } from '../utils/bodyAnalysis';
 import { localDate } from '../services/workoutService';
 
-export type StepKey = 'basic' | 'goal' | 'body' | 'env' | 'food' | 'routine';
+export type StepKey = 'sex' | 'age' | 'height' | 'weight' | 'body' | 'level' | 'place' | 'days' | 'food' | 'focus';
 
 export interface InbodyDraft {
   on: boolean;

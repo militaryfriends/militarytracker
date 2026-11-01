@@ -78,7 +78,7 @@ export default function CheckinScreen() {
     return (
       <Screen>
         <TopBar title="내 변화 프로젝트" onBack={goBack} />
-        <EmptyState text="진행 중인 프로젝트가 없어요." cta="내 몸 분석하기" onCta={() => router.replace('/project/new')} />
+        <EmptyState text="진행 중인 프로젝트가 없어요." cta="내 몸 계산하기" onCta={() => router.replace('/project/new')} />
       </Screen>
     );
   }

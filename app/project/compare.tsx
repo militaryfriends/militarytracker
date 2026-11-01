@@ -1,8 +1,9 @@
 /**
- * O7 지금 몸 vs 목표 몸 — "분석이 완료되었습니다".
- * 같은 크기 · 같은 발 위치로 두 아바타를 나란히 놓아 한눈에 비교한다. 블러 없음.
- * 가운데 격차 줄("목표까지") + 엔진이 정한 순서 한 줄. 정확도가 '기본'이면 허리 입력으로 돌아가는 링크.
+ * O7 결과 — "계산이 끝났어요" · 지금 내 몸(대표 피드백 10/31 1절 12단계).
+ * 지금 몸 하나를 크게(손으로 돌리는 3D) 보여 주고, 숫자 4칸 + 추천 프로젝트 한 줄 → 목표 몸 4가지(/project).
+ * 목표 몸 비교는 다음 화면 카드 4장이 맡는다(여기서 목표 몸을 하나로 못 박지 않는다).
  */
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,33 +14,38 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useOnboardDraft } from '../../src/stores/onboardDraft';
 import { AvatarView } from '../../src/components/body/AvatarView';
 import { has3D } from '../../src/components/body/avatar3d/Avatar3D';
-import { coordOf } from '../../src/components/body/avatar3d/morph';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
 import { kg, muscleOf, pct0 } from '../../src/components/body/format';
 import { EmptyState } from '../../src/components/ui';
+import { analyzeBody } from '../../src/utils/bodyAnalysis';
 
 export default function CompareScreen() {
   useThemeMode();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { redo } = useLocalSearchParams<{ redo?: string }>();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const a = useAppStore((st) => st.analysis);
+  // 카드 4장은 저장된 입력으로 다시 계산(엔진 결정론적) — 옛 분석 문서에도 같은 추천이 나온다
+  const rec = useMemo(() => {
+    if (!a) return null;
+    const cards = analyzeBody(a.input).projects;
+    return cards.find((c) => c.recommended) ?? cards[0];
+  }, [a]);
 
-  if (!a) {
+  if (!a || !rec) {
     return (
       <SafeAreaView style={s.root}>
-        <EmptyState text="분석 결과가 없어요." cta="내 몸 분석하기" onCta={() => router.replace('/project/new')} />
+        <EmptyState text="계산 결과가 없어요." cta="내 몸 계산하기" onCta={() => router.replace('/project/new')} />
       </SafeAreaView>
     );
   }
 
   const sex = a.input.sex;
-  const colW = Math.min(170, (Math.min(width, 480) - 40 - 16) / 2);
-  const g = a.gap;
-  const fatTxt = Math.abs(g.fatKg) < 0.05 ? '체지방 유지' : `체지방 ${kg(Math.abs(g.fatKg))}kg ${g.fatKg < 0 ? '감량' : '증가'}`;
-  const leanTxt = g.leanKg >= 0.05 ? ` + 제지방 ${kg(g.leanKg)}kg 증가` : '';
+  // 화면 높이의 절반 정도 — 작은 폰에서도 숫자 칸과 버튼이 한 화면에 들어오게
+  const avW = Math.round(Math.min(280, Math.min(width, 480) * 0.66, (height - 420) / 1.5));
   const fromInbody = a.comp.src === 'inbody';
+  const leanKg = a.input.weightKg * (1 - a.comp.bfPct / 100);
 
   // 허리둘레를 넣으러 O3 로 — 입력 흐름이 스택에 있으면 그리로 돌아가고, 없으면 새로 연다
   const addWaist = () => {
@@ -48,39 +54,39 @@ export default function CompareScreen() {
     else router.replace(!redo ? '/onboard' : useOnboardDraft.getState().restart ? '/project/new?restart=1' : '/project/new');
   };
 
+  const stats: [string, string][] = [
+    ['체중', `${kg(a.input.weightKg)}kg`],
+    [fromInbody ? '체지방률 (인바디)' : '체지방률 (추정)', `${pct0(a.comp.bfPct)}%`],
+    ['제지방량', `${kg(leanKg)}kg`],
+    ['근육', muscleOf(a.cell)],
+  ];
+
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
-        <Text style={s.title} accessibilityRole="header">분석이 완료되었습니다</Text>
-        <Text style={s.sub}>지금 몸과 목표 몸입니다</Text>
+        <Text style={s.title} accessibilityRole="header">계산이 끝났어요</Text>
+        <Text style={s.sub}>지금 내 몸이에요</Text>
 
-        <View style={s.pair}>
-          <Animated.View entering={FadeInDown.duration(320)} style={s.col}>
-            <AvatarView sex={sex} cell={a.cell} coord={a.coord} width={colW} badge="지금" live intro yawGroup="compare"
-              label={`지금 몸, ${kg(a.input.weightKg)}kg, 체지방 ${pct0(a.comp.bfPct)}%`} />
-            <Text style={s.colHead}>지금 {fromInbody ? '(인바디)' : '(추정)'}</Text>
-            <Text style={s.colNum}>{kg(a.input.weightKg)}kg · 체지방 {pct0(a.comp.bfPct)}%</Text>
-            <Text style={s.colSub}>근육: {muscleOf(a.cell)}</Text>
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(140).duration(320)} style={s.col}>
-            <AvatarView sex={sex} cell={a.goal.cell} coord={coordOf(sex, a.goal.bfPct, a.goal.nffmi)} width={colW} badge="목표"
-              live intro yawGroup="compare"
-              label={`목표 ${a.goal.name}, ${kg(a.goal.weightKg)}kg, 체지방 ${pct0(a.goal.bfPct)}%`} />
-            <Text style={s.colHead}>목표 · {a.goal.name}</Text>
-            <Text style={s.colNum}>{kg(a.goal.weightKg)}kg · 체지방 {pct0(a.goal.bfPct)}%</Text>
-            <Text style={s.colSub}>근육: {muscleOf(a.goal.cell)}</Text>
-          </Animated.View>
-        </View>
+        <Animated.View entering={FadeInDown.duration(320)} style={s.hero}>
+          <AvatarView sex={sex} cell={a.cell} coord={a.coord} width={Math.max(150, avW)} badge="지금" live intro
+            label={`지금 내 몸, ${kg(a.input.weightKg)}kg, 체지방 ${pct0(a.comp.bfPct)}%`} />
+          {has3D(sex) ? <Text style={s.spin}>좌우로 밀어 돌려 보세요</Text> : null}
+        </Animated.View>
 
-        {has3D(sex) ? <Text style={s.spin}>좌우로 밀면 두 몸이 같이 돌아가요</Text> : null}
+        <Animated.View entering={FadeInDown.delay(120).duration(320)} style={s.grid}>
+          {stats.map(([k, v]) => (
+            <View key={k} style={s.cell}>
+              <Text style={s.cellK}>{k}</Text>
+              <Text style={s.cellV}>{v}</Text>
+            </View>
+          ))}
+        </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(260).duration(320)} style={s.gap}>
-          <Text style={s.gapLabel}>목표까지</Text>
-          <Text style={s.gapTxt}>{fatTxt}{leanTxt}</Text>
-          <Text style={s.order}>{a.order}</Text>
-          {g.muscleAhead ? (
-            <Text style={s.note}>지금 근육량을 유지하면서 체지방만 줄이면 목표보다 더 탄탄하게 보일 거예요.</Text>
-          ) : null}
+        <Animated.View entering={FadeInDown.delay(220).duration(320)} style={s.rec}>
+          <Text style={s.recLabel}>추천 프로젝트</Text>
+          <Text style={s.recName}>{rec.name} · {rec.months}개월</Text>
+          <Text style={s.recHow}>{rec.how}</Text>
+          <Text style={s.recSub}>다음 화면에서 목표 몸 4가지를 비교하고 고를 수 있어요.</Text>
         </Animated.View>
 
         <View style={s.accRow}>
@@ -94,8 +100,8 @@ export default function CompareScreen() {
       </ScrollView>
 
       <View style={[s.foot, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <PressableScale style={s.cta} onPress={() => router.push(redo ? '/project?redo=1' : '/project')} accessibilityLabel="내 변화 프로젝트 보기">
-          <Text style={s.ctaTxt}>내 변화 프로젝트 보기</Text>
+        <PressableScale style={s.cta} onPress={() => router.push(redo ? '/project?redo=1' : '/project')} accessibilityLabel="목표 몸 4가지 보기">
+          <Text style={s.ctaTxt}>목표 몸 4가지 보기</Text>
         </PressableScale>
       </View>
     </SafeAreaView>
@@ -103,24 +109,24 @@ export default function CompareScreen() {
 }
 
 const s = themed(() => StyleSheet.create({
-  spin: { fontSize: 11.5, color: colors.muted, textAlign: 'center', marginTop: 8 },
   root: { flex: 1, backgroundColor: colors.bg },
   inner: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 24 },
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   sub: { fontSize: 14, color: colors.muted, marginTop: 6 },
-  pair: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, marginTop: 26 },
-  col: { flex: 1, alignItems: 'center' },
-  colHead: { fontSize: 14, fontWeight: '800', color: colors.ink, marginTop: 10, textAlign: 'center' },
-  colNum: { fontSize: 13, color: colors.mid, marginTop: 4, textAlign: 'center' },
-  colSub: { fontSize: 12, color: colors.muted, marginTop: 2, textAlign: 'center' },
-  gap: {
-    marginTop: 24, backgroundColor: colors.panel, borderRadius: 16, padding: 16,
+  hero: { alignItems: 'center', marginTop: 18 },
+  spin: { fontSize: 11.5, color: colors.muted, textAlign: 'center', marginTop: 6 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 18 },
+  cell: {
+    flexBasis: '48%', flexGrow: 1, backgroundColor: colors.panel, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14,
     borderWidth: 1, borderColor: colors.line,
   },
-  gapLabel: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 1 },
-  gapTxt: { fontSize: 17, fontWeight: '800', color: colors.ink, marginTop: 6, lineHeight: 24 },
-  order: { fontSize: 13, color: colors.mid, marginTop: 10, lineHeight: 19 },
-  note: { fontSize: 12.5, color: colors.muted, marginTop: 8, lineHeight: 18 },
+  cellK: { fontSize: 11.5, color: colors.muted, fontWeight: '700' },
+  cellV: { fontSize: 18, color: colors.ink, fontWeight: '800', marginTop: 4 },
+  rec: { marginTop: 14, backgroundColor: colors.panel, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.line },
+  recLabel: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 1 },
+  recName: { fontSize: 17, fontWeight: '800', color: colors.ink, marginTop: 6 },
+  recHow: { fontSize: 13, color: colors.mid, marginTop: 6, lineHeight: 19 },
+  recSub: { fontSize: 12, color: colors.muted, marginTop: 8, lineHeight: 17 },
   accRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16, flexWrap: 'wrap' },
   link: { fontSize: 12.5, color: colors.mid, fontWeight: '700', textDecorationLine: 'underline' },
   foot: { paddingHorizontal: 18, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg },

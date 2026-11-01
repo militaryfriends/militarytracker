@@ -2,7 +2,7 @@ import { exById, exFilter, type Place } from '../data/exercises';
 import { DANGER, LUMBAR, WEEKLY_ONCE, splitLabel, splitTemplates, type DayTemplate, type Slot } from '../data/planTemplates';
 import mediaSnapshot from '../data/mediaManifest.json';
 import { routineById } from '../data/routines';
-import { Plan, PlanDay, UserProfile } from '../types';
+import { FocusPart, Plan, PlanDay, UserProfile } from '../types';
 
 // ─── 시드 난수 (재생성 시마다 다른 구성) ───────────────────────────────────
 function mulberry32(seed: number) {
@@ -71,12 +71,35 @@ export function planFromTemplates(
   }).filter((d) => d.ids.length > 0);
 }
 
+/** 신경 쓰이는 부위 → 그 부위가 있는 첫 데이에 더할 보조 종목(앞이 우선, 이미 있으면 다음) */
+const FOCUS_EXTRA: Record<FocusPart, { parts: string[]; gym: string[]; home: string[] }> = {
+  chest: { parts: ['chest'], gym: ['crossover', 'pecdeck', 'dbfly'], home: ['dbfly', 'pushup'] },
+  back: { parts: ['back'], gym: ['straightarmpull', 'facepull', 'reversefly'], home: ['reversefly', 'facepull'] },
+  shoulders: { parts: ['shoulders'], gym: ['cablelatraise', 'latraise', 'reardeltfly'], home: ['latraise', 'bandedlatraise'] },
+  arms: { parts: ['biceps', 'triceps'], gym: ['hammercurl', 'ropepushdown', 'cablecurl'], home: ['hammercurl', 'kickback'] },
+  abs: { parts: ['abs', 'legs', 'back'], gym: ['cablecrunch', 'hanginglegraise', 'plank'], home: ['plank', 'legraise', 'deadbug'] },
+  legs: { parts: ['legs'], gym: ['hipthrust', 'legext', 'seatedcalf'], home: ['glutebridge', 'stepup'] },
+};
+
+function addFocus(days: PlanDay[], focus: FocusPart[] | undefined, place: Place): PlanDay[] {
+  if (!focus?.length) return days;
+  const out = days.map((d) => ({ ...d, ids: [...d.ids] }));
+  for (const f of focus) {
+    const spec = FOCUS_EXTRA[f];
+    const day = out.find((d) => d.ids.length < 7 && d.ids.some((id) => spec.parts.includes(exById(id)?.part ?? '')));
+    if (!day) continue;
+    const pick = (place === 'home' ? spec.home : spec.gym).find((id) => !day.ids.includes(id) && exById(id)?.pl.includes(place));
+    if (pick) day.ids.push(pick);
+  }
+  return out;
+}
+
 /** seed 없으면 기본 정석 구성, 있으면 슬롯 안에서만 바꾼 구성('자동 재구성') */
 export function buildLocalPlan(p: UserProfile, seed?: number): Plan {
   const level = (p.level ?? 2) as 1 | 2 | 3;
   const perDay = p.goal === 'habit' ? 3 : 5;
   const templates = splitTemplates(p.env, p.days, level);
-  const days = planFromTemplates(templates, { level, place: p.env, perDay, seed });
+  const days = addFocus(planFromTemplates(templates, { level, place: p.env, perDay, seed }), p.goal === 'habit' ? undefined : p.focus, p.env);
   return {
     routineId: null,
     days,
@@ -116,7 +139,7 @@ export function conformToTemplates(ai: Plan, p: UserProfile): Plan {
     });
     return { ...bd, ids };
   });
-  return { ...ai, days };
+  return { ...ai, days: addFocus(days, p.goal === 'habit' ? undefined : p.focus, p.env) };
 }
 
 const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');

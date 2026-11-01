@@ -101,7 +101,7 @@ const num = (v: unknown, min: number, max: number): number | null => {
 };
 
 const bad = (field: string): HttpsError =>
-  new HttpsError('invalid-argument', `분석 입력값이 올바르지 않습니다 (${field}). 다시 분석해주세요.`);
+  new HttpsError('invalid-argument', `입력값이 올바르지 않습니다 (${field}). 내 몸 계산을 다시 해주세요.`);
 
 /**
  * 저장된 분석 입력을 엔진에 넣기 전에 검사한다 — bodyAnalyses 는 본인이 쓰는 문서라

@@ -95,9 +95,9 @@ export function HomeProjectCard() {
 
   return (
     <PressableScale style={s.card} scaleTo={PRESS_SCALE.card} onPress={() => router.push('/project/new')}
-      accessibilityLabel="내 몸 분석하기, 목표 몸까지 걸리는 기간을 계산해요">
+      accessibilityLabel="내 몸 계산하기, 목표 몸까지 걸리는 기간을 계산해요">
       <Text style={s.label}>내 변화 프로젝트</Text>
-      <Text style={s.name}>내 몸 분석하기</Text>
+      <Text style={s.name}>내 몸 계산하기</Text>
       <Text style={s.sub}>원하는 체형을 고르면 지금 몸에서 걸리는 기간과 예상 몸을 계산해요</Text>
     </PressableScale>
   );

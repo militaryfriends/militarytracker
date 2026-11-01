@@ -1,13 +1,13 @@
 /**
- * 온보딩 입력 단계(O1~O5) — 세 곳이 같은 흐름을 쓴다.
+ * 온보딩 — 질문 하나에 화면 하나(2026-11-01, 대표 피드백 10/31 1절의 12단계). 세 곳이 같은 흐름을 쓴다.
  *  first   = 처음 가입
- *  redo    = 홈 "내 몸 분석하기" — 저장된 프로필 · 목표로 채움, 습관 경로 없음
- *  restart = 마이 "온보딩 처음부터 다시 하기" — 기본 정보만 채우고 목표부터 새로 고름, 습관 경로 있음,
- *            거절해도 처음 가입처럼 루틴을 새로 정한다(draft.restart)
+ *  redo    = 홈 "내 몸 계산하기" — 저장된 프로필로 채움
+ *  restart = 마이 "온보딩 처음부터 다시 하기" — 거절해도 처음 가입처럼 루틴을 새로 정한다(draft.restart)
  *
- *  체형 경로: O1 기본 → O2 원하는 체형 → O3 현재 체형 → O4 환경·경력 → O5 식사 → O6 분석(/project/analysis)
- *  습관 경로: O1 → O2("체형보다 운동 습관이 먼저예요") → O4 → O5 → 루틴 선택(예전 Step 5) — O3·O6~O8 건너뜀
- *  두 경로 모두 입력 5단계라 "STEP n / 5". 온보딩에서는 AI 를 부르지 않는다(습관 경로의 AI 구성 버튼은 구독자만).
+ *  1 성별 → 2 나이 → 3 키 → 4 체중 → 5 허리 · 인바디(선택) → 6 운동 경력 → 7 운동 장소 → 8 주 운동 일수 → 9 식사 환경
+ *  → 10 신경 쓰이는 부위(선택) → 11 계산 중(/project/analysis) → 12 지금 내 몸(3D) → 프로젝트 카드 4장(/project)
+ *  '원하는 체형' 고르기는 없다 — 목표는 결과를 본 뒤 카드에서 고른다. 온보딩에서는 AI 를 부르지 않는다.
+ *  예전 습관 경로(목표 단계의 "습관이 먼저")는 카드 화면의 "운동 자세만 볼래요"가 대신한다.
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -20,20 +20,16 @@ import { showAlert } from '../../utils/alert';
 import { useAuthStore } from '../../stores/authStore';
 import { useAppStore } from '../../stores/appStore';
 import { useOnboardDraft, DEFAULT_PROFILE, type StepKey } from '../../stores/onboardDraft';
-import { saveOnboarding } from '../../services/authService';
-import { generatePlan, QuotaExceeded, SubscriptionRequired } from '../../services/aiService';
-import { validateProfile } from '../../utils/body';
-import { useEntitlement } from '../../hooks/useEntitlement';
-import { planFromRoutine } from '../../utils/planner';
-import { recommendRoutine } from '../../data/routines';
+import { validateField, validateProfile } from '../../utils/body';
 import { draftAccuracy, validateBodyDraft } from './draftInput';
-import { StepBasic, StepEnv, StepFood, StepRoutine } from './basicSteps';
-import { StepGoal } from './StepGoal';
+import { StepFood } from './basicSteps';
+import { StepDays, StepFocus, StepLevel, StepNumber, StepPlace, StepSex } from './questionSteps';
 import { StepBody, type BodyErrors } from './StepBody';
 import { o } from './styles';
 
-const BODY_PATH: StepKey[] = ['basic', 'goal', 'body', 'env', 'food'];
-const HABIT_PATH: StepKey[] = ['basic', 'goal', 'env', 'food', 'routine'];
+const BODY_PATH: StepKey[] = ['sex', 'age', 'height', 'weight', 'body', 'level', 'place', 'days', 'food', 'focus'];
+/** 계산 · 결과까지 합친 전체 단계 수(진행 막대 · STEP n / 12) */
+const TOTAL_STEPS = 12;
 
 export type FlowMode = 'first' | 'redo' | 'restart';
 
@@ -59,7 +55,7 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
         profile: { ...DEFAULT_PROFILE, ...savedProfile, goal: savedProfile.goal === 'habit' ? 'muscle' : savedProfile.goal },
         waist: savedProfile.waistCm ? String(savedProfile.waistCm) : '',
         // 처음부터 다시 하기는 목표를 새로 고른다
-        pick: mode === 'redo' && savedProfile.goalArchetypeId ? { mode: 'pick', archetypeId: savedProfile.goalArchetypeId } : null,
+        pick: null,
         restart: mode === 'restart',
       });
     } else {
@@ -69,10 +65,10 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const withHabit = mode !== 'redo';
-  const path = d.habit && withHabit ? HABIT_PATH : BODY_PATH;
+  const path = BODY_PATH;
   const key = path[Math.min(idx, path.length - 1)];
-  const total = path.length;
+  const total = TOTAL_STEPS;
+  const [numErr, setNumErr] = useState<string | null>(null);
 
   // O7 "허리둘레를 넣으면 더 정확해져요" → O3 로 돌아온다
   useEffect(() => {
@@ -86,15 +82,16 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
 
   function go(delta: number) {
     setBodyErr({});
+    setNumErr(null);
     setIdx((v) => Math.max(0, Math.min(path.length - 1, v + delta)));
   }
 
   function next() {
-    if (key === 'basic') {
-      // 빈 값만 보면 '1.75', '800', '-5' 가 통과해 BMI 235102 같은 값이 화면에 나간다
-      const err = validateProfile(d.profile);
+    // 빈 값만 보면 '1.75', '800', '-5' 가 통과해 BMI 235102 같은 값이 화면에 나간다
+    if (key === 'age' || key === 'height' || key === 'weight') {
+      const err = validateField(key, d.profile[key]);
       if (err) {
-        showAlert('입력 확인', err);
+        setNumErr(err);
         return;
       }
     }
@@ -106,7 +103,12 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
       }
       setBodyErr({});
     }
-    if (key === 'food' && path === BODY_PATH) {
+    if (key === 'focus') {
+      const err = validateProfile(d.profile);
+      if (err) {
+        showAlert('입력 확인', err);
+        return;
+      }
       // 가입한 사용자(redo · restart)는 redo=1 — 뒤로 가기 · 빈 화면 처리가 홈 기준이 된다
       router.push(mode === 'first' ? '/project/analysis' : '/project/analysis?redo=1');
       return;
@@ -114,74 +116,24 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
     go(1);
   }
 
-  // ─── 습관 경로: 예전 루틴 선택 그대로 ────────────────────────────────────────
-  // 루틴 추천과 AI 구성은 구독 기능이다. 구독 전에는 추천 배지도 정렬도 걸지 않는다 — 보여 주면 이미 준 것이다.
-  const { can } = useEntitlement();
-  const canAI = can('ai_plan');
-  const recommendedId = can('routine_reco')
-    ? recommendRoutine({ place: d.profile.env, days: d.profile.days, level: d.profile.level }).id
-    : null;
-  const habitProfile = { ...d.profile, goal: 'habit' as const };
-
-  async function choosePreset(routineId: string) {
-    if (!user || loading) return;
-    setLoading(routineId);
-    try {
-      const plan = planFromRoutine(routineId);
-      if (!plan) throw new Error('routine not found');
-      await saveOnboarding(user.uid, habitProfile, plan);
-      setProfile(habitProfile);
-      setPlan(plan);
-      patchUser({ onboardingDone: true, profile: habitProfile });
-      useOnboardDraft.getState().reset();
-      router.replace(`/routine/${routineId}?onboard=1`);
-    } catch {
-      showAlert('오류', '루틴 저장에 실패했습니다. 다시 시도해주세요.');
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  async function chooseAI() {
-    if (!user || loading) return;
-    if (!canAI) {
-      router.push('/subscribe?f=ai_plan');
-      return;
-    }
-    setLoading('ai');
-    try {
-      const { plan, fallback, reason } = await generatePlan(habitProfile);
-      await saveOnboarding(user.uid, habitProfile, plan);
-      setProfile(habitProfile);
-      setPlan(plan);
-      patchUser({ onboardingDone: true, profile: habitProfile });
-      useOnboardDraft.getState().reset();
-      router.replace('/tabs/home');
-      if (fallback) {
-        showAlert('자동 구성으로 시작', `${reason ?? 'AI 서버에 연결하지 못했습니다.'} 우선 자동 알고리즘으로 구성했어요. 운동 탭에서 'AI로 다시 구성' 을 누르면 다시 시도합니다.`);
-      }
-    } catch (e) {
-      if (e instanceof SubscriptionRequired) router.push('/subscribe?f=ai_plan');
-      else if (e instanceof QuotaExceeded) showAlert('오늘 한도 초과', `${e.message} 아래 루틴 중 하나로 시작해주세요.`);
-      else showAlert('오류', '플랜 생성에 실패했습니다. 다시 시도해주세요.');
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  const canNext = key === 'basic'
-    ? !!(d.profile.age && d.profile.height && d.profile.weight)
-    : key === 'goal' ? d.pick?.mode === 'pick' : true;
-  const isLastInput = key === 'food' && path === BODY_PATH;
+  const canNext = key === 'age' || key === 'height' || key === 'weight' ? !!String(d.profile[key]).trim() : true;
+  const isLastInput = key === 'focus';
+  const num = idx + 1;
+  const numStep = (k: 'age' | 'height' | 'weight', q: string, unit: string, ph: string, decimal: boolean, desc?: string) => (
+    <StepNumber num={num} total={total} q={q} desc={desc} unit={unit} placeholder={ph} decimal={decimal}
+      value={String(d.profile[k] ?? '')} error={numErr}
+      onChange={(v) => { d.setProfile(k, v); setNumErr(null); }} onSubmit={next} />
+  );
 
   return (
     <SafeAreaView style={o.root} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 안드로이드도 키패드만큼 줄인다 — 줄이지 않으면 키패드가 '다음' 버튼을 가린다(10/31 녹화 0:01) */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View
           style={o.progRow}
           accessibilityRole="progressbar"
-          accessibilityLabel={`${idx + 1}단계, 전체 ${total}단계`}
-          accessibilityValue={{ min: 1, max: total, now: idx + 1 }}
+          accessibilityLabel={`${num}단계, 전체 ${total}단계`}
+          accessibilityValue={{ min: 1, max: total, now: num }}
         >
           {Array.from({ length: total }).map((_, i) => (
             <View key={i} style={[o.progBar, i <= idx && o.progOn]} />
@@ -189,21 +141,13 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
         </View>
 
         <ScrollView style={o.scroll} contentContainerStyle={o.scrollInner} keyboardShouldPersistTaps="handled">
-          {key === 'basic' && <StepBasic p={d.profile} update={d.setProfile} num={idx + 1} total={total} />}
-          {key === 'goal' && (
-            <StepGoal
-              sex={d.profile.sex}
-              pick={d.pick}
-              num={idx + 1}
-              total={total}
-              onPick={(id) => d.patch({ pick: { mode: 'pick', archetypeId: id }, habit: false })}
-              onAuto={() => { d.patch({ pick: { mode: 'auto' }, habit: false }); setIdx(BODY_PATH.indexOf('body')); }}
-              onHabit={withHabit ? () => { d.patch({ habit: true, pick: null }); setIdx(HABIT_PATH.indexOf('env')); } : undefined}
-            />
-          )}
+          {key === 'sex' && <StepSex p={d.profile} update={d.setProfile} num={num} total={total} />}
+          {key === 'age' && numStep('age', '나이를 알려주세요', '세', '25', false)}
+          {key === 'height' && numStep('height', '키를 알려주세요', 'cm', '175', true)}
+          {key === 'weight' && numStep('weight', '지금 체중을\n알려주세요', 'kg', '72', true, '아침 공복 체중이면 가장 정확해요.')}
           {key === 'body' && (
             <StepBody
-              num={idx + 1}
+              num={num}
               total={total}
               waist={d.waist}
               inbody={d.inbody}
@@ -213,21 +157,11 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
               onInbody={(v) => { d.patch({ inbody: v }); setBodyErr({}); }}
             />
           )}
-          {key === 'env' && <StepEnv p={d.profile} update={d.setProfile} num={idx + 1} total={total} />}
-          {key === 'food' && <StepFood p={d.profile} update={d.setProfile} num={idx + 1} total={total} />}
-          {key === 'routine' && (
-            <StepRoutine
-              num={idx + 1}
-              total={total}
-              recommendedId={recommendedId}
-              canAI={canAI}
-              onReco={() => router.push('/subscribe?f=routine_reco')}
-              place={d.profile.env}
-              loading={loading}
-              onPreset={choosePreset}
-              onAI={chooseAI}
-            />
-          )}
+          {key === 'level' && <StepLevel p={d.profile} update={d.setProfile} num={num} total={total} />}
+          {key === 'place' && <StepPlace p={d.profile} update={d.setProfile} num={num} total={total} />}
+          {key === 'days' && <StepDays p={d.profile} update={d.setProfile} num={num} total={total} />}
+          {key === 'food' && <StepFood p={d.profile} update={d.setProfile} num={num} total={total} />}
+          {key === 'focus' && <StepFocus p={d.profile} update={d.setProfile} num={num} total={total} />}
         </ScrollView>
 
         <View style={[o.foot, { paddingBottom: Math.max(insets.bottom, 18) }]}>
@@ -237,17 +171,15 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
               <Text style={o.backTxt}>{idx > 0 ? '이전' : '닫기'}</Text>
             </TouchableOpacity>
           ) : null}
-          {key !== 'routine' && (
-            <TouchableOpacity activeOpacity={0.7}
-              style={[o.nextBtn, !canNext && o.btnOff]}
-              disabled={!canNext}
-              onPress={next}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canNext }}
-            >
-              <Text style={o.nextTxt}>{isLastInput ? '내 몸 분석하기' : '다음'}</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity activeOpacity={0.7}
+            style={[o.nextBtn, !canNext && o.btnOff]}
+            disabled={!canNext}
+            onPress={next}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canNext }}
+          >
+            <Text style={o.nextTxt}>{isLastInput ? '내 몸 계산하기' : key === 'body' && !d.waist.trim() && !d.inbody.on ? '건너뛰기' : '다음'}</Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

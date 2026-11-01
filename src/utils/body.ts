@@ -113,12 +113,19 @@ export function validateProfile(p: Pick<UserProfile, 'age' | 'height' | 'weight'
 }
 
 // ─── 현재 체형 상세 (온보딩 O3 · 체크인) ─────────────────────────────────────
-/** 허리둘레 50~200cm, 그리고 키의 30~90% — 인치를 그대로 넣은 경우(32 → 32cm)를 걸러낸다 */
+/**
+ * 허리둘레 50~200cm, 그리고 키의 36~85%.
+ *  · 인치를 그대로 넣은 경우(32 → 32cm)를 걸러낸다.
+ *  · 바지 사이즈(골반 위 · 허리 가장 가는 곳)를 넣으면 배꼽 둘레보다 5~10cm 작게 들어가 체지방이 낮게 나온다(10/31 피드백 "허리 60cm").
+ *    키 대비 36% 아래는 성인에게 거의 없는 값이라 다시 묻는다.
+ */
 export function validateWaist(v: string, heightCm: number): string | null {
   const n = parseNum(v);
-  if (!Number.isFinite(n) || n < 50 || n > 200 || (heightCm > 0 && (n < heightCm * 0.3 || n > heightCm * 0.9))) {
-    return '허리둘레를 다시 확인해주세요 (cm 단위)';
+  if (!Number.isFinite(n) || n < 50 || n > 200) return '허리둘레를 다시 확인해주세요 (cm 단위)';
+  if (heightCm > 0 && n < heightCm * 0.36) {
+    return `키 ${Math.round(heightCm)}cm 에 비해 너무 작아요. 바지 사이즈가 아니라 배꼽 높이에서 줄자로 잰 둘레를 넣어주세요.`;
   }
+  if (heightCm > 0 && n > heightCm * 0.85) return '허리둘레를 다시 확인해주세요 (cm 단위)';
   return null;
 }
 

@@ -68,7 +68,7 @@ export default function ProjectsScreen() {
   if (!a || !cards) {
     return (
       <SafeAreaView style={s.root}>
-        <EmptyState text="분석 결과가 없어요." cta="내 몸 분석하기" onCta={() => router.replace('/project/new')} />
+        <EmptyState text="계산 결과가 없어요." cta="내 몸 계산하기" onCta={() => router.replace('/project/new')} />
       </SafeAreaView>
     );
   }

@@ -96,7 +96,7 @@ export function StepBody({
         placeholder="예: 84" placeholderTextColor={colors.muted} keyboardType="decimal-pad"
         value={waist} onChangeText={onWaist} accessibilityLabel="허리둘레 (cm)"
       />
-      {errors.waist ? <Text style={o.err}>{errors.waist}</Text> : <Text style={s.hint}>비워 두고 넘어가도 돼요. 넣으면 정확도가 '좋음'이 됩니다.</Text>}
+      {errors.waist ? <Text style={o.err}>{errors.waist}</Text> : <Text style={s.hint}>배꼽 높이 둘레예요(바지 사이즈 아님). 비워 둬도 되고, 넣으면 정확도가 '좋음'이 됩니다.</Text>}
 
       <View style={s.toggle}>
         <View style={{ flex: 1 }}>

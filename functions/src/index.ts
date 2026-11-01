@@ -609,8 +609,8 @@ export const bodyProjectStart = onCall(
     const aRef = db.collection('bodyAnalyses').doc(analysisId);
     const aSnap = await aRef.get();
     const a = aSnap.data();
-    if (!a) throw new HttpsError('not-found', '분석 결과를 찾을 수 없습니다. 다시 분석해주세요.');
-    if (a.userId !== uid) throw new HttpsError('permission-denied', '본인의 분석 결과로만 시작할 수 있습니다.');
+    if (!a) throw new HttpsError('not-found', '계산 결과를 찾을 수 없습니다. 내 몸 계산을 다시 해주세요.');
+    if (a.userId !== uid) throw new HttpsError('permission-denied', '본인의 계산 결과로만 시작할 수 있습니다.');
 
     const input = sanitizeInput(a.input);
     // 카드 4장은 입력만으로 정해진다 — 앱이 보낸 숫자는 쓰지 않는다
