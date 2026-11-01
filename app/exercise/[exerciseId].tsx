@@ -9,6 +9,7 @@ import { useMediaEntry } from '../../src/stores/mediaStore';
 import { rirFor, RISK_NOTE, ROM_NOTE } from '../../src/data/coaching';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { prescription, repsText } from '../../src/utils/prescription';
 import { lastRecordOf, personalBest, e1rm, fmtSetDetail } from '../../src/utils/stats';
 
 export default function ExerciseDetailScreen() {
@@ -17,6 +18,7 @@ export default function ExerciseDetailScreen() {
   const router = useRouter();
   const goBack = useSafeBack();
   const logs = useAppStore((s) => s.logs);
+  const profileLv = useAppStore((s) => s.profile?.level);
   const stats = useAuthStore((s) => s.user?.stats);
   const hasVideo = !!useMediaEntry(String(exerciseId))?.video;
 
@@ -35,6 +37,8 @@ export default function ExerciseDetailScreen() {
   const pb = personalBest(logs, e.id, stats);
   const related = exByPart(e.part).filter((x) => x.id !== e.id).slice(0, 6);
   const rir = rirFor(e);
+  // 세트 · 반복 · 여유 횟수는 플랜 · 세션과 같은 처방(레벨 반영)
+  const rx = prescription(e, (profileLv ?? 2) as 1 | 2 | 3);
   const risk = RISK_NOTE[e.id];
 
   return (
@@ -63,8 +67,8 @@ export default function ExerciseDetailScreen() {
           <Text style={s.target}>{e.g}</Text>
 
           <View style={s.specRow}>
-            <Spec value={`${e.s}`} unit="세트" label="권장 볼륨" />
-            <Spec value={e.r} unit="" label="반복 수" />
+            <Spec value={`${rx.sets}`} unit="세트" label="내 레벨 세트" />
+            <Spec value={repsText(rx.reps)} unit="" label="반복 수" />
             <Spec value={`${e.rest}`} unit="초" label="세트간 휴식" />
           </View>
 
@@ -72,7 +76,7 @@ export default function ExerciseDetailScreen() {
           <View style={s.rirBox}>
             <View style={s.rirHead}>
               <Text style={s.rirLabel}>강도</Text>
-              <Text style={s.rirRange}>{rir.range}</Text>
+              <Text style={s.rirRange}>세트마다 {rx.rir}회 여유</Text>
             </View>
             <Text style={s.rirNote}>{rir.note}</Text>
           </View>

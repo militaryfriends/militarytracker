@@ -1,5 +1,6 @@
 import { avatar3DError } from '../../src/components/body/avatar3d/Avatar3D';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { MyBodyCard } from '../../src/components/body/MyBodyCard';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, KeyboardAvoidingView, Platform, Switch,
@@ -50,6 +51,14 @@ export default function MyScreen() {
   const manageUrl = manageSubscriptionUrl(sub.source, sub.productId);
   const canCoach = can('ai_coach');
   const [weightInput, setWeightInput] = useState('');
+  // MY 맨 위 '체중 기록' 버튼 → 아래 체중 칸으로
+  const scrollRef = useRef<ScrollView>(null);
+  const weightY = useRef(0);
+  const weightRef = useRef<TextInput>(null);
+  const goWeigh = () => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, weightY.current - 12), animated: true });
+    setTimeout(() => weightRef.current?.focus(), 350);
+  };
   const [saving, setSaving] = useState(false);
 
   const st = calcBodyStats(profile, weights, bodyProject);
@@ -170,7 +179,9 @@ export default function MyScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <MyBodyCard onWeigh={goWeigh} />
+
         {/* Summary */}
         <View style={s.summaryRow}>
           <Summary value={`${weekSets}`} label="이번 주 세트" />
@@ -234,7 +245,7 @@ export default function MyScreen() {
         </View>
 
         {/* Weight */}
-        <Text style={s.sectionLabel}>체중 기록</Text>
+        <Text style={s.sectionLabel} onLayout={(e) => { weightY.current = e.nativeEvent.layout.y; }}>체중 기록</Text>
         <View style={s.card}>
           {weights.length ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.weightHistory}>
@@ -265,6 +276,7 @@ export default function MyScreen() {
           )}
           <View style={s.weightRow}>
             <TextInput
+              ref={weightRef}
               style={s.weightInput}
               placeholder="오늘 체중 (kg)"
               placeholderTextColor={colors.placeholder}

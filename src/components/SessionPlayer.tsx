@@ -1,8 +1,8 @@
-import { prescription, repsText } from '../utils/prescription';
+import { prescription, repsText, rxText } from '../utils/prescription';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList,
-  Vibration, Platform, ActivityIndicator, KeyboardAvoidingView,
+  Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../theme';
@@ -28,6 +28,7 @@ function buzz() {
 export default function SessionPlayer() {
   useThemeMode();
   const insets = useSafeAreaInsets();
+  const { width: winW, height: winH } = useWindowDimensions();
   const user = useAuthStore((s) => s.user);
   const session = useAppStore((s) => s.session);
   const profile = useAppStore((s) => s.profile);
@@ -53,6 +54,13 @@ export default function SessionPlayer() {
   const [picker, setPicker] = useState<'swap' | 'add' | null>(null);
   const [saving, setSaving] = useState(false);
   const wasResting = useRef(false);
+  // 키패드가 뜨면 영상을 작게 — 고정 영상 + 키패드에 세트 칸이 눌려 안 보이지 않게
+  const [kb, setKb] = useState(false);
+  useEffect(() => {
+    const a = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKb(true));
+    const b = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKb(false));
+    return () => { a.remove(); b.remove(); };
+  }, []);
   // 무게 → 횟수 → 다음 세트 무게로 키보드 '다음' 이 이동하도록
   const inputRefs = useRef<Record<string, TextInput | null>>({});
 
@@ -80,6 +88,9 @@ export default function SessionPlayer() {
   const anyRecorded = session.data.some((x) => x.sets.some((t) => t.done));
   const last = lastSetsOf(logs, cur.id);
   const usedKey = session.data.map((x) => x.id).join(',');
+  // 화면 높이의 38% 까지 — 작은 폰에서도 세트 2~3줄은 보이게
+  const mediaSize = Math.round(Math.min(winW - 32, 480, winH * (kb ? 0.16 : 0.38)));
+  const rx = e ? prescription(e, lv) : null;
 
   /**
    * ✓ — 빈 칸은 지난 기록(placeholder)으로 채우고 완료한다.
@@ -194,23 +205,10 @@ export default function SessionPlayer() {
         </TouchableOpacity>
       </View>
 
+      {/* 영상은 1:1 로 위에 고정, 자동 재생 — 아래 세트 기록만 스크롤된다(10/31 피드백 4절). 종목 탭을 누르면 영상이 바뀐다 */}
       <View style={s.mediaArea}>
-        <ExerciseMedia exId={cur.id} autoPlay rounded={24} dim={0.25} style={s.media} />
-        <View style={s.mediaMeta}>
-          <Text style={s.exName}>{e?.n ?? ''}</Text>
-          <Text style={s.exPart}>{e ? `${PART_LABEL[e.part]} · ${e.g} · 권장 ${repsText(e.r)} · 세트마다 ${prescription(e, lv).rir}회 여유` : ''}</Text>
-        </View>
-
-        <View style={s.lastRow}>
-          {last ? (
-            <Text style={s.lastTxt} numberOfLines={1}>
-              지난 기록 <Text style={s.lastDate}>{last.date.slice(5)}</Text>{'  '}
-              <Text style={s.lastSets}>{last.detail.map(fmtSetDetail).join('  ')}</Text>
-            </Text>
-          ) : (
-            <Text style={s.lastEmpty}>이 종목의 첫 기록입니다</Text>
-          )}
-        </View>
+        <ExerciseMedia key={cur.id} exId={cur.id} autoPlay rounded={20} dim={0.15}
+          style={{ width: mediaSize, height: mediaSize, alignSelf: 'center' }} />
       </View>
 
       <ScrollView
@@ -275,23 +273,37 @@ export default function SessionPlayer() {
                 <Text style={s.restLabel}>세트</Text>
                 <Text style={s.restTime} maxFontSizeMultiplier={1.2}>{completedSets}/{cur.sets.length}</Text>
               </View>
-              <Text style={s.restHint}>세트를 완료하면 {e?.rest ?? 75}초 휴식이 시작됩니다</Text>
+              <Text style={s.restHint}>세트를 완료하면 {rx?.rest ?? 75}초 휴식이 시작됩니다</Text>
             </>
           )}
-        </View>
-
-        <View style={s.sheetHead}>
-          <Text style={s.sheetTitle}>세트 기록 · 길게 눌러 삭제</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => setPicker('swap')} hitSlop={12} accessibilityRole="button" accessibilityLabel="종목 교체">
-            <Text style={s.swapLink}>종목 교체</Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView
           style={s.setsScroll}
           contentContainerStyle={s.setsContainer}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+          <View style={s.metaRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.exName} numberOfLines={1}>{e?.n ?? ''}</Text>
+              <Text style={s.exPart}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)} · 세트마다 ${rx.rir}회 여유` : ''}</Text>
+            </View>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => setPicker('swap')} hitSlop={12} accessibilityRole="button" accessibilityLabel="종목 교체" style={s.swapBtn}>
+              <Text style={s.swapLink}>종목 교체</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.lastRow}>
+            {last ? (
+              <Text style={s.lastTxt} numberOfLines={1}>
+                지난 기록 <Text style={s.lastDate}>{last.date.slice(5)}</Text>{'  '}
+                <Text style={s.lastSets}>{last.detail.map(fmtSetDetail).join('  ')}</Text>
+              </Text>
+            ) : (
+              <Text style={s.lastEmpty}>이 종목의 첫 기록입니다</Text>
+            )}
+          </View>
+          <Text style={s.sheetTitle}>세트 기록 · ✓ 길게 눌러 삭제</Text>
           {cur.sets.map((st, si) => {
             const ref = last?.detail[si];
             const isLastRow = si === cur.sets.length - 1;
@@ -510,11 +522,11 @@ const s = themed(() => StyleSheet.create({
   },
   finishTxt: { fontSize: 13, fontWeight: '700', color: colors.ink },
 
-  mediaArea: { flex: 1, paddingHorizontal: 20, justifyContent: 'center', gap: 12, minHeight: 120 },
-  media: { width: '100%', aspectRatio: 1, maxHeight: 260, alignSelf: 'center', flexShrink: 1 },
-  mediaMeta: { alignItems: 'center' },
-  exName: { fontSize: 21, fontWeight: '800', color: colors.ink, textAlign: 'center', letterSpacing: -0.3 },
-  exPart: { fontSize: 12, color: colors.muted, marginTop: 4, textAlign: 'center' },
+  mediaArea: { paddingHorizontal: 16, flexShrink: 0 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  exName: { fontSize: 19, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  exPart: { fontSize: 12, color: colors.muted, marginTop: 3 },
+  swapBtn: { borderWidth: 1, borderColor: colors.line2, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7 },
   lastRow: {
     backgroundColor: colors.panel2, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1, borderColor: colors.line,
@@ -526,7 +538,7 @@ const s = themed(() => StyleSheet.create({
 
   // 가로 스크롤러: ScrollView 기본값이 flexShrink:1 이라 형제에 눌려 잘린다
   filmScroll: { flexGrow: 0, flexShrink: 0 },
-  filmContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filmContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   filmCell: {
     width: 80, borderRadius: 12, padding: 10,
     backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line,
@@ -546,14 +558,13 @@ const s = themed(() => StyleSheet.create({
   sheet: {
     backgroundColor: colors.panel, borderTopWidth: 1, borderTopColor: colors.line2,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 16, paddingTop: 8, maxHeight: '56%',
+    paddingHorizontal: 16, paddingTop: 8, flex: 1, minHeight: 200,
   },
   grab: {
     width: 40, height: 4, borderRadius: 2,
     backgroundColor: colors.line2, alignSelf: 'center', marginBottom: 12,
   },
-  sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sheetTitle: { fontSize: 10.5, fontWeight: '700', color: colors.muted, letterSpacing: 0.8 },
+  sheetTitle: { fontSize: 10.5, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, marginTop: 4 },
   swapLink: { fontSize: 12, color: colors.mid, fontWeight: '600' },
 
   restBox: {
@@ -573,8 +584,8 @@ const s = themed(() => StyleSheet.create({
   },
   skipTxt: { fontSize: 13, fontWeight: '600', color: colors.ink },
 
-  setsScroll: { flexGrow: 0 },
-  setsContainer: { gap: 8, paddingBottom: 8 },
+  setsScroll: { flex: 1 },
+  setsContainer: { gap: 8, paddingBottom: 12 },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   setNum: { fontSize: 11, color: colors.muted, width: 18, textAlign: 'right', flexShrink: 0 },
   setNumDone: { color: colors.good },
