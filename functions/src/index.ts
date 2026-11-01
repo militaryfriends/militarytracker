@@ -253,11 +253,34 @@ async function withQuota<T>(
 interface PlanReq {
   profile?: {
     sex: string; age: string; height: string; weight: string;
-    goal: string; env: string; days: number; level: number;
+    goal: string; env: string; days: number; level: number; strategy?: string;
   };
   catalog: string;
   /** 진행 중인 내 변화 프로젝트 — 있으면 프로필 숫자 대신 프로젝트에 저장된 입력을 쓴다 */
   projectId?: string;
+  /** 정석 템플릿의 데이 · 슬롯(슬롯마다 후보 id) — 있으면 AI 는 슬롯 안에서만 고른다(앱 conformToTemplates 와 같은 구조) */
+  slots?: { name?: unknown; focus?: unknown; slots?: unknown }[];
+  /** 신경 쓰이는 부위(선택) */
+  focus?: unknown;
+}
+
+const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const FOCUS_LABEL: Record<string, string> = {
+  chest: '가슴', back: '등', shoulders: '어깨', arms: '팔', abs: '복근 · 뱃살', legs: '하체 · 엉덩이',
+};
+
+/** 슬롯 구조 검증 — 카탈로그에 있는 id 만, 데이 6 · 슬롯 7 · 후보 6 까지 */
+function sanitizeSlots(raw: unknown, catalog: string): { name: string; focus: string; slots: string[][] }[] | null {
+  if (!Array.isArray(raw)) return null;
+  const known = new Set(catalog.split('\n').map((l) => l.split('|')[0]));
+  const days = raw.slice(0, 6).map((d) => {
+    const x = (d ?? {}) as { name?: unknown; focus?: unknown; slots?: unknown };
+    const slots = (Array.isArray(x.slots) ? x.slots : []).slice(0, 7)
+      .map((sl) => (Array.isArray(sl) ? sl : []).filter((id): id is string => typeof id === 'string' && ID_RE.test(id) && known.has(id)).slice(0, 6))
+      .filter((sl) => sl.length > 0);
+    return { name: str(x.name, 24), focus: str(x.focus, 40), slots };
+  }).filter((d) => d.name && d.slots.length);
+  return days.length ? days : null;
 }
 
 interface PlanOut {
@@ -339,29 +362,50 @@ export const aiPlan = onCall(
     } else {
       const p = req.data?.profile;
       if (!p) throw new HttpsError('invalid-argument', '요청 정보가 부족합니다.');
+      // 앱 화면과 같은 이름(카드 4종 — '근성장' 같은 옛 이름이 AI 문장으로 새지 않게)
       const goalMap: Record<string, string> = {
-        muscle: '근성장', cut: '체지방 감량', habit: '운동 습관 만들기',
+        muscle: '린매스업', cut: '근육 유지 감량', habit: '운동 습관 만들기',
+        cut_fast: '최대 감량', leanmass: '린매스업', bulk: '벌크업',
       };
       days = Math.min(6, Math.max(2, int(p.days, 3)));
       perDay = p.goal === 'habit' ? 3 : 5;
       head = [
         `사용자: ${p.sex === 'male' ? '남' : '여'} ${int(p.age, 25)}세 / ${int(p.height, 170)}cm ${int(p.weight, 70)}kg`,
-        `목표: ${goalMap[p.goal] ?? '근성장'} / 환경: ${p.env === 'gym' ? '헬스장' : '홈트'} / 주 ${days}일 / 수준: ${LEVEL_LABEL[int(p.level, 1)] ?? '입문'}`,
+        `목표: ${(p.goal !== 'habit' && typeof p.strategy === 'string' && goalMap[p.strategy]) || goalMap[p.goal] || '린매스업'} / 환경: ${p.env === 'gym' ? '헬스장' : '홈트'} / 주 ${days}일 / 수준: ${LEVEL_LABEL[int(p.level, 1)] ?? '입문'}`,
       ];
     }
 
-    const prompt = [
-      ...head,
-      '',
-      `아래 목록의 id 만 사용해 주 ${days}일 분할 루틴을 만들어라. 하루 ${perDay}종목.`,
-      '큰 근육 → 작은 근육 순서로 배치하고, 같은 부위가 연속된 데이에 겹치지 않게 하라.',
-      '',
-      `운동 목록(id|이름|부위|난이도):`,
-      catalog,
-      '',
-      '출력 형식(JSON만):',
-      '{"days":[{"id":"push","name":"푸시데이","focus":"가슴·어깨·삼두","ids":["bench","..."]}],"reason":"이 분할을 추천한 이유 한 문장"}',
-    ].join('\n');
+    const slots = sanitizeSlots(req.data?.slots, catalog);
+    const focus = (Array.isArray(req.data?.focus) ? req.data!.focus as unknown[] : [])
+      .filter((f): f is string => typeof f === 'string' && f in FOCUS_LABEL).map((f) => FOCUS_LABEL[f]);
+    const prompt = slots
+      ? [
+        ...head,
+        ...(focus.length ? [`신경 쓰이는 부위: ${focus.join(', ')} (그 부위가 있는 슬롯은 그 부위를 더 직접 자극하는 후보로)`] : []),
+        '',
+        `정석 템플릿이다. 데이 순서 · 이름과 슬롯 순서는 그대로 두고, 슬롯마다 [ ] 안의 후보 중 하나만 골라라.`,
+        '첫 후보가 정석이다. 사용자 수준 · 단계 · 부위에 맞을 때만 다른 후보로 바꾼다. 목록에 없는 id 는 쓰지 마라.',
+        '',
+        ...slots.map((d, i) => `D${i + 1} ${d.name}(${d.focus}): ${d.slots.map((sl) => `[${sl.join(', ')}]`).join(' ')}`),
+        '',
+        `운동 정보(id|이름|부위|난이도):`,
+        catalog,
+        '',
+        '출력 형식(JSON만, 데이는 위 순서 그대로, ids 는 슬롯 순서대로):',
+        '{"days":[{"id":"d1","name":"가슴","focus":"가슴","ids":["bench","..."]}],"reason":"이 구성으로 고른 이유 한 문장(고른 종목 기준)"}',
+      ].join('\n')
+      : [
+        ...head,
+        '',
+        `아래 목록의 id 만 사용해 주 ${days}일 분할 루틴을 만들어라. 하루 ${perDay}종목.`,
+        '큰 근육 → 작은 근육 순서로 배치하고, 같은 부위가 연속된 데이에 겹치지 않게 하라.',
+        '',
+        `운동 목록(id|이름|부위|난이도):`,
+        catalog,
+        '',
+        '출력 형식(JSON만):',
+        '{"days":[{"id":"push","name":"푸시데이","focus":"가슴·어깨·삼두","ids":["bench","..."]}],"reason":"이 분할을 추천한 이유 한 문장"}',
+      ].join('\n');
 
     const { result } = await withQuota(acc.uid, 'plan', acc.isAdmin, async () => {
       return planCall({
@@ -388,21 +432,6 @@ interface DietOut {
 }
 
 const DIET_SYSTEM = '너는 스포츠 영양 가이드 AI다. 반드시 유효한 JSON만 출력한다. 마크다운 금지. 의학적 진단이나 치료 조언은 하지 않는다.';
-
-function normalizeDietOut(raw: unknown): DietOut {
-  const d = (raw ?? {}) as Partial<DietOut>;
-  const meals = (Array.isArray(d.meals) ? d.meals : [])
-    .filter((m) => m && typeof m === 'object')
-    .slice(0, 8)
-    .map((m) => ({
-      t: str((m as { t?: unknown }).t, 20),
-      m: str((m as { m?: unknown }).m, 300),
-      k: str((m as { k?: unknown }).k, 60),
-    }))
-    .filter((m) => m.t && m.m);
-  if (!meals.length) throw new HttpsError('internal', 'AI 식단이 비어 있습니다.');
-  return { meals, tip: str(d.tip, 200) };
-}
 
 /**
  * 프로젝트 식단 — AI 응답은 끼니 순서대로 메뉴 글만 받는다. 끼니 이름과 칼로리·단백질 표기(k)는
@@ -457,17 +486,23 @@ export const aiDiet = onCall(
     if (!d) throw new HttpsError('invalid-argument', '요청 정보가 부족합니다.');
     if (projectId != null) return projectDiet(acc, projectId, d.allergy);
 
+    // 하루 목표는 앱 엔진 값(calcBodyStats = phaseNutrition) — 끼니별 숫자도 서버가 나눈다. AI 는 메뉴만(프로젝트 식단과 같은 방식)
+    const kcal = Math.min(6000, Math.max(1000, int(d.kcal, 2000)));
+    const protein = Math.min(400, Math.max(40, int(d.protein, 120)));
+    const { fat, carb } = macrosOf(kcal, protein);
+    const targets = mealTargets(kcal, protein);
     const prompt = [
       `사용자: ${str(d.bodyType, 30)}, 목표 ${str(d.goal, 30)}`,
-      `하루 ${int(d.kcal, 2000)}kcal / 단백질 ${int(d.protein, 120)}g / 탄수 ${int(d.carb, 200)}g / 지방 ${int(d.fat, 60)}g`,
+      `하루 ${kcal}kcal / 단백질 ${protein}g / 탄수 ${carb}g / 지방 ${fat}g`,
+      `끼니별 목표: ${targets.map((m) => `${m.t} ${mealK(m)}`).join(' / ')}`,
       `식사 환경: ${str(d.foodEnv, 30)} / 알레르기·제외: ${str(d.allergy, 120)}`,
-      '한국에서 구하기 쉬운 음식으로 하루 식단(아침/점심/저녁/간식)을 구성하라.',
-      '출력: {"meals":[{"t":"아침","m":"음식 구성","k":"약 500kcal · 단백질 30g"}],"tip":"한 줄 팁"}',
+      '끼니별 목표에 맞춰 한국에서 구하기 쉬운 음식으로 구성하라. 음식 이름과 양만 쓰고 칼로리·단백질 숫자는 쓰지 마라.',
+      '출력(끼니 4개, 이 순서): {"meals":[{"t":"아침","m":"음식 구성"},{"t":"점심","m":"음식 구성"},{"t":"저녁","m":"음식 구성"},{"t":"간식","m":"음식 구성"}],"tip":"한 줄 팁"}',
     ].join('\n');
 
     const { result } = await withQuota(acc.uid, 'diet', acc.isAdmin, async () => {
       return planCall({ system: withGuard(DIET_SYSTEM), prompt, maxTokens: 1000, uid: acc.uid },
-        (raw) => normalizeDietOut(parseJson(raw)));
+        (raw) => projectMeals(parseJson(raw), targets));
     });
     return result;
   }
@@ -600,7 +635,7 @@ export const bodyProjectStart = onCall(
   async (req: CallableRequest<ProjectStartReq>) => {
     const acc = await requirePro(req, 'body_project');
     const uid = acc.uid;
-    const analysisId = docId(req.data?.analysisId, '분석');
+    const analysisId = docId(req.data?.analysisId, '계산 결과');
     const raw = req.data?.projectId;
     const legacy = raw === 'p1' || raw === 'p2';
     if (!legacy && !(STRATEGIES as readonly string[]).includes(String(raw))) {
@@ -799,7 +834,7 @@ async function judgeCheckin(uid: string, checkinId: string, reportId: string, no
     const pUpdate: Partial<BodyProjectDoc> = { lastCheckinId: checkinId };
     let recalculated: Judgement['recalculated'] = null;
     if (status === 'behind' && prev?.status === 'behind' && !prev.recalculated) {
-      const rc = recalcFrom(i.sex, i.heightCm, i.level, comp, pj.goal, monthIndex, pj.months);
+      const rc = recalcFrom(i.sex, i.heightCm, i.level, comp, pj.goal, monthIndex, pj.months, pj.strategy);
       const months = rc.months ?? monthIndex + 24;
       recalculated = { delayMonths: rc.delayMonths, months };
       pUpdate.trackHistory = [...(pj.trackHistory ?? []), { at: now, offset: pj.trackOffset, track: pj.track }];

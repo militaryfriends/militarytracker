@@ -120,7 +120,9 @@ export default function DietScreen() {
               {st.weightUsed}kg · {profile.height}cm · {profile.age}세 · {goalLabel(profile)}
             </Text>
             <Text style={s.basisSub}>
-              {st.weightSrc === 'trend'
+              {st.weightSrc === 'project'
+                ? '내 변화 프로젝트의 이번 달 예상 체중 기준 — 단계가 바뀌면 칼로리도 따라 바뀌어요'
+                : st.weightSrc === 'trend'
                 ? `최근 체중 기록의 추세값 · 기준 ${eff?.baseline}kg`
                 : '내 정보에 저장된 기준 체중'}
             </Text>

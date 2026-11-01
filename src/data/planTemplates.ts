@@ -125,8 +125,9 @@ const G_LEGDAY = (v: 'A' | 'B'): DayTemplate => ({
 const G_UPPER = (v: 'A' | 'B'): DayTemplate => ({
   id: v === 'A' ? 'upper' : 'upperB', name: v === 'A' ? '상체' : '상체 B', focus: '가슴 · 등 · 어깨 · 팔',
   slots: v === 'A'
+    // 하루 5종목이면 6번째가 빠진다 — 상체 A 는 삼두, 상체 B 는 이두를 5번째에 둬서 한 주에 팔 둘 다 들어가게
     ? [S(['bench', 'smithbench'], ['dbbench', 'chestpressmc']), S(['bbrow', 'tbarrow'], ['chestsupportedrow']), S(['dbshoulderpress', 'ohp', 'shoulderpressmc'], ['shoulderpressmc']),
-      S(['latpull', 'pullup'], ['latpull']), S(['bbcurl', 'dbcurl']), S(['pushdown', 'ropepushdown'])]
+      S(['latpull', 'pullup'], ['latpull']), S(['pushdown', 'ropepushdown']), S(['bbcurl', 'dbcurl'])]
     : [S(['incdbpress', 'inclinebench']), S(['cablerow', 'chestsupportedrow']), S(['latraise', 'cablelatraise']),
       S(['pullup', 'latpull'], ['latpull', 'assistedpullup']), S(['hammercurl', 'incdbcurl']), S(['ohext', 'ohropeext'])],
 });
@@ -135,16 +136,6 @@ const G_LOWER = (v: 'A' | 'B'): DayTemplate => ({
   slots: v === 'A'
     ? [S(['backsquat', 'hacksquat'], ['goblet', 'smithsquat']), S(['rdlleg', 'hipthrust']), S(['legext']), S(['legcurl', 'seatedlegcurl']), S(['calfraise', 'seatedcalf']), S(['plank', 'cablecrunch'], undefined, true)]
     : [S(['legpress', 'hacksquat']), S(['hipthrust', 'glutebridge']), S(['bulgarian', 'reverselunge'], ['lunge']), S(['lyinglegcurl', 'legcurl']), S(['seatedcalf', 'calfraise']), S(['hanginglegraise', 'cablecrunch'], ['legraise'], true)],
-});
-
-// 입문 전신(주 3일 이하 · 입문) — 머신 · 덤벨 위주
-const G_FULL = (v: 'A' | 'B' | 'C'): DayTemplate => ({
-  id: `full${v}`, name: `전신 ${v}`, focus: v === 'A' ? '스쿼트 · 프레스 · 로우' : v === 'B' ? '머신 위주' : '런지 · 케이블',
-  slots: v === 'A'
-    ? [S(['goblet', 'legpress']), S(['dbbench', 'chestpressmc']), S(['latpull']), S(['dbshoulderpress', 'shoulderpressmc']), S(['plank', 'deadbug'])]
-    : v === 'B'
-      ? [S(['legpress']), S(['chestpressmc', 'dbbench']), S(['cablerow', 'chestsupportedrow']), S(['latraise']), S(['deadbug', 'crunch'])]
-      : [S(['lunge', 'reverselunge']), S(['incdbpress', 'inclinepushup']), S(['onearmdbrow', 'cablerow']), S(['facepull']), S(['crunch', 'plank'])],
 });
 
 // ─── 홈트 — 맨몸 · 덤벨 · 밴드 ─────────────────────────────────────────────
@@ -182,7 +173,7 @@ export function splitTemplates(place: Place, days: number, level: 1 | 2 | 3): Da
     if (d === 5) return [H_PUSH, H_PULL, H_LEGS, H_UPPER, H_LOWER];
     return [H_PUSH, H_PULL, H_LEGS, H_PUSH, H_PULL, H_LEGS];
   }
-  if (level === 1 && d <= 3) return d === 2 ? [G_FULL('A'), G_FULL('B')] : [G_FULL('A'), G_FULL('B'), G_FULL('C')];
+  // 입문도 같은 분할 · 같은 정석 종목 — 바벨 슬롯만 머신 · 덤벨 대체(slot.beginner), 세트 · 여유 횟수로 강도를 낮춘다(10/31 3절 원칙 1)
   if (d === 2) return [G_UPPER('A'), G_LOWER('A')];
   if (d === 3) return [G_PUSH('A'), G_PULL('A'), G_LEGDAY('A')];
   if (d === 4) return [G_UPPER('A'), G_LOWER('A'), G_UPPER('B'), G_LOWER('B')];
@@ -194,6 +185,5 @@ export function splitTemplates(place: Place, days: number, level: 1 | 2 | 3): Da
 export function splitLabel(place: Place, days: number, level: 1 | 2 | 3): string {
   const d = Math.min(6, Math.max(2, Math.round(days)));
   if (place === 'home') return d === 2 ? '홈 상하체 2분할' : d === 4 ? '홈 상하체 + 푸시 · 레그' : '홈 푸시 · 풀 · 레그';
-  if (level === 1 && d <= 3) return '입문 전신';
   return d === 2 ? '상하체 2분할' : d === 3 ? '푸시 · 풀 · 레그' : d === 4 ? '상하체 2분할 × 2' : d === 5 ? '부위별 5분할' : '푸시 · 풀 · 레그 × 2';
 }

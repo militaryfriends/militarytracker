@@ -204,8 +204,8 @@ export interface BodyStats {
   carb: number;
   /** 실제 계산에 사용한 체중 */
   weightUsed: number;
-  /** trend = 최근 체중 기록의 추세값, profile = 저장된 기준 체중 */
-  weightSrc: 'trend' | 'profile';
+  /** trend = 최근 체중 기록의 추세값, profile = 저장된 기준 체중, project = 프로젝트 이번 달 예상 체중(서버 식단과 같은 값) */
+  weightSrc: 'trend' | 'profile' | 'project';
 }
 
 // ─── Report ────────────────────────────────────────────────────────────────

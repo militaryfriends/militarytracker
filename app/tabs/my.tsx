@@ -23,7 +23,7 @@ import { SUB_STATUS_LABEL } from '../../src/utils/subscription';
 import { PRO_NAME } from '../../src/config/entitlements';
 import { manageSubscriptionUrl } from '../../src/services/billingService';
 import { calcBodyStats, effectiveWeight, validateField } from '../../src/utils/body';
-import { setsByPart, weakestPart, totalSets, totalVolume, currentStreakDays, fmtDuration, fmtVolume } from '../../src/utils/stats';
+import { weekDates, setsByPart, weakestPart, totalSets, totalVolume, currentStreakDays, fmtDuration, fmtVolume } from '../../src/utils/stats';
 
 const THEME_OPTIONS = [
   { value: 'system', label: '시스템' },
@@ -74,6 +74,16 @@ export default function MyScreen() {
   const lastVol = setsByPart(logs, { lastWeek: true });
   const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '±0');
   const volPct = lastVolume > 0 ? Math.round(((weekVolume - lastVolume) / lastVolume) * 100) : null;
+  // 체중 — 이번 주 평균 vs 지난주 평균(광고 UI ⑧)
+  const thisWk = new Set(weekDates());
+  const lastWk = new Set(weekDates(new Date(Date.now() - 7 * 86_400_000)));
+  const avg = (set: Set<string>) => {
+    const xs = weights.filter((w) => set.has(w.date)).map((w) => w.kg);
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  };
+  const wNow = avg(thisWk);
+  const wLast = avg(lastWk);
+  const wDelta = wNow != null && wLast != null ? Math.round((wNow - wLast) * 10) / 10 : null;
   const streakDays = currentStreakDays(logs);
   const avgDuration = logs.length
     ? Math.round(logs.reduce((a, l) => a + l.durationSec, 0) / logs.length)
@@ -235,6 +245,9 @@ export default function MyScreen() {
                   );
                 })}
               </View>
+              {wDelta != null ? (
+                <Text style={s.subMeta}>체중 지난주 평균 대비 {wDelta > 0 ? `+${wDelta}` : wDelta < 0 ? `−${Math.abs(wDelta)}` : '±0'}kg (이번 주 {Math.round(wNow! * 10) / 10}kg)</Text>
+              ) : null}
               {weakest && (
                 <View style={s.weakRow}>
                   <Text style={s.weakTxt}>

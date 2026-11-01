@@ -87,7 +87,20 @@ export function resolveGoal(input: AnalysisInput, comp: BodyComp, pick: GoalPick
  * pick 을 주면 예전처럼 그 목표 카드(명세 예시 · 옛 분석 재현)로 목표 · 차이를 잡는다.
  * pick 이 없으면(지금 온보딩) 목표 = 추천 카드가 실제로 도달하는 몸 — 결과 · 프로젝트 · 식단 숫자가 한 값에서 나온다.
  */
-export function analyzeBody(input: AnalysisInput, pick?: GoalPick): AnalysisCore {
+/**
+ * 허리둘레가 키에 비해 말이 안 되면(키의 36% 미만 · 85% 초과 — 바지 사이즈 · 인치를 넣은 경우) 버리고 키 · 체중만으로 계산한다.
+ * 앱 입력 검사(validateWaist)와 같은 기준 — 예전에 저장된 '허리 60cm' 계산도 체지방 5% 몸이 나오지 않게(11/1 피드백).
+ */
+export const WAIST_RATIO = { min: 0.36, max: 0.85 } as const;
+export function sanitizeWaist(input: AnalysisInput): AnalysisInput {
+  const w = input.waistCm;
+  if (w === undefined || (w >= input.heightCm * WAIST_RATIO.min && w <= input.heightCm * WAIST_RATIO.max)) return input;
+  const { waistCm: _drop, ...rest } = input;
+  return rest;
+}
+
+export function analyzeBody(input0: AnalysisInput, pick?: GoalPick): AnalysisCore {
+  const input = sanitizeWaist(input0);
   const comp = estimateBodyComp(input);
   const coord = toCoord(input.sex, comp.bfPct, comp.nffmi);
   const cell = toCell(input.sex, comp.bfPct, comp.nffmi);

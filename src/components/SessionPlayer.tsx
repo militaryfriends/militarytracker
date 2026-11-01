@@ -93,8 +93,12 @@ export default function SessionPlayer() {
   const anyRecorded = session.data.some((x) => x.sets.some((t) => t.done));
   const last = lastSetsOf(logs, cur.id);
   const usedKey = session.data.map((x) => x.id).join(',');
-  // 화면 높이의 38% 까지 — 작은 폰에서도 세트 2~3줄은 보이게
-  const mediaSize = Math.round(Math.min(winW - 32, 480, winH * (kb ? 0.16 : 0.46)));
+  // 영상은 화면 폭 1:1 이 기본 — 다만 아래에 지난 기록 + 세트 2줄은 늘 보이게 남은 높이로 줄인다.
+  // 476 = 머리줄 68 + 종목 탭 76 + 휴식칸 · 이전/다음 · 여백 156 + 지난 기록 · 세트 2줄 168 + 여유 8. 키패드가 뜨면 작게.
+  const roomH = winH - insets.top - insets.bottom - 476;
+  const mediaSize = kb
+    ? Math.round(Math.min(winW - 32, winH * 0.16))
+    : Math.round(Math.max(180, Math.min(winW - 32, 480, roomH)));
   const rx = e ? prescription(e, lv) : null;
 
   /**
@@ -212,8 +216,21 @@ export default function SessionPlayer() {
 
       {/* 영상은 1:1 로 위에 고정, 자동 재생 — 아래 세트 기록만 스크롤된다(10/31 피드백 4절). 종목 탭을 누르면 영상이 바뀐다 */}
       <View style={s.mediaArea}>
-        <ExerciseMedia key={cur.id} exId={cur.id} autoPlay rounded={20} dim={0.15}
-          style={{ width: mediaSize, height: mediaSize, alignSelf: 'center' }} />
+        <View style={{ width: mediaSize, height: mediaSize, alignSelf: 'center' }}>
+          <ExerciseMedia key={cur.id} exId={cur.id} autoPlay rounded={20} dim={0.15} style={{ width: mediaSize, height: mediaSize }} />
+          {/* 종목 이름 · 처방은 영상 아래쪽에 겹쳐 — 세트 칸에 자리를 더 준다 */}
+          {!kb ? (
+            <View style={s.mediaMeta} pointerEvents="box-none">
+              <View style={{ flex: 1 }} pointerEvents="none">
+                <Text style={s.exName} numberOfLines={1}>{e?.n ?? ''}</Text>
+                <Text style={s.exPart} numberOfLines={1}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)} · 세트마다 ${rx.rir}회 여유` : ''}</Text>
+              </View>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => setPicker('swap')} hitSlop={10} accessibilityRole="button" accessibilityLabel="종목 교체" style={s.swapBtn}>
+                <Text style={s.swapLink}>종목 교체</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView
@@ -294,15 +311,7 @@ export default function SessionPlayer() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={s.metaRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.exName} numberOfLines={1}>{e?.n ?? ''}</Text>
-              <Text style={s.exPart}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)} · 세트마다 ${rx.rir}회 여유` : ''}</Text>
-            </View>
-            <TouchableOpacity activeOpacity={0.7} onPress={() => setPicker('swap')} hitSlop={12} accessibilityRole="button" accessibilityLabel="종목 교체" style={s.swapBtn}>
-              <Text style={s.swapLink}>종목 교체</Text>
-            </TouchableOpacity>
-          </View>
+          {kb ? <Text style={s.kbName} numberOfLines={1}>{e?.n ?? ''}{rx ? ` · ${rxText(rx)}` : ''}</Text> : null}
           <View style={s.lastRow}>
             {last ? (
               <Text style={s.lastTxt} numberOfLines={1}>
@@ -533,10 +542,15 @@ const s = themed(() => StyleSheet.create({
   finishTxt: { fontSize: 13, fontWeight: '700', color: colors.ink },
 
   mediaArea: { paddingHorizontal: 16, flexShrink: 0 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  exName: { fontSize: 19, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
-  exPart: { fontSize: 12, color: colors.muted, marginTop: 3 },
-  swapBtn: { borderWidth: 1, borderColor: colors.line2, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7 },
+  mediaMeta: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+    paddingHorizontal: 14, paddingTop: 28, paddingBottom: 12, borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
+    backgroundColor: colors.mediaDim,
+  },
+  exName: { fontSize: 19, fontWeight: '800', color: colors.onMedia, letterSpacing: -0.3 },
+  exPart: { fontSize: 12, color: colors.onMediaSub, marginTop: 3 },
+  swapBtn: { borderWidth: 1, borderColor: colors.onMediaSub, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7 },
+  kbName: { fontSize: 13, fontWeight: '800', color: colors.ink },
   lastRow: {
     backgroundColor: colors.panel2, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1, borderColor: colors.line,
@@ -575,7 +589,7 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.line2, alignSelf: 'center', marginBottom: 12,
   },
   sheetTitle: { fontSize: 10.5, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, marginTop: 4 },
-  swapLink: { fontSize: 12, color: colors.mid, fontWeight: '600' },
+  swapLink: { fontSize: 12, color: colors.onMedia, fontWeight: '700' },
 
   restBox: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

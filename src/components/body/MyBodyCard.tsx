@@ -15,6 +15,7 @@ import { useEntitlement } from '../../hooks/useEntitlement';
 import { cellWithHysteresis, updateComp } from '../../utils/bodyComp';
 import { trendWeight } from '../../utils/body';
 import { analyzeBody } from '../../utils/bodyAnalysis';
+import { expectedPoint, progressPct } from '../../utils/projection';
 import { AvatarView } from './AvatarView';
 import { has3D } from './avatar3d/Avatar3D';
 import { coordOf } from './avatar3d/morph';
@@ -38,6 +39,8 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
   const weights = useAppStore((st) => st.weights);
   const { pro } = useEntitlement();
   const [view, setView] = useState<View3>('both');
+  // 고른 카드(식단 · 코치와 같은 카드), 없으면 추천
+  const chosen = useAppStore((st) => st.profile?.strategy);
 
   const running = !!project && (project.status === 'active' || project.status === 'paused');
   const now = useMemo(() => (running && project ? projectNow(project, checkins, weights) : null), [running, project, checkins, weights]);
@@ -54,9 +57,9 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
       coord: tw ? coordOf(analysis.input.sex, c.bfPct, c.nffmi) : analysis.coord,
       kg: tw ?? analysis.input.weightKg,
       bf: c.bfPct,
-      rec: cards.find((x) => x.recommended) ?? cards[0],
+      rec: cards.find((x) => x.strategy === chosen) ?? cards.find((x) => x.recommended) ?? cards[0],
     };
-  }, [analysis, weights]);
+  }, [analysis, weights, chosen]);
 
   const inner = Math.min(width, 480) - 40 - 32;
 
@@ -65,8 +68,11 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
     const nowBody = { cell: now.nowCell, coord: coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi) };
     const goalBody = { cell: project.end.cell, coord: coordOf(sex, project.end.bfPct, project.end.nffmi) };
     const nowKg = now.nowComp.ffmKg + now.nowComp.fmKg;
-    const totalDays = Math.max(1, Math.round(project.months * 30.44));
-    const pctDone = Math.min(100, Math.round((now.days / totalDays) * 100));
+    // 진행 막대 = 몸 변화(지금 몸이 목표 몸까지 온 비율) — 체중을 기록하면 지금 몸과 함께 움직인다(10/31 피드백 8절 2).
+    // 눈금 = 이 날짜의 예상 진행률(기간 기준)
+    const bodyPct = Math.round(progressPct(sex, project.baseline, now.nowComp, project.goal));
+    const expPct = Math.round(progressPct(sex, project.baseline,
+      expectedPoint(project.track, project.trackOffset, Math.floor(now.days / 30.44)), project.goal));
     const stopped = project.status === 'paused' || !pro;
     const totalWeeks = Math.max(1, Math.round((project.months * 30.44) / 7));
     // 최근 7일 안에 체중 기록이 없으면 한 줄 안내
@@ -107,8 +113,12 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
 
         <View style={s.proj}>
           <Text style={s.projName} numberOfLines={1}>{project.name} · {project.months}개월</Text>
-          <Text style={s.projSub}>{stopped ? '멈춤 · 다시 구독하면 이어서' : `${Math.min(now.week, totalWeeks)}주차 / 전체 ${totalWeeks}주 · ${pctDone}%`}</Text>
-          <View style={s.bar}><View style={[s.barFill, { width: `${Math.max(3, pctDone)}%` }]} /></View>
+          <Text style={s.projSub}>{stopped ? '멈춤 · 다시 구독하면 이어서' : `${Math.min(now.week, totalWeeks)}주차 / 전체 ${totalWeeks}주`}</Text>
+          <View style={s.bar} accessibilityLabel={`목표 몸까지 ${bodyPct}%, 지금 날짜의 예상 ${expPct}%`}>
+            <View style={[s.barFill, { width: `${Math.max(3, bodyPct)}%` }]} />
+            <View style={[s.barTick, { left: `${Math.min(99, expPct)}%` }]} />
+          </View>
+          <Text style={s.barTxt}>목표 몸까지 {bodyPct}% · 예상 {expPct}%</Text>
           <View style={s.kgRow}>
             {[['시작', project.input.weightKg], ['지금', nowKg], ['예상', project.end.weightKg]].map(([k, v]) => (
               <View key={k as string} style={s.kgCell}>
@@ -121,11 +131,11 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
         {/* 체크인은 4주마다라 그 사이엔 주 1회 체중이 "지금" 몸을 움직이는 유일한 장면이다(10/31 피드백 8절 2) */}
         {weighDue && !stopped ? (
           <TouchableOpacity activeOpacity={0.7} onPress={onWeigh} style={s.nudge} accessibilityRole="button">
-            <Text style={s.nudgeTxt}>이번 주 체중을 기록하면 "지금" 몸과 진행 막대가 바로 움직여요 ›</Text>
+            <Text style={s.nudgeTxt}>이번 주 체중을 기록하면 "지금" 몸과 진행 막대가 바로 바뀌어요 ›</Text>
           </TouchableOpacity>
         ) : null}
         <View style={s.btnRow}>
-          <Btn title="진행률 보기" sub="그래프 · 기록" onPress={() => router.push('/project/checkin')} />
+          <Btn title="진행률 보기" sub={`${bodyPct}% · 그래프`} onPress={() => router.push('/project/checkin')} />
           <Btn title="체크인" sub={now.dueIn <= 0 ? '오늘' : `D-${now.dueIn}`} onPress={() => router.push('/project/checkin')} />
           <Btn title="체중 기록" sub={weighDue ? '이번 주 아직' : '오늘 몸무게'} onPress={onWeigh} />
         </View>
@@ -148,7 +158,7 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
         <PressableScale style={s.cta} onPress={() => router.push('/project')} accessibilityLabel="프로젝트 4가지 보기">
           <Text style={s.ctaTxt}>프로젝트 4가지 보기</Text>
         </PressableScale>
-        <Text style={s.ctaSub}>추천 · {free.rec.name} {free.rec.months}개월</Text>
+        <Text style={s.ctaSub}>{free.rec.recommended ? '추천' : '내가 고른 카드'} · {free.rec.name} {free.rec.months}개월</Text>
       </View>
     );
   }
@@ -189,7 +199,9 @@ const s = themed(() => StyleSheet.create({
   proj: { marginTop: 16 },
   projName: { fontSize: 16, fontWeight: '800', color: colors.ink, marginTop: 6 },
   projSub: { fontSize: 12.5, color: colors.mid, marginTop: 4, lineHeight: 18 },
-  bar: { height: 6, borderRadius: 3, backgroundColor: colors.panel3, marginTop: 10, overflow: 'hidden' },
+  bar: { height: 8, borderRadius: 4, backgroundColor: colors.panel3, marginTop: 10, overflow: 'hidden' },
+  barTick: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: colors.mid },
+  barTxt: { fontSize: 11.5, color: colors.muted, marginTop: 5, fontWeight: '600' },
   barFill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
   btnRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   kgRow: { flexDirection: 'row', marginTop: 12, gap: 8 },

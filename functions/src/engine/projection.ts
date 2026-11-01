@@ -521,14 +521,24 @@ export function expectedPoint(track: readonly MonthPoint[], offset: number, mont
   return track[i];
 }
 
+/** 카드 방식으로 목표까지 — 감량은 목표 체지방에서 멈추고, 처음 닿는 달이 reachedAt(24개월까지) */
+function simulateStrategyTo(sex: Sex, heightCm: number, level: Level, start: BodyComp, strategy: Strategy, goal: Goal): SimResult {
+  const cut = STRATEGY[strategy].phase === 'cut';
+  const track = simulateStrategy(sex, heightCm, level, start, strategy, 24, cut ? goal.bfPct : undefined);
+  const hit = track.findIndex((pt) => (cut ? pt.bfPct <= goal.bfPct + 0.3 : pt.nffmi >= goal.nffmi - 0.05));
+  return { track, reachedAt: hit < 0 ? null : hit };
+}
+
 /**
  * 두 번 연속 뒤처지면 지금 실측값에서 다시 시뮬레이션 — 완료 예상이 몇 개월 늦어졌는지 알린다(몰래 바꾸지 않는다).
  * months: 시작부터 센 새 완료 예상(18개월 안에 못 가면 null).
  */
 export function recalcFrom(
   sex: Sex, heightCm: number, level: Level, now: BodyComp, goal: Goal, monthIndex: number, oldMonths: number,
+  /** 카드 방식(2.0) — 있으면 그 속도(감량 1% · 0.5%, 증량 +300 · +500)로 다시 계산한다. 없으면(옛 프로젝트) 옛 모델 */
+  strategy?: Strategy,
 ): { sim: SimResult; months: number | null; delayMonths: number } {
-  const sim = simulate(sex, heightCm, level, now, goal);
+  const sim = strategy ? simulateStrategyTo(sex, heightCm, level, now, strategy, goal) : simulate(sex, heightCm, level, now, goal);
   const months = sim.reachedAt === null ? null : monthIndex + sim.reachedAt;
   return { sim, months, delayMonths: months === null ? 24 + monthIndex - oldMonths : months - oldMonths };
 }

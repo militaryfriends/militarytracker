@@ -62,7 +62,10 @@ export function planFromTemplates(
       let cands = slotCandidates(sl, o.level, o.place).filter((id) => !ids.includes(id));
       cands = cands.filter((id) => !(LUMBAR.has(id) && lumbar) && !(WEEKLY_ONCE.has(id) && weekly.has(id)));
       if (!cands.length) continue;
-      const pick = rnd ? cands[Math.floor(rnd() * cands.length)] : cands[0];
+      // 재구성도 영상 있는 후보 안에서만 바꾼다(영상 우선 원칙) — 영상 후보가 하나뿐이면 전체에서
+      const withVideo = cands.filter((id) => HAS_VIDEO.has(id));
+      const pool = withVideo.length >= 2 ? withVideo : cands;
+      const pick = rnd ? pool[Math.floor(rnd() * pool.length)] : cands[0];
       ids.push(pick);
       if (LUMBAR.has(pick)) lumbar = true;
       if (WEEKLY_ONCE.has(pick)) weekly.add(pick);
@@ -92,6 +95,22 @@ function addFocus(days: PlanDay[], focus: FocusPart[] | undefined, place: Place)
     if (pick) day.ids.push(pick);
   }
   return out;
+}
+
+/**
+ * AI 플랜에 보내는 데이 · 슬롯 구조 — AI 는 데이 순서 · 이름을 그대로 두고 슬롯마다 후보 하나를 고른다(프로 개인화).
+ * 결과는 conformToTemplates 가 같은 구조로 다시 맞춘다(데이 순서가 같아야 AI 선택이 살아남는다).
+ */
+export function templateSlots(p: UserProfile): { name: string; focus: string; slots: string[][] }[] {
+  const level = (p.level ?? 2) as 1 | 2 | 3;
+  const perDay = p.goal === 'habit' ? 3 : 5;
+  return splitTemplates(p.env, p.days, level).map((t) => ({
+    name: t.name,
+    focus: t.focus,
+    slots: t.slots.filter((sl) => !sl.optional || perDay > 5).slice(0, perDay)
+      .map((sl) => slotCandidates(sl, level, p.env).slice(0, 6))
+      .filter((c) => c.length > 0),
+  }));
 }
 
 /** seed 없으면 기본 정석 구성, 있으면 슬롯 안에서만 바꾼 구성('자동 재구성') */

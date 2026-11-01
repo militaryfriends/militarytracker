@@ -194,10 +194,18 @@ export function calcBodyStats(
   let kcal: number;
   let protein: number;
   let tagline: string;
+  let weightUsed = W;
+  let weightSrc: BodyStats['weightSrc'] = eff?.src ?? 'profile';
   if (project && project.status === 'active') {
-    const monthIndex = Math.round((Date.now() - Date.parse(project.startedAt)) / (30.44 * 86_400_000));
+    // 서버 식단(aiDiet projectDiet)과 같은 입력 — 프로젝트 입력값 + 이번 달 예상 체중. 식단 탭 목표 = AI 끼니 합(10/31 "숫자는 한 곳에서만")
+    const monthIndex = Math.floor((Date.now() - Date.parse(project.startedAt)) / (30.44 * 86_400_000));
     const pt = expectedPoint(project.track, project.trackOffset, monthIndex);
-    const n = phaseNutrition(pt.phase, ctx, project.strategy);
+    const i = project.input;
+    const n = phaseNutrition(pt.phase, {
+      sex: i.sex, age: i.age, heightCm: i.heightCm, weightKg: pt.weightKg, days: i.days, level: i.level,
+    }, project.strategy);
+    weightUsed = pt.weightKg;
+    weightSrc = 'project';
     kcal = n.kcal;
     protein = n.proteinG;
     tagline = `${project.strategy && pt.phase !== 'keep' ? STRATEGY[project.strategy].name : PHASE_WORD[pt.phase]} 단계 · 내 변화 프로젝트`;
@@ -222,8 +230,8 @@ export function calcBodyStats(
     protein,
     fat,
     carb,
-    weightUsed: Math.round(W * 10) / 10,
-    weightSrc: eff?.src ?? 'profile',
+    weightUsed: Math.round(weightUsed * 10) / 10,
+    weightSrc,
   };
 }
 

@@ -6,22 +6,35 @@
 import { httpsCallable, FunctionsError } from 'firebase/functions';
 import { functions } from './firebase';
 import { BodyProject, BodyReportBody, CheckinResult, DietPlan, Plan, UserProfile } from '../types';
-import { buildLocalPlan, conformToTemplates, planFromAI } from '../utils/planner';
+import { buildLocalPlan, conformToTemplates, planFromAI, templateSlots } from '../utils/planner';
 import { DANGER, splitTemplates } from '../data/planTemplates';
 import { calcBodyStats, FOOD_LABEL, goalLabel } from '../utils/body';
 import type { BodyStats } from '../types';
 import { exById, PART_LABEL } from '../data/exercises';
 
-export const FALLBACK_DIET: DietPlan = {
-  meals: [
-    { t: '아침', m: '그릭요거트 + 그래놀라 + 바나나', k: '약 450kcal · 단백질 25g 내외' },
-    { t: '점심', m: '닭가슴살 샐러드 랩 + 삶은 달걀 2개', k: '약 550kcal · 단백질 45g 내외' },
-    { t: '저녁', m: '잡곡밥 + 구운 생선/닭다리살 + 나물 반찬', k: '약 650kcal · 단백질 40g 내외' },
-    { t: '간식', m: '프로틴 음료 1개 + 견과류 한 줌', k: '약 300kcal · 단백질 20g 내외' },
-  ],
-  tip: '연결에 실패해 기본 예시 식단을 표시합니다. 다시 시도하면 조건에 맞게 새로 구성합니다.',
-  src: 'LOCAL',
-};
+/** 끼니 나누기 — 서버 functions/src/bodyProject.ts 의 MEAL_SPLIT · mealTargets 와 같은 값 */
+const MEAL_SPLIT = [
+  { t: '아침', r: 0.25, m: '그릭요거트 + 그래놀라 + 바나나' },
+  { t: '점심', r: 0.35, m: '닭가슴살 샐러드 랩 + 삶은 달걀 2개' },
+  { t: '저녁', r: 0.3, m: '잡곡밥 + 구운 생선/닭다리살 + 나물 반찬' },
+  { t: '간식', r: 0.1, m: '프로틴 음료 1개 + 견과류 한 줌' },
+] as const;
+
+/**
+ * 연결 실패 때의 예시 식단 — 끼니별 숫자는 내 하루 목표(엔진 값)를 나눈 것(10/31 피드백 "숫자는 한 곳에서만":
+ * 예전엔 목표와 상관없이 늘 1,950kcal 였다). 메뉴는 예시라 양은 목표에 맞춰 조절하라고 쓴다.
+ */
+export function fallbackDiet(kcal?: number, protein?: number): DietPlan {
+  return {
+    meals: MEAL_SPLIT.map(({ t, r, m }) => ({
+      t, m,
+      k: kcal && protein ? `약 ${Math.round((kcal * r) / 10) * 10}kcal · 단백질 ${Math.round(protein * r)}g` : '',
+    })),
+    tip: '연결에 실패해 예시 메뉴를 보여 드려요. 끼니별 숫자는 내 하루 목표를 나눈 값이라, 양을 그만큼 맞춰 드세요. 다시 시도하면 조건에 맞게 새로 구성합니다.',
+    src: 'LOCAL',
+  };
+}
+export const FALLBACK_DIET: DietPlan = fallbackDiet();
 
 export class AIUnavailable extends Error {}
 
@@ -146,6 +159,9 @@ export async function generatePlan(p: UserProfile, opts?: { projectId?: string }
     const res = await call({
       profile: p,
       catalog: buildCatalog(p),
+      // 데이 · 슬롯 구조(정석 템플릿) + 신경 쓰이는 부위 — AI 는 슬롯 안에서만 고른다
+      slots: templateSlots(p),
+      focus: p.focus ?? [],
       ...(opts?.projectId ? { projectId: opts.projectId } : {}),
     });
     const plan = planFromAI(res.data, p);
@@ -172,6 +188,8 @@ export async function generateDiet(
   const projectId = opts?.projectId;
   // 호출 측에서 추세 체중이 반영된 stats 를 넘기면 그대로 쓴다
   const st = projectId ? null : stats ?? calcBodyStats(p);
+  // 실패 때 보여 줄 예시도 같은 하루 목표로(프로젝트면 호출 측 stats 가 프로젝트 단계 값)
+  const target = stats ?? st;
   if (!projectId && !st) return FALLBACK_DIET;
   try {
     const call = httpsCallable(functions, 'aiDiet', { timeout: CALL_TIMEOUT_MS });
@@ -198,7 +216,7 @@ export async function generateDiet(
     if (over) throw over;
     if (!isUnavailable(e)) console.warn('[aiDiet]', e);
   }
-  return FALLBACK_DIET;
+  return fallbackDiet(target?.kcal, target?.protein);
 }
 
 /**

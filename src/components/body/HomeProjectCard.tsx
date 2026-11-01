@@ -20,6 +20,7 @@ import { projectNow } from './progress';
 import { kg, pct1 } from './format';
 import { coordOf } from './avatar3d/morph';
 import { analyzeBody } from '../../utils/bodyAnalysis';
+import { expectedPoint, progressPct } from '../../utils/projection';
 
 export function HomeProjectCard() {
   useThemeMode();
@@ -51,21 +52,26 @@ export function HomeProjectCard() {
   }, [analysis, weights]);
 
   // 카드 4장은 저장된 입력으로 다시 계산 — 옛 분석 문서(2장)에도 프로젝트 화면과 같은 추천
+  // 고른 카드(profile.strategy — 식단 · 코치와 같은 카드)가 있으면 그 카드, 없으면 추천
+  const chosen = useAppStore((st) => st.profile?.strategy);
   const rec = useMemo(() => {
     if (!analysis) return null;
     const cards = analyzeBody(analysis.input).projects;
-    return cards.find((c) => c.recommended) ?? cards[0];
-  }, [analysis]);
+    return cards.find((c) => c.strategy === chosen) ?? cards.find((c) => c.recommended) ?? cards[0];
+  }, [analysis, chosen]);
 
   if (project && now) {
     const sex = project.input.sex;
     const fresh = now.days === 0;
     const stopped = project.status === 'paused' || !pro;
-    const totalDays = Math.max(1, Math.round(project.months * 30.44));
-    const pctDone = Math.min(100, Math.round((now.days / totalDays) * 100));
+    // 진행 막대 = 몸 변화(지금 몸이 목표 몸까지 온 비율) — 체중을 기록하면 지금 몸과 함께 움직인다(10/31 피드백 8절 2).
+    // 눈금 = 이 날짜의 예상 진행률(기간 기준)
+    const bodyPct = Math.round(progressPct(sex, project.baseline, now.nowComp, project.goal));
+    const expPct = Math.round(progressPct(sex, project.baseline,
+      expectedPoint(project.track, project.trackOffset, Math.floor(now.days / 30.44)), project.goal));
     return (
       <PressableScale style={s.card} scaleTo={PRESS_SCALE.card} onPress={() => router.push('/project/checkin')}
-        accessibilityLabel={`내 변화 프로젝트, ${project.name}, ${now.week}주차, 기간의 ${pctDone}%`}>
+        accessibilityLabel={`내 변화 프로젝트, ${project.name}, ${now.week}주차, 목표 몸까지 ${bodyPct}%`}>
         <Text style={s.label}>내 변화 프로젝트</Text>
         {fresh ? <Text style={s.fresh}>프로젝트가 시작되었습니다</Text> : null}
         <Text style={s.name} numberOfLines={1}>{project.name}</Text>
@@ -78,10 +84,10 @@ export function HomeProjectCard() {
           <AvatarView sex={sex} cell={project.end.cell} coord={coordOf(sex, project.end.bfPct, project.end.nffmi)} width={AV} badge="예상" />
         </View>
         <View style={s.bar} accessibilityElementsHidden>
-          <View style={[s.barFill, { width: `${Math.max(3, pctDone)}%` }]} />
+          <View style={[s.barFill, { width: `${Math.max(3, bodyPct)}%` }]} />
         </View>
         <View style={s.barRow}>
-          <Text style={s.small}>{pctDone}% · {project.months}개월 중 {Math.min(project.months, Math.floor(now.days / 30.44))}개월</Text>
+          <Text style={s.small}>목표 몸까지 {bodyPct}% (예상 {expPct}%) · {project.months}개월 중 {Math.min(project.months, Math.floor(now.days / 30.44))}개월</Text>
           <Text style={s.small}>예상 {kg(project.end.weightKg)}kg · 체지방 {pct1(project.end.bfPct)}%</Text>
         </View>
       </PressableScale>
@@ -93,7 +99,7 @@ export function HomeProjectCard() {
       <PressableScale style={s.card} scaleTo={PRESS_SCALE.card} onPress={() => router.push('/project')}
         accessibilityLabel={`내 변화 프로젝트, 추천 ${rec.name} ${rec.months}개월, 프로젝트 4가지 보기`}>
         <Text style={s.label}>내 변화 프로젝트</Text>
-        <Text style={s.name} numberOfLines={1}>추천 · {rec.name}</Text>
+        <Text style={s.name} numberOfLines={1}>{rec.recommended ? '추천' : '내가 고른 카드'} · {rec.name}</Text>
         <Text style={s.sub}>{rec.months}개월 · {kg(rec.end.weightKg)}kg · 체지방 {pct1(rec.end.bfPct)}%</Text>
         <View style={s.pair}>
           <AvatarView sex={analysis.input.sex} cell={freeNow.cell} coord={freeNow.coord} width={AV} badge="지금" />

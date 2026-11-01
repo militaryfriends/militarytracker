@@ -99,15 +99,5 @@ export const EX_IMAGE: Record<string, number> = {
   squeezepress: require('../../assets/exercise/image/squeezepress.jpg'),
   guillotine: require('../../assets/exercise/image/guillotine.jpg'),
 
-  // 영상이 아직 없는 종목 — 기존 일러스트 사용
-  deadlift: require('../../assets/form/form_dead.webp'),
-  latpull: require('../../assets/form/form_latpull.webp'),
-  latraise: require('../../assets/form/form_latraise.webp'),
-  ohp: require('../../assets/form/form_ohp.webp'),
-  plank: require('../../assets/form/form_plank.webp'),
-  pullup: require('../../assets/form/form_pullup.webp'),
-  pushdown: require('../../assets/form/form_pushdown.webp'),
-  cablerow: require('../../assets/form/form_row.webp'),
-  backsquat: require('../../assets/form/form_squat.webp'),
-  uprow: require('../../assets/form/form_uprow.webp'),
+  // 실제 사람 사진(form_*.webp)은 쓰지 않는다 — 영상이 없는 종목은 버킷 포스터 → 회색 자리 표시(10/31 피드백 7-3)
 };

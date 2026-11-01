@@ -8,6 +8,7 @@ import { colors, partTint, themed, useThemeMode } from '../theme';
 import { exById, PART_LABEL } from '../data/exercises';
 import { videoSource, posterSource } from '../data/media';
 import { useMediaEntry } from '../stores/mediaStore';
+import { Silhouette } from './body/Silhouette';
 
 interface Props {
   exId: string;
@@ -88,6 +89,7 @@ function StaticMedia({
   useThemeMode();
   const ex = exById(exId);
   const imageSrc = poster;
+  const [ph, setPh] = useState(0);
   const tint = ex ? partTint[ex.part] ?? colors.panel3 : colors.panel3;
 
   return (
@@ -99,9 +101,10 @@ function StaticMedia({
         </>
       ) : (
         <LinearGradient colors={[tint, colors.mediaPh]} style={s.fill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={s.phCenter}>
-            <Text style={s.phTxt}>{ex ? PART_LABEL[ex.part] : '?'}</Text>
-            <Text style={s.phSub}>미디어 준비중</Text>
+          {/* 사람 사진 대신 회색 얼굴 없는 몸(10/31 피드백 7-3) — 영상이 올라오면 그 첫 프레임으로 바뀐다 */}
+          <View style={s.phCenter} onLayout={(e) => setPh(Math.round(Math.min(e.nativeEvent.layout.height * 0.62, e.nativeEvent.layout.width * 0.42)))}>
+            {ph > 24 ? <Silhouette sex="male" f={2.5} m={3} width={ph / 1.5} height={ph} /> : null}
+            <Text style={ph > 24 ? s.phSubSmall : s.phTxt}>{ex ? PART_LABEL[ex.part] : '?'}{ph > 60 ? ' · 영상 준비 중' : ''}</Text>
           </View>
         </LinearGradient>
       )}
@@ -142,6 +145,7 @@ const s = themed(() => StyleSheet.create({
   phCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   phTxt: { fontSize: 15, fontWeight: '800', color: colors.onMediaSub, letterSpacing: 1 },
   phSub: { fontSize: 11, color: colors.onMediaSub, marginTop: 4, letterSpacing: 0.5 },
+  phSubSmall: { fontSize: 10.5, color: colors.onMediaSub, marginTop: 4, fontWeight: '700' },
   badge: {
     position: 'absolute', top: 10, right: 10,
     backgroundColor: colors.mediaBadge, borderRadius: 7,
