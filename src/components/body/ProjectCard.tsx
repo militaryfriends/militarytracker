@@ -113,7 +113,7 @@ export function ProjectGridCard({
   useThemeMode();
   const p = project;
   const dim = p.fit ? !p.fit.ok : false;
-  const avatarW = Math.round(Math.min(150, width * 0.62));
+  const avatarW = Math.round(Math.min(170, width * 0.74));
   return (
     <PressableScale
       haptic="select"

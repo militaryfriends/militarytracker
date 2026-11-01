@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   ScrollView, StyleProp, ViewStyle, TextStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 
@@ -55,10 +55,12 @@ export function TopBar({
 
 export function Body({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   useThemeMode();
+  // 안드로이드 전체 화면(edge-to-edge)에서 맨 아래 안내문이 시스템 내비게이션 바에 가려지지 않게(10/31 피드백 7-6)
+  const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={[s.scrollInner, style]}
+      contentContainerStyle={[s.scrollInner, { paddingBottom: 40 + insets.bottom }, style]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >

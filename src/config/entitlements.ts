@@ -81,9 +81,9 @@ export const PRODUCTS: readonly SubProduct[] = [
 ];
 
 /** 무료 체험 일수. 0 이면 체험 없음 */
-export const TRIAL_DAYS = 30;
+export const TRIAL_DAYS = 7;
 
-export const PRO_NAME = 'MILITARYTRACKER PRO';
+export const PRO_NAME = 'MILITARY TRACKER PRO';
 
 // ─── 법적 고지 링크 ─────────────────────────────────────────────────────────
 // 자동갱신 구독은 심사에서 이용약관(EULA)·개인정보처리방침 링크가 필수다(Apple 3.1.2).

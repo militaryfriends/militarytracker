@@ -69,7 +69,7 @@ export default function WaitlistAdmin() {
   const goBack = useSafeBack('/tabs/my');
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const [csv, setCsv] = useState('');
-  const [cutoff, setCutoff] = useState('2026-10-25');
+  const [cutoff, setCutoff] = useState('2026-10-31');
   const [busy, setBusy] = useState(false);
   const parsed = useMemo(() => toRows(csv, cutoff), [csv, cutoff]);
 

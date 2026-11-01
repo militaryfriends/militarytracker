@@ -92,7 +92,7 @@ export default function SignupScreen() {
         >
           <Animated.View entering={enter(0)} style={styles.header}>
             <BrandMark size={88} still={reduce} glintDelay={900} />
-            <Text style={styles.word}>MILITARYTRACKER</Text>
+            <Text style={styles.word}>MILITARY TRACKER</Text>
             <Text style={styles.sub}>계정을 만들고 시작하세요</Text>
           </Animated.View>
 

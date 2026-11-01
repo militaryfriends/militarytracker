@@ -251,6 +251,8 @@ export interface CoachMessage {
   content: string;
   meal?: CoachMeal | null;
   warning?: string | null;
+  /** 동기부여 한 줄 — 카드들 아래 마지막 */
+  cheer?: string | null;
 }
 
 /** 남은 코치 대화 횟수 — 서버가 계산해서 내려 준다 (앱은 표시만) */
@@ -265,6 +267,7 @@ export interface CoachReply {
   reply: string;
   meal?: CoachMeal | null;
   warning?: string | null;
+  cheer?: string | null;
   quota?: CoachQuota;
 }
 
@@ -289,7 +292,7 @@ export async function askCoach(
     const call = httpsCallable(functions, 'aiCoach', { timeout: CALL_TIMEOUT_MS });
     const res = await call({ messages: messages.slice(-20).map(toWire), context, dayKcal });
     const d = res.data as CoachReply;
-    if (d?.reply) return { reply: d.reply, meal: d.meal ?? null, warning: d.warning ?? null, quota: d.quota };
+    if (d?.reply) return { reply: d.reply, meal: d.meal ?? null, warning: d.warning ?? null, cheer: d.cheer ?? null, quota: d.quota };
     throw new AIUnavailable();
   } catch (e) {
     const need = asSubRequired(e);

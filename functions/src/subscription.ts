@@ -20,7 +20,7 @@ import { claimByEmail, claimByPhone, importWaitlist, isPhone, normPhone } from '
 const REGION = 'asia-northeast3';
 const MAX_INSTANCES = 10;
 /** src/config/entitlements.ts 의 TRIAL_DAYS 와 같은 값이어야 한다 */
-const TRIAL_DAYS = 30;
+const TRIAL_DAYS = 7;
 /** 프로모션 코드 1개가 줄 수 있는 최대 일수 — 실수로 365000 을 넣는 사고 방지 */
 const MAX_PROMO_DAYS = 400;
 /** 프로모 코드 규격. 콘솔에서 만들 때도 이 규격을 지킬 것 (짧은 코드는 추측된다) */

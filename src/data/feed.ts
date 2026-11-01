@@ -1,7 +1,17 @@
 /**
  * 라이브러리 — 부위별 가이드 시리즈
  * 카드 탭 시 /library/[feedId] 상세로 이동하며, 연결된 종목은 종목 상세로 연결된다.
+ * 표지는 실제 사람 사진을 쓰지 않는다 — 연결된 종목의 회색 아바타 썸네일(10/31 피드백 7-3).
  */
+import mediaSnapshot from './mediaManifest.json';
+import { EX_IMAGE } from './media';
+
+const POSTERS = (mediaSnapshot as { items?: Record<string, { poster?: string }> }).items ?? {};
+
+/** 표지로 쓸 종목 — 썸네일이 있는 첫 종목 */
+export function coverExId(item: Pick<FeedItem, 'exIds'>): string {
+  return item.exIds.find((id) => !!EX_IMAGE[id] || !!POSTERS[id]?.poster) ?? item.exIds[0];
+}
 export interface FeedSection {
   h: string;
   body: string;
@@ -12,7 +22,6 @@ export interface FeedItem {
   n: string;
   part: string;
   cnt: string;
-  img: number;
   summary: string;
   sections: FeedSection[];
   exIds: string[];
@@ -24,7 +33,6 @@ export const FEED: FeedItem[] = [
     n: '등 그립별 타겟 부위',
     part: '등',
     cnt: '1편',
-    img: require('../../assets/feed/feed_00.webp'),
     summary: '같은 랫풀다운도 그립에 따라 자극 부위가 달라집니다.',
     sections: [
       { h: '와이드 오버그립', body: '광배 상부와 등 너비에 관여합니다. 팔꿈치를 아래로 내리는 느낌으로 당기세요.' },
@@ -38,7 +46,6 @@ export const FEED: FeedItem[] = [
     n: '벤치프레스 각도별 타겟',
     part: '가슴',
     cnt: '1편',
-    img: require('../../assets/feed/feed_01.webp'),
     summary: '벤치 각도 15도 차이가 상부·중부 자극을 바꿉니다.',
     sections: [
       { h: '플랫 (0도)', body: '가슴 중부에 가장 고르게 실립니다. 중량을 올리기 가장 좋은 각도.' },
@@ -52,7 +59,6 @@ export const FEED: FeedItem[] = [
     n: '바벨 스쿼트 5가지 변형',
     part: '하체',
     cnt: '5동작',
-    img: require('../../assets/feed/feed_02.webp'),
     summary: '바 위치와 발 간격만 바꿔도 타겟이 이동합니다.',
     sections: [
       { h: '하이바 / 로우바', body: '하이바는 대퇴사두, 로우바는 둔근·햄스트링 비중이 큽니다.' },
@@ -66,7 +72,6 @@ export const FEED: FeedItem[] = [
     n: '홈트 가슴운동 · 덤벨',
     part: '가슴',
     cnt: '부위별',
-    img: require('../../assets/feed/feed_03.webp'),
     summary: '덤벨 한 쌍이면 가슴 전 영역을 덮을 수 있습니다.',
     sections: [
       { h: '프레스로 볼륨', body: '덤벨 벤치프레스와 인클라인 프레스로 중부·상부를 나눠 자극합니다.' },
@@ -80,7 +85,6 @@ export const FEED: FeedItem[] = [
     n: '납작한 이두 살리는 3동작',
     part: '이두',
     cnt: '3동작',
-    img: require('../../assets/feed/feed_04.webp'),
     summary: '장두·단두·상완근을 나눠 공략하면 팔 두께가 달라집니다.',
     sections: [
       { h: '장두 — 인클라인 덤벨컬', body: '팔을 몸 뒤로 두어 장두를 늘린 상태에서 수축합니다. 이두 봉우리에 관여.' },
@@ -94,7 +98,6 @@ export const FEED: FeedItem[] = [
     n: '어깨 루틴',
     part: '어깨',
     cnt: '6동작',
-    img: require('../../assets/feed/feed_05.webp'),
     summary: '프레스 1개 + 세 방향 레이즈가 기본 공식입니다.',
     sections: [
       { h: '프레스로 시작', body: '가장 무겁게 다룰 수 있는 종목을 맨 앞에. 오버헤드 프레스 또는 덤벨 숄더프레스.' },
@@ -108,7 +111,6 @@ export const FEED: FeedItem[] = [
     n: '광배가 커지는 동작',
     part: '등',
     cnt: '5동작',
-    img: require('../../assets/feed/feed_06.webp'),
     summary: '등 너비는 수직 당기기에서 만들어집니다.',
     sections: [
       { h: '수직 당기기 우선', body: '풀업·랫풀다운처럼 위에서 아래로 당기는 동작이 광배 너비에 직결됩니다.' },
@@ -122,7 +124,6 @@ export const FEED: FeedItem[] = [
     n: '등 두께 만드는 동작',
     part: '등',
     cnt: '6동작',
-    img: require('../../assets/feed/feed_07.webp'),
     summary: '두께는 수평 당기기(로우)에서 나옵니다.',
     sections: [
       { h: '로우 계열이 핵심', body: '바벨로우·케이블로우처럼 몸쪽으로 당기는 동작이 등 중부 밀도를 만듭니다.' },
@@ -136,7 +137,6 @@ export const FEED: FeedItem[] = [
     n: '스쿼트 동작 소개',
     part: '하체',
     cnt: '3동작',
-    img: require('../../assets/feed/feed_08.webp'),
     summary: '맨몸 → 고블릿 → 바벨 순서로 올라가세요.',
     sections: [
       { h: '1단계 맨몸 스쿼트', body: '발목·고관절 가동범위부터 확보합니다. 뒤꿈치가 뜨면 아직 바벨 단계가 아닙니다.' },
@@ -150,7 +150,6 @@ export const FEED: FeedItem[] = [
     n: '푸시데이 루틴',
     part: '가슴·어깨·삼두',
     cnt: '10동작',
-    img: require('../../assets/feed/feed_09.webp'),
     summary: '큰 근육 → 작은 근육 순서가 원칙입니다.',
     sections: [
       { h: '컴파운드 먼저', body: '벤치프레스·오버헤드 프레스처럼 여러 관절을 쓰는 종목을 앞에 둡니다.' },
@@ -164,7 +163,6 @@ export const FEED: FeedItem[] = [
     n: '풀데이 루틴',
     part: '등·이두',
     cnt: '10동작',
-    img: require('../../assets/feed/feed_10.webp'),
     summary: '수직·수평 당기기를 반드시 섞으세요.',
     sections: [
       { h: '수직 + 수평', body: '너비(수직)와 두께(수평)는 다른 동작에서 만들어집니다. 한 쪽만 하면 편중됩니다.' },
@@ -178,7 +176,6 @@ export const FEED: FeedItem[] = [
     n: '딥스 — 삼두 vs 가슴 타겟',
     part: '가슴·삼두',
     cnt: '비교',
-    img: require('../../assets/feed/feed_11.webp'),
     summary: '상체 각도 하나로 타겟이 바뀝니다.',
     sections: [
       { h: '가슴 타겟', body: '상체를 앞으로 기울이고 팔꿈치를 약간 벌립니다. 가동범위를 깊게.' },

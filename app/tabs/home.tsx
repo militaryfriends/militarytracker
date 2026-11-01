@@ -1,13 +1,13 @@
 import { prescription, rxText } from '../../src/utils/prescription';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ThemeToggle, colors, themed, useThemeMode } from '../../src/theme';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { FEED } from '../../src/data/feed';
+import { FEED, coverExId } from '../../src/data/feed';
 import { exById } from '../../src/data/exercises';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/utils/stats';
@@ -77,7 +77,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
-        <Text style={s.logo}>MILITARYTRACKER</Text>
+        <Text style={s.logo}>MILITARY TRACKER</Text>
         <View style={s.topRight}>
           <Text style={s.meta}>{today}</Text>
           <ThemeToggle />
@@ -177,7 +177,7 @@ export default function HomeScreen() {
               onPress={() => router.push(`/library/${f.id}`)}
             >
               <View style={s.gridThumb}>
-                <Image source={f.img} style={s.gridThumbImg} resizeMode="cover" />
+                <ExerciseMedia exId={coverExId(f)} rounded={0} dim={0} style={s.gridThumbImg} />
                 <View style={s.gridThumbOverlay} />
                 <View style={s.gridBadge}>
                   <Text style={s.gridBadgeTxt}>{f.cnt}</Text>

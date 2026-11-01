@@ -69,7 +69,8 @@ export default function CoachScreen() {
       ? logs.slice(0, 3).map((l) => `${l.date} ${l.dayName} ${l.totalSets}세트`).join('; ')
       : '기록 없음';
     const body = st
-      ? `BMI ${st.bmi} (${st.bodyType}), 목표 칼로리 ${st.kcal}kcal, 단백질 ${st.protein}g`
+      ? `BMI ${st.bmi} (${st.bodyType}), 계산 체중 ${st.weightUsed}kg, 유지 칼로리 ${st.tdee}kcal, `
+        + `하루 목표 ${st.kcal}kcal (유지 ${st.kcal - st.tdee >= 0 ? '+' : '−'} ${Math.abs(st.kcal - st.tdee)}), 단백질 ${st.protein}g · 탄수 ${st.carb}g · 지방 ${st.fat}g`
       : '신체 정보 없음';
     return [
       `사용자: ${profile?.sex === 'male' ? '남' : '여'} ${profile?.age ?? '-'}세, ${profile?.height ?? '-'}cm/${profile?.weight ?? '-'}kg, ${body}`,
@@ -99,10 +100,10 @@ export default function CoachScreen() {
     setChatBusy(true);
     try {
       const st = calcBodyStats(profile, weights, bodyProject);
-      const { reply, meal, warning, quota: next } = await askCoach(
+      const { reply, meal, warning, cheer, quota: next } = await askCoach(
         [...chat, { role: 'user', content: text }], context(), st?.kcal,
       );
-      addChat({ role: 'assistant', content: reply, meal, warning });
+      addChat({ role: 'assistant', content: reply, meal, warning, cheer });
       if (next) setQuota(next);
     } catch (e) {
       if (e instanceof SubscriptionRequired) {
@@ -175,6 +176,7 @@ export default function CoachScreen() {
                   <View style={s.msgA}><Text style={s.msgATxt}>{item.content}</Text></View>
                   {item.meal ? <MealCard meal={item.meal} /> : null}
                   {item.warning ? <WarningCard text={item.warning} /> : null}
+                  {item.cheer ? <Text style={s.cheer}>{item.cheer}</Text> : null}
                 </View>
               )
             }
@@ -244,6 +246,7 @@ const s = themed(() => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10,
   },
   msgATxt: { color: colors.ink, fontSize: 14, lineHeight: 22 },
+  cheer: { color: colors.mid, fontSize: 13, fontWeight: '700', marginTop: 8, marginLeft: 4, lineHeight: 19 },
   inRow: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-end',
     paddingHorizontal: 16, paddingTop: 10,

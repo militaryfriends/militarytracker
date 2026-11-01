@@ -68,6 +68,12 @@ export default function MyScreen() {
   const weakest = weakestPart(vol);
   const weekSets = totalSets(logs, { weekOnly: true });
   const weekVolume = totalVolume(logs, { weekOnly: true });
+  // 주간 리포트 — 지난주 대비(10/31 피드백 6절 ⑧)
+  const lastSets = totalSets(logs, { lastWeek: true });
+  const lastVolume = totalVolume(logs, { lastWeek: true });
+  const lastVol = setsByPart(logs, { lastWeek: true });
+  const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '±0');
+  const volPct = lastVolume > 0 ? Math.round(((weekVolume - lastVolume) / lastVolume) * 100) : null;
   const streakDays = currentStreakDays(logs);
   const avgDuration = logs.length
     ? Math.round(logs.reduce((a, l) => a + l.durationSec, 0) / logs.length)
@@ -184,8 +190,8 @@ export default function MyScreen() {
 
         {/* Summary */}
         <View style={s.summaryRow}>
-          <Summary value={`${weekSets}`} label="이번 주 세트" />
-          <Summary value={fmtVolume(weekVolume)} label="주간 볼륨" />
+          <Summary value={`${weekSets}`} label="이번 주 세트" delta={lastSets || weekSets ? `지난주 ${signed(weekSets - lastSets)}` : undefined} />
+          <Summary value={fmtVolume(weekVolume)} label="주간 볼륨" delta={volPct != null ? `지난주 ${signed(volPct)}%` : undefined} />
           <Summary value={`${streakDays}일`} label="연속 기록" />
         </View>
 
@@ -220,6 +226,7 @@ export default function MyScreen() {
                   return (
                     <View key={p} style={s.barCol}>
                       {val > 0 && <Text style={s.barValTxt}>{val}</Text>}
+                      {lastVol[p] !== val ? <Text style={s.barDelta}>{signed(val - lastVol[p])}</Text> : null}
                       <View style={s.barTrack}>
                         <View style={[s.barFill, { height: `${heightPct}%` }, isTop && s.barFillHi]} />
                       </View>
@@ -415,12 +422,13 @@ export default function MyScreen() {
   );
 }
 
-function Summary({ value, label }: { value: string; label: string }) {
+function Summary({ value, label, delta }: { value: string; label: string; delta?: string }) {
   useThemeMode();
   return (
     <View style={s.summary}>
       <Text style={s.summaryVal}>{value}</Text>
       <Text style={s.summaryLabel}>{label}</Text>
+      {delta ? <Text style={s.summaryDelta}>{delta}</Text> : null}
     </View>
   );
 }
@@ -450,6 +458,7 @@ const s = themed(() => StyleSheet.create({
   },
   summaryVal: { fontSize: 18, fontWeight: '800', color: colors.ink },
   summaryLabel: { fontSize: 10, color: colors.muted, marginTop: 4 },
+  summaryDelta: { fontSize: 10, color: colors.mid, marginTop: 3, fontWeight: '700' },
 
   sectionLabel: {
     fontSize: 10, fontWeight: '800', color: colors.muted,
@@ -471,6 +480,7 @@ const s = themed(() => StyleSheet.create({
   barsRow: { flexDirection: 'row', gap: 6, height: 104, alignItems: 'flex-end', marginBottom: 14 },
   barCol: { flex: 1, alignItems: 'center' },
   barValTxt: { fontSize: 10, color: colors.muted, marginBottom: 3 },
+  barDelta: { fontSize: 9, color: colors.muted, marginBottom: 2, fontVariant: ['tabular-nums'] },
   barTrack: { width: '100%', height: 80, justifyContent: 'flex-end' },
   barFill: { width: '100%', backgroundColor: colors.panel3, borderRadius: 4 },
   barFillHi: { backgroundColor: colors.mid },

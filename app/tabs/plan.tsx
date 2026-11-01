@@ -147,19 +147,22 @@ export default function PlanScreen() {
         <Text style={s.routineLink}>{routine ? '루틴 보기 ›' : '루틴 탐색 ›'}</Text>
       </TouchableOpacity>
 
-      {/* Day pills */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.pillScroll} contentContainerStyle={s.pillContent}>
+      {/* Day 탭 — 한 줄에 다 보이게(가로 스크롤인 걸 몰라 Day5 를 못 찾던 문제, 10/31 피드백 7-9) */}
+      <View style={s.pillRow}>
         {plan.days.map((d, i) => (
           <TouchableOpacity activeOpacity={0.7}
             key={`${d.id}-${i}`}
-            style={[s.pill, activeDay === i && s.pillActive]}
+            style={[s.pill, s.pillFlex, activeDay === i && s.pillActive]}
             onPress={() => setActiveDay(i)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeDay === i }}
+            accessibilityLabel={`Day ${i + 1}, ${d.name}`}
           >
-            <Text style={[s.pillTxt, activeDay === i && s.pillTxtActive]}>Day {i + 1}</Text>
-            <Text style={[s.pillSub, activeDay === i && s.pillSubActive]}>{d.name}</Text>
+            <Text style={[s.pillTxt, activeDay === i && s.pillTxtActive]} numberOfLines={1}>Day {i + 1}</Text>
+            <Text style={[s.pillSub, activeDay === i && s.pillSubActive]} numberOfLines={1}>{d.name}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
         <View style={s.dayHeader}>
@@ -249,6 +252,8 @@ const s = themed(() => StyleSheet.create({
   routineLink: { fontSize: 11.5, color: colors.mid, fontWeight: '600' },
 
   // 가로 스크롤러: ScrollView 기본값이 flexShrink:1 이라 형제에 눌려 잘린다
+  pillRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 14 },
+  pillFlex: { flex: 1, minWidth: 0, paddingHorizontal: 4, alignItems: 'center' },
   pillScroll: { flexGrow: 0, flexShrink: 0 },
   pillContent: { paddingHorizontal: 16, paddingBottom: 14, gap: 8, flexDirection: 'row' },
   pill: {

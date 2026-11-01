@@ -151,7 +151,7 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 ## 구독 · 결제 · 대기자 (2026-10-26)
 
 - **요금**: 프리미엄 월 ₩9,900 하나(`mt_pro_monthly`). 앱에 스토어 결제가 열리면 **스토어 무료 체험**(상품의 도입 혜택, 카드 등록 후
-  자동 결제 — 버튼 "1개월 무료로 시작하기")을 쓰고, 카드 없는 서버 체험 30일(`TRIAL_DAYS` 앱 · 서버 두 곳)은 결제가 없는 곳(웹 · 키 전)에만.
+  자동 결제 — 버튼 "7일 무료로 시작하기", 스토어 도입 혜택을 1주로)을 쓰고, 카드 없는 서버 체험 7일(`TRIAL_DAYS` 앱 · 서버 두 곳)은 결제가 없는 곳(웹 · 키 전)에만.
   구독 관리 · 해지는 MY 탭 · 구독 화면에서 스토어 구독 화면으로 보낸다(`manageSubscriptionUrl`).
 - **스토어 결제 = RevenueCat** (`react-native-purchases`, 1.0.0 빌드부터 네이티브에 포함). 앱 `src/services/storeIap.native.ts`
   (웹은 `storeIap.ts` 빈 자리), 공개 SDK 키는 `src/config/revenuecat.ts` — **비어 있으면 가격표 · 구매 · 복원이 숨는다**.

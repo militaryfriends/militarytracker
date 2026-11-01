@@ -60,11 +60,27 @@ export function nextDayIdx(logs: WorkoutLog[], plan: Plan | null): number {
 const emptyVolume = (): PartVolume =>
   PART_ORDER.reduce((acc, p) => ({ ...acc, [p]: 0 }), {} as PartVolume);
 
-export function setsByPart(logs: WorkoutLog[], opts: { weekOnly?: boolean } = {}): PartVolume {
+/** weekOnly = 이번 주 월~일, lastWeek = 지난주 월~일(주간 리포트의 "지난주 대비") */
+type WeekOpts = { weekOnly?: boolean; lastWeek?: boolean };
+function weekFilter(opts: WeekOpts): ((date: string) => boolean) {
+  if (opts.lastWeek) {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    const w = new Set(weekDates(d));
+    return (date) => w.has(date);
+  }
+  if (opts.weekOnly) {
+    const w = new Set(weekDates());
+    return (date) => w.has(date);
+  }
+  return () => true;
+}
+
+export function setsByPart(logs: WorkoutLog[], opts: WeekOpts = {}): PartVolume {
   const acc = emptyVolume();
-  const week = new Set(weekDates());
+  const inWeek = weekFilter(opts);
   logs.forEach((l) => {
-    if (opts.weekOnly && !week.has(l.date)) return;
+    if (!inWeek(l.date)) return;
     l.exercises.forEach((x) => {
       const e = exById(x.id);
       if (!e) return;
@@ -80,14 +96,14 @@ export function weakestPart(vol: PartVolume): Part | null {
   return entries.reduce((a, b) => (a[1] <= b[1] ? a : b))[0];
 }
 
-export function totalSets(logs: WorkoutLog[], opts: { weekOnly?: boolean } = {}): number {
-  const week = new Set(weekDates());
-  return logs.filter((l) => !opts.weekOnly || week.has(l.date)).reduce((a, l) => a + l.totalSets, 0);
+export function totalSets(logs: WorkoutLog[], opts: WeekOpts = {}): number {
+  const inWeek = weekFilter(opts);
+  return logs.filter((l) => inWeek(l.date)).reduce((a, l) => a + l.totalSets, 0);
 }
 
-export function totalVolume(logs: WorkoutLog[], opts: { weekOnly?: boolean } = {}): number {
-  const week = new Set(weekDates());
-  return logs.filter((l) => !opts.weekOnly || week.has(l.date)).reduce((a, l) => a + l.totalVolume, 0);
+export function totalVolume(logs: WorkoutLog[], opts: WeekOpts = {}): number {
+  const inWeek = weekFilter(opts);
+  return logs.filter((l) => inWeek(l.date)).reduce((a, l) => a + l.totalVolume, 0);
 }
 
 // ─── 종목별 기록 ───────────────────────────────────────────────────────────

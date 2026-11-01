@@ -180,7 +180,7 @@ export default function ProjectsScreen() {
         })()}
 
         <TouchableOpacity onPress={() => router.push(redo ? '/project/compare?redo=1' : '/project/compare')} style={s.again} accessibilityRole="button">
-          <Text style={s.againTxt}>지금 몸 vs 목표 몸 다시 보기</Text>
+          <Text style={s.againTxt}>지금 내 몸 다시 보기</Text>
         </TouchableOpacity>
       </ScrollView>
 

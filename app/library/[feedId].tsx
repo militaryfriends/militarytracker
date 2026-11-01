@@ -1,9 +1,9 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, EmptyState, useSafeBack } from '../../src/components/ui';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
-import { feedById } from '../../src/data/feed';
+import { coverExId, feedById } from '../../src/data/feed';
 import { exByIds, PART_LABEL } from '../../src/data/exercises';
 
 export default function LibraryDetailScreen() {
@@ -29,7 +29,7 @@ export default function LibraryDetailScreen() {
       <TopBar title={item.n} meta={item.cnt} onBack={goBack} />
       <Body style={{ paddingHorizontal: 0 }}>
         <View style={s.hero}>
-          <Image source={item.img} style={s.heroImg} resizeMode="cover" />
+          <ExerciseMedia exId={coverExId(item)} rounded={0} dim={0} style={s.heroImg} />
           <View style={s.heroDim} />
           <View style={s.heroMeta}>
             <Text style={s.heroPart}>{item.part}</Text>
