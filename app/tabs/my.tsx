@@ -6,6 +6,7 @@ import {
   TextInput, KeyboardAvoidingView, Platform, Switch,
   Linking,
 } from 'react-native';
+import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref } from '../../src/theme';
@@ -52,9 +53,9 @@ export default function MyScreen() {
   const canCoach = can('ai_coach');
   const [weightInput, setWeightInput] = useState('');
   // MY 맨 위 '체중 기록' 버튼 → 아래 체중 칸으로
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const weightY = useRef(0);
-  const weightRef = useRef<TextInput>(null);
+  const weightRef = useRef<TextInputInstance>(null);
   const goWeigh = () => {
     scrollRef.current?.scrollTo({ y: Math.max(0, weightY.current - 12), animated: true });
     setTimeout(() => weightRef.current?.focus(), 350);

@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList,
   Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Keyboard,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../theme';
 import { showAlert } from '../utils/alert';
@@ -63,7 +64,7 @@ export default function SessionPlayer() {
     return () => { a.remove(); b.remove(); };
   }, []);
   // 무게 → 횟수 → 다음 세트 무게로 키보드 '다음' 이 이동하도록
-  const inputRefs = useRef<Record<string, TextInput | null>>({});
+  const inputRefs = useRef<Record<string, TextInputInstance | null>>({});
 
   // 원형 휴식 타이머의 전체 길이 — 휴식이 시작될 때(+15초로 늘리면 그만큼) 잡는다
   const restTotal = useRef(0);

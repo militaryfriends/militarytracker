@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { Pressable, View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 import Animated, {
   interpolateColor, useAnimatedProps, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming,
 } from 'react-native-reanimated';
@@ -29,7 +30,7 @@ export function CheckBox({
   const on = colors.accent;
   const off = colors.line2;
   const mark = colors.onAccent;
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
   const v = useSharedValue(checked ? 1 : 0);
   const pop = useSharedValue(1);
   useEffect(() => {

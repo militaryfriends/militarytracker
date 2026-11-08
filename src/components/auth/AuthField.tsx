@@ -4,6 +4,7 @@
  */
 import { forwardRef, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { D, FIELD } from './palette';
@@ -14,7 +15,7 @@ type Props = Omit<TextInputProps, 'style' | 'placeholder' | 'secureTextEntry'> &
   secure?: boolean;
 };
 
-export const AuthField = forwardRef<TextInput, Props>(function AuthField(
+export const AuthField = forwardRef<TextInputInstance, Props>(function AuthField(
   { label, value, error = false, secure = false, onFocus, onBlur, ...rest },
   ref
 ) {

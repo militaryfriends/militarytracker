@@ -17,6 +17,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
   type LayoutChangeEvent, type StyleProp, type TextInput, type ViewStyle,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -88,7 +89,7 @@ export default function LoginScreen() {
   const [T, setT] = useState<Timeline>(init.T);
   const startAt = init.at;
   const [ready, setReady] = useState(startAt >= init.T.up.d);
-  const pwRef = useRef<TextInput>(null);
+  const pwRef = useRef<TextInputInstance>(null);
 
   const clock = useSharedValue(startAt);
   const shake = useSharedValue(0);

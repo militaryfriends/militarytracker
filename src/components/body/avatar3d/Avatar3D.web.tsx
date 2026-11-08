@@ -6,6 +6,7 @@
 import { useThemeMode } from '../../../theme/tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import type { Coord, Sex } from '../../../utils/bodyComp';
 import { coordKey } from './morph';
@@ -68,7 +69,7 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
   intro?: boolean;
   fallback: ReactNode;
 }) {
-  const host = useRef<View>(null);
+  const host = useRef<ViewInstance>(null);
   const reduce = useReducedMotion();
   const viewer = useRef<Viewer | null>(null);
   const coordRef = useRef(coord);

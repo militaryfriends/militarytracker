@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { colors, useThemeMode } from '../../theme';
 import type { FocusPart, UserProfile } from '../../types';
 import { Opt, StepHead, type Update } from './basicSteps';
@@ -28,7 +29,7 @@ export function StepNumber({
   unit: string; placeholder: string; decimal?: boolean; error?: string | null; onSubmit: () => void;
 }) {
   useThemeMode();
-  const ref = useRef<TextInput>(null);
+  const ref = useRef<TextInputInstance>(null);
   // 단계가 바뀌어 다시 그려질 때도 키패드를 띄운다
   useEffect(() => {
     const t = setTimeout(() => ref.current?.focus(), 250);

@@ -1,6 +1,6 @@
 # MilitaryTracker — 작업 메모
 
-Expo SDK 57 · React Native 0.86 · expo-router · TypeScript(strict) · Zustand · Firebase
+Expo SDK 58 · React Native 0.88 · expo-router · TypeScript(strict) · Zustand · Firebase
 
 ## 검증
 
@@ -126,6 +126,12 @@ VM 은 연결 폴더에서 파일을 지울 수 없어 git 이 `.lock` 파일을
   로 맞춘 뒤 `firebase_get_environment` 로 확인한다(두 값을 한 호출에 바꾸면 다른 폴더에 이 프로젝트가 남은 적이 있다).
   기본 환경은 smiscamp(2026-10-26 부터 — SMIS Mentor 이관 후 메인). 예전 기본값 smis-mentor 로 되돌리지 말 것.
 - `firebase.json` hosting 의 `site` 는 지우지 말 것 — 없으면 MCP 배포가 "no site name" 으로 실패한다.
+
+## Expo Go (SDK 58, 2026-11-08)
+
+- `npx expo start --go` 로 휴대폰 Expo Go(SDK 58)에서 연다. 3D(expo-gl)도 Expo Go 에 들어 있어 그대로 보인다.
+  RevenueCat 은 Expo Go 에서 미리보기 모드(구매 · 복원 안 됨) — 결제 확인은 개발 빌드(`eas build --profile development`) · TestFlight.
+- RN 0.88: ref 타입은 `TextInputInstance` · `ScrollViewInstance` · `ViewInstance`(`useRef<TextInput>` 은 타입 오류), `InteractionManager` 없음.
 
 ## 앱 코드 푸시 (EAS Update, 스토어 첫 빌드 1.0.0 부터)
 

@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  InteractionManager, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
+  KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -85,8 +85,9 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
   const warm = idx >= path.indexOf('body');
   useEffect(() => {
     if (!warm || !sex) return;
-    const t = InteractionManager.runAfterInteractions(() => preload3D(sex));
-    return () => t.cancel();
+    // RN 0.88 에서 InteractionManager 가 빠졌다 — 화면 전환 애니메이션(약 350ms)이 끝난 뒤에
+    const t = setTimeout(() => preload3D(sex), 450);
+    return () => clearTimeout(t);
   }, [warm, sex]);
 
   const accuracy = useMemo(() => draftAccuracy(d), [d]);

@@ -6,6 +6,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View,
   type TextInput,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -34,9 +35,9 @@ export default function SignupScreen() {
   // 건강(신체) 정보는 민감정보라 별도 동의가 필요하다 — 셋 다 필수
   const [agree, setAgree] = useState({ terms: false, privacy: false, health: false });
   const allAgreed = agree.terms && agree.privacy && agree.health;
-  const emailRef = useRef<TextInput>(null);
-  const pwRef = useRef<TextInput>(null);
-  const pw2Ref = useRef<TextInput>(null);
+  const emailRef = useRef<TextInputInstance>(null);
+  const pwRef = useRef<TextInputInstance>(null);
+  const pw2Ref = useRef<TextInputInstance>(null);
 
   async function handleSignup() {
     if (!displayName.trim() || !email.trim() || !password || !confirmPassword) {
