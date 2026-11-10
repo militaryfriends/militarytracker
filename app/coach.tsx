@@ -19,8 +19,8 @@ import { MealCard, WarningCard } from '../src/components/CoachCards';
 import { useAppStore } from '../src/stores/appStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useEntitlement } from '../src/hooks/useEntitlement';
-import { PART_LABEL, PART_ORDER, exById } from '../src/data/exercises';
-import { calcBodyStats, goalLabel } from '../src/utils/body';
+import { LEVEL_LABEL, PART_LABEL, PART_ORDER, exById } from '../src/data/exercises';
+import { calcBodyStats, FOOD_LABEL, goalLabel } from '../src/utils/body';
 import { setsByPart } from '../src/utils/stats';
 import {
   askCoach, AIUnavailable, SubscriptionRequired, QuotaExceeded, CoachQuota, CoachMessage,
@@ -75,6 +75,8 @@ export default function CoachScreen() {
     return [
       `사용자: ${profile?.sex === 'male' ? '남' : '여'} ${profile?.age ?? '-'}세, ${profile?.height ?? '-'}cm/${profile?.weight ?? '-'}kg, ${body}`,
       `목표: ${profile ? goalLabel(profile) : '-'}`,
+      ...(profile ? [`환경: ${profile.env === 'home' ? '집(홈트)' : '헬스장'}, 주 ${profile.days}회, 경력 ${LEVEL_LABEL[profile.level]}, `
+        + `식사 ${FOOD_LABEL[profile.food]}, 알레르기 · 못 먹는 음식 ${profile.allergy?.trim() || '없음'}`] : []),
       `현재 플랜: ${planTxt}`,
       `최근 기록: ${logTxt}`,
       `이번 주 부위별 세트: ${PART_ORDER.map((p) => `${PART_LABEL[p]} ${vol[p]}`).join(', ')}`,
@@ -100,11 +102,17 @@ export default function CoachScreen() {
     setChatBusy(true);
     try {
       const st = calcBodyStats(profile, weights, bodyProject);
-      const { reply, meal, warning, cheer, quota: next } = await askCoach(
-        [...chat, { role: 'user', content: text }], context(), st?.kcal,
+      // 최근 기록의 종목 이름표 — 서버가 "기록 갱신" 을 이름으로 말하게
+      const exNames: Record<string, string> = {};
+      for (const l of logs.slice(0, 12)) for (const e of l.exercises) {
+        const n = exById(e.id)?.n;
+        if (n) exNames[e.id] = n;
+      }
+      const { reply, meal, warning, cheer, next, quota: q } = await askCoach(
+        [...chat, { role: 'user', content: text }], context(), st?.kcal, exNames,
       );
-      addChat({ role: 'assistant', content: reply, meal, warning, cheer });
-      if (next) setQuota(next);
+      addChat({ role: 'assistant', content: reply, meal, warning, cheer, next });
+      if (q) setQuota(q);
     } catch (e) {
       if (e instanceof SubscriptionRequired) {
         router.push('/subscribe?f=ai_coach');
@@ -176,6 +184,12 @@ export default function CoachScreen() {
                   <View style={s.msgA}><Text style={s.msgATxt}>{item.content}</Text></View>
                   {item.meal ? <MealCard meal={item.meal} /> : null}
                   {item.warning ? <WarningCard text={item.warning} /> : null}
+                  {item.next ? (
+                    <View style={s.next} accessibilityLabel={`다음 행동: ${item.next}`}>
+                      <Text style={s.nextLbl}>다음 행동</Text>
+                      <Text style={s.nextTxt}>{item.next}</Text>
+                    </View>
+                  ) : null}
                   {item.cheer ? <Text style={s.cheer}>{item.cheer}</Text> : null}
                 </View>
               )
@@ -246,6 +260,13 @@ const s = themed(() => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10,
   },
   msgATxt: { color: colors.ink, fontSize: 14, lineHeight: 22 },
+  next: {
+    alignSelf: 'flex-start', maxWidth: '88%', marginTop: 8,
+    borderWidth: 1, borderColor: colors.line2, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9, gap: 2,
+  },
+  nextLbl: { fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.3 },
+  nextTxt: { fontSize: 14, fontWeight: '700', color: colors.ink, lineHeight: 20 },
   cheer: { color: colors.mid, fontSize: 13, fontWeight: '700', marginTop: 8, marginLeft: 4, lineHeight: 19 },
   inRow: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-end',

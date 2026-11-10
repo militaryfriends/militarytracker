@@ -271,6 +271,8 @@ export interface CoachMessage {
   warning?: string | null;
   /** 동기부여 한 줄 — 카드들 아래 마지막 */
   cheer?: string | null;
+  /** 다음 행동 한 가지 (서버 코치 2026-11-11~) */
+  next?: string | null;
 }
 
 /** 남은 코치 대화 횟수 — 서버가 계산해서 내려 준다 (앱은 표시만) */
@@ -286,6 +288,7 @@ export interface CoachReply {
   meal?: CoachMeal | null;
   warning?: string | null;
   cheer?: string | null;
+  next?: string | null;
   quota?: CoachQuota;
 }
 
@@ -298,6 +301,7 @@ const toWire = (m: CoachMessage) => ({
     m.content,
     m.meal ? `[제안한 ${m.meal.t}: ${m.meal.items.map(fmtQ).join(', ')} · ${m.meal.kcal}kcal]` : '',
     m.warning ? `[경고: ${m.warning}]` : '',
+    m.next ? `[다음 행동으로 제안: ${m.next}]` : '',
   ].filter(Boolean).join('\n'),
 });
 
@@ -305,12 +309,14 @@ export async function askCoach(
   messages: CoachMessage[],
   context: string,
   dayKcal?: number,
+  /** 최근 운동 종목 id → 이름 — 서버의 기록 갱신 신호 이름표 */
+  exNames?: Record<string, string>,
 ): Promise<CoachReply> {
   try {
     const call = httpsCallable(functions, 'aiCoach', { timeout: CALL_TIMEOUT_MS });
-    const res = await call({ messages: messages.slice(-20).map(toWire), context, dayKcal });
+    const res = await call({ messages: messages.slice(-20).map(toWire), context, dayKcal, exNames });
     const d = res.data as CoachReply;
-    if (d?.reply) return { reply: d.reply, meal: d.meal ?? null, warning: d.warning ?? null, cheer: d.cheer ?? null, quota: d.quota };
+    if (d?.reply) return { reply: d.reply, meal: d.meal ?? null, warning: d.warning ?? null, cheer: d.cheer ?? null, next: d.next ?? null, quota: d.quota };
     throw new AIUnavailable();
   } catch (e) {
     const need = asSubRequired(e);

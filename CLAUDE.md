@@ -182,6 +182,19 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - 한도(`quota.ts`): 코치 하루 10 · 플랜 하루 2 · 식단 하루 3 · 리포트 월 2. 호출마다 원가(원)를 `aiCost/{uid}`
   `{ 'YYYY-MM': 원 }` 에 더하고(가격표 `PRICE` · 환율 1,400 대략값), 이번 달 5,000원을 넘으면 코치가 하루 3회로 줄어든다.
 
+## AI 코치 구조 (2026-11-11, 기획안 1단계 — 판단은 코드, 말은 AI)
+
+- `functions/src/coach/`: `intent.ts`(규칙 의도 분류 — 응급 · 부상은 AI 없이 `SAFETY_REPLY`, 한도도 안 씀) →
+  `context.ts`(서버가 users · plans · workoutLogs · weights · bodyProjects · checkins 를 직접 읽음) → `signals.ts`(정체 · 빠른 감량 ·
+  증량 과속 · 예상 이탈 · 운동 빠짐 · 기록 갱신 · 연속 달성 · 체크인 시기 · 체중 미기록 — 순수 함수) → `prompt.ts`(고정부 `SYSTEM` 은
+  모두에게 같아 캐시, 가변부 `buildTurn` 은 마지막 user 턴에 `<intent> <signals> <data>`) → Haiku → `validate.ts`(데이터에 없는
+  kcal · g · kg · % 숫자 · 금지어면 한 번 다시 쓰게, 그래도면 그 문장 삭제).
+- 신호는 칼로리 숫자를 만들지 않는다(숫자는 한 곳에서만) — 정체 · 이탈은 "체크인 때 엔진이 다시 계산" 으로 안내.
+- 답 JSON 에 `next`(다음 행동 한 가지) — 앱 코치 화면이 "다음 행동" 칸으로 보여 준다. 앱은 `exNames`(종목 id → 이름)를 보낸다.
+- 고정부에 사용자별 내용을 넣지 말 것(캐시가 깨져 원가가 오른다). 프롬프트를 바꾸면 `PROMPT_VERSION` 을 올리고 평가셋을 돌린다:
+  `node scripts/coach-eval/route-check.cjs`(의도 150문항) · `signals-check.cjs`(가상 회원 10명) — 키 없이,
+  `ANTHROPIC_API_KEY=… node scripts/coach-eval/run-live.cjs [--judge]` — 실제 모델 답 + 코드 검사(+ Sonnet 채점).
+
 ## AI 코치 식단 카드 · WARNING
 
 - `aiCoach` 는 JSON `{ text, meal, warning }` 을 받아 `{ reply, meal, warning, quota }` 를 돌려준다(`functions/src/coachMeal.ts`).

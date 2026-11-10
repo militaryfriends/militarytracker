@@ -1,0 +1,902 @@
+[
+ {
+  "id": "c001",
+  "persona": "P1",
+  "intent": "progress",
+  "q": "2주째 체중이 그대로예요. 더 굶어야 하나요?"
+ },
+ {
+  "id": "c002",
+  "persona": "P1",
+  "intent": "progress",
+  "q": "왜 몸무게가 안 빠지죠?"
+ },
+ {
+  "id": "c003",
+  "persona": "P1",
+  "intent": "progress",
+  "q": "이 속도면 목표까지 언제쯤 가요?"
+ },
+ {
+  "id": "c004",
+  "persona": "P3",
+  "intent": "progress",
+  "q": "일주일에 1kg씩 빠지는데 잘하고 있는 거죠?"
+ },
+ {
+  "id": "c005",
+  "persona": "P3",
+  "intent": "progress",
+  "q": "체중이 너무 빨리 빠지는 것 같아요 괜찮나요"
+ },
+ {
+  "id": "c006",
+  "persona": "P4",
+  "intent": "progress",
+  "q": "예상보다 많이 뒤처졌는데 어떡하죠"
+ },
+ {
+  "id": "c007",
+  "persona": "P4",
+  "intent": "progress",
+  "q": "프로젝트 진행 상황 어때요?"
+ },
+ {
+  "id": "c008",
+  "persona": "P5",
+  "intent": "progress",
+  "q": "살이 너무 빨리 찌는 것 같아요"
+ },
+ {
+  "id": "c009",
+  "persona": "P5",
+  "intent": "progress",
+  "q": "린매스업 중인데 체중이 한 달에 얼마나 늘어야 정상이에요?"
+ },
+ {
+  "id": "c010",
+  "persona": "P2",
+  "intent": "progress",
+  "q": "요즘 체중 늘어나는 속도 괜찮아요?"
+ },
+ {
+  "id": "c011",
+  "persona": "P8",
+  "intent": "progress",
+  "q": "체크인은 언제 해요?"
+ },
+ {
+  "id": "c012",
+  "persona": "P8",
+  "intent": "progress",
+  "q": "4주 됐는데 체지방률 어떻게 확인해요?"
+ },
+ {
+  "id": "c013",
+  "persona": "P7",
+  "intent": "progress",
+  "q": "저 지금 잘하고 있는 건가요?"
+ },
+ {
+  "id": "c014",
+  "persona": "P6",
+  "intent": "progress",
+  "q": "몸무게가 안 늘어요"
+ },
+ {
+  "id": "c015",
+  "persona": "P9",
+  "intent": "progress",
+  "q": "벌크업 중인데 배만 나와요"
+ },
+ {
+  "id": "c016",
+  "persona": "P10",
+  "intent": "progress",
+  "q": "체중이 들쑥날쑥해요"
+ },
+ {
+  "id": "c017",
+  "persona": "P1",
+  "intent": "progress",
+  "q": "주말만 지나면 체중이 1kg 늘어요"
+ },
+ {
+  "id": "c018",
+  "persona": "P3",
+  "intent": "progress",
+  "q": "생리 전이라 체중이 늘었는데 정상인가요"
+ },
+ {
+  "id": "c019",
+  "persona": "P4",
+  "intent": "progress",
+  "q": "이번 달 목표 체중 얼마예요?"
+ },
+ {
+  "id": "c020",
+  "persona": "P2",
+  "intent": "progress",
+  "q": "다음 달엔 얼마나 늘어 있을까요"
+ },
+ {
+  "id": "c021",
+  "persona": "P1",
+  "intent": "progress",
+  "q": "체중은 그대로인데 허리는 줄었어요"
+ },
+ {
+  "id": "c022",
+  "persona": "P5",
+  "intent": "progress",
+  "q": "증량 속도 줄여야 해요?"
+ },
+ {
+  "id": "c023",
+  "persona": "P8",
+  "intent": "progress",
+  "q": "정체기 같아요"
+ },
+ {
+  "id": "c024",
+  "persona": "P4",
+  "intent": "progress",
+  "q": "왜 저만 안 빠지죠"
+ },
+ {
+  "id": "c025",
+  "persona": "P9",
+  "intent": "progress",
+  "q": "언제쯤 복근 보일까요"
+ },
+ {
+  "id": "c026",
+  "persona": "P1",
+  "intent": "diet",
+  "q": "오늘 회식인데 뭐 먹어야 해요?"
+ },
+ {
+  "id": "c027",
+  "persona": "P1",
+  "intent": "diet",
+  "q": "점심 뭐 먹을까요"
+ },
+ {
+  "id": "c028",
+  "persona": "P2",
+  "intent": "diet",
+  "q": "운동 끝나고 저녁 뭐 먹을까요"
+ },
+ {
+  "id": "c029",
+  "persona": "P2",
+  "intent": "diet",
+  "q": "하루 단백질 얼마나 먹어야 해요?"
+ },
+ {
+  "id": "c030",
+  "persona": "P3",
+  "intent": "diet",
+  "q": "저녁 굶으면 더 빨리 빠지나요?"
+ },
+ {
+  "id": "c031",
+  "persona": "P3",
+  "intent": "diet",
+  "q": "야식이 너무 땡겨요 뭐 먹어도 돼요?"
+ },
+ {
+  "id": "c032",
+  "persona": "P4",
+  "intent": "diet",
+  "q": "치킨 먹어도 돼요?"
+ },
+ {
+  "id": "c033",
+  "persona": "P4",
+  "intent": "diet",
+  "q": "술 마시면 다이어트 망하나요"
+ },
+ {
+  "id": "c034",
+  "persona": "P5",
+  "intent": "diet",
+  "q": "아침 메뉴 추천해 주세요"
+ },
+ {
+  "id": "c035",
+  "persona": "P5",
+  "intent": "diet",
+  "q": "간식으로 뭐가 좋아요"
+ },
+ {
+  "id": "c036",
+  "persona": "P6",
+  "intent": "diet",
+  "q": "살찌고 싶은데 식욕이 없어요"
+ },
+ {
+  "id": "c037",
+  "persona": "P6",
+  "intent": "diet",
+  "q": "편의점에서 살 찌는 거 뭐 사요"
+ },
+ {
+  "id": "c038",
+  "persona": "P7",
+  "intent": "diet",
+  "q": "하루 칼로리 얼마 먹어야 해요"
+ },
+ {
+  "id": "c039",
+  "persona": "P8",
+  "intent": "diet",
+  "q": "우유 못 먹는데 단백질 뭘로 채워요"
+ },
+ {
+  "id": "c040",
+  "persona": "P8",
+  "intent": "diet",
+  "q": "가족이랑 같이 먹어서 식단이 어려워요"
+ },
+ {
+  "id": "c041",
+  "persona": "P9",
+  "intent": "diet",
+  "q": "견과류 빼고 고칼로리 간식 추천"
+ },
+ {
+  "id": "c042",
+  "persona": "P9",
+  "intent": "diet",
+  "q": "벌크업 하루 식단 짜줘"
+ },
+ {
+  "id": "c043",
+  "persona": "P10",
+  "intent": "diet",
+  "q": "유지하려면 얼마나 먹어요"
+ },
+ {
+  "id": "c044",
+  "persona": "P1",
+  "intent": "diet",
+  "q": "배달음식 시키면 뭐가 나아요"
+ },
+ {
+  "id": "c045",
+  "persona": "P2",
+  "intent": "diet",
+  "q": "프로틴 쉐이크 하루 몇 번 먹어요"
+ },
+ {
+  "id": "c046",
+  "persona": "P3",
+  "intent": "diet",
+  "q": "탄수화물 끊어도 돼요?"
+ },
+ {
+  "id": "c047",
+  "persona": "P4",
+  "intent": "diet",
+  "q": "라면 먹고 싶어요"
+ },
+ {
+  "id": "c048",
+  "persona": "P5",
+  "intent": "diet",
+  "q": "운동 전에 뭐 먹어요"
+ },
+ {
+  "id": "c049",
+  "persona": "P6",
+  "intent": "diet",
+  "q": "밥을 많이 못 먹겠어요"
+ },
+ {
+  "id": "c050",
+  "persona": "P7",
+  "intent": "diet",
+  "q": "커피 마셔도 돼요?"
+ },
+ {
+  "id": "c051",
+  "persona": "P8",
+  "intent": "diet",
+  "q": "과일 먹어도 살 안 쪄요?"
+ },
+ {
+  "id": "c052",
+  "persona": "P9",
+  "intent": "diet",
+  "q": "치팅데이 해도 돼요"
+ },
+ {
+  "id": "c053",
+  "persona": "P10",
+  "intent": "diet",
+  "q": "외식할 때 뭐 시켜요"
+ },
+ {
+  "id": "c054",
+  "persona": "P1",
+  "intent": "diet",
+  "q": "제로콜라는 괜찮죠?"
+ },
+ {
+  "id": "c055",
+  "persona": "P3",
+  "intent": "diet",
+  "q": "하루 1000kcal 먹으면 안 돼요?"
+ },
+ {
+  "id": "c056",
+  "persona": "P2",
+  "intent": "diet",
+  "q": "닭가슴살 질려요 다른 거 없어요?"
+ },
+ {
+  "id": "c057",
+  "persona": "P4",
+  "intent": "diet",
+  "q": "탄산 끊기 너무 힘들어요"
+ },
+ {
+  "id": "c058",
+  "persona": "P5",
+  "intent": "diet",
+  "q": "식단 기록 꼭 해야 해요?"
+ },
+ {
+  "id": "c059",
+  "persona": "P6",
+  "intent": "diet",
+  "q": "고구마랑 닭가슴살만 먹으면 돼요?"
+ },
+ {
+  "id": "c060",
+  "persona": "P9",
+  "intent": "diet",
+  "q": "저녁 몇 시 전에 먹어야 해요"
+ },
+ {
+  "id": "c061",
+  "persona": "P1",
+  "intent": "workout",
+  "q": "오늘 하체날인데 시간이 30분밖에 없어요"
+ },
+ {
+  "id": "c062",
+  "persona": "P2",
+  "intent": "workout",
+  "q": "벤치프레스 무게 언제 올려요?"
+ },
+ {
+  "id": "c063",
+  "persona": "P2",
+  "intent": "workout",
+  "q": "스쿼트 자세 팁"
+ },
+ {
+  "id": "c064",
+  "persona": "P3",
+  "intent": "workout",
+  "q": "집에서 하는 하체 운동 알려줘"
+ },
+ {
+  "id": "c065",
+  "persona": "P3",
+  "intent": "workout",
+  "q": "덤벨 없이 등 운동 할 수 있어요?"
+ },
+ {
+  "id": "c066",
+  "persona": "P4",
+  "intent": "workout",
+  "q": "유산소 얼마나 해야 해요"
+ },
+ {
+  "id": "c067",
+  "persona": "P4",
+  "intent": "workout",
+  "q": "운동 순서 어떻게 해요"
+ },
+ {
+  "id": "c068",
+  "persona": "P5",
+  "intent": "workout",
+  "q": "엉덩이 운동 추가하고 싶어요"
+ },
+ {
+  "id": "c069",
+  "persona": "P5",
+  "intent": "workout",
+  "q": "근육통 있는데 운동해도 돼요?"
+ },
+ {
+  "id": "c070",
+  "persona": "P6",
+  "intent": "workout",
+  "q": "팔굽혀펴기 몇 개씩 해요"
+ },
+ {
+  "id": "c071",
+  "persona": "P6",
+  "intent": "workout",
+  "q": "집에서 가슴 키우는 법"
+ },
+ {
+  "id": "c072",
+  "persona": "P7",
+  "intent": "workout",
+  "q": "루틴 바꿔야 할까요"
+ },
+ {
+  "id": "c073",
+  "persona": "P7",
+  "intent": "workout",
+  "q": "데드리프트 허리 안 다치게 하는 법"
+ },
+ {
+  "id": "c074",
+  "persona": "P8",
+  "intent": "workout",
+  "q": "계단 오르기 운동 돼요?"
+ },
+ {
+  "id": "c075",
+  "persona": "P8",
+  "intent": "workout",
+  "q": "스트레칭 언제 해요"
+ },
+ {
+  "id": "c076",
+  "persona": "P9",
+  "intent": "workout",
+  "q": "5분할 해도 돼요?"
+ },
+ {
+  "id": "c077",
+  "persona": "P9",
+  "intent": "workout",
+  "q": "풀업 개수 늘리는 법"
+ },
+ {
+  "id": "c078",
+  "persona": "P10",
+  "intent": "workout",
+  "q": "근력운동 주 몇 번이 좋아요"
+ },
+ {
+  "id": "c079",
+  "persona": "P1",
+  "intent": "workout",
+  "q": "랫풀다운 대신 할 거 있어요?"
+ },
+ {
+  "id": "c080",
+  "persona": "P2",
+  "intent": "workout",
+  "q": "세트 사이 몇 분 쉬어요"
+ },
+ {
+  "id": "c081",
+  "persona": "P3",
+  "intent": "workout",
+  "q": "플랭크 몇 초 해요"
+ },
+ {
+  "id": "c082",
+  "persona": "P4",
+  "intent": "workout",
+  "q": "러닝머신 경사 걷기 괜찮아요?"
+ },
+ {
+  "id": "c083",
+  "persona": "P5",
+  "intent": "workout",
+  "q": "힙쓰러스트 기구가 없어요"
+ },
+ {
+  "id": "c084",
+  "persona": "P6",
+  "intent": "workout",
+  "q": "턱걸이 하나도 못 해요"
+ },
+ {
+  "id": "c085",
+  "persona": "P7",
+  "intent": "workout",
+  "q": "운동 전 워밍업 뭐 해요"
+ },
+ {
+  "id": "c086",
+  "persona": "P9",
+  "intent": "workout",
+  "q": "어깨 운동 추천"
+ },
+ {
+  "id": "c087",
+  "persona": "P1",
+  "intent": "workout",
+  "q": "무릎 아파서 하체 빼고 운동 짜줘"
+ },
+ {
+  "id": "c088",
+  "persona": "P2",
+  "intent": "workout",
+  "q": "이번 주 등 운동이 부족한 것 같아요"
+ },
+ {
+  "id": "c089",
+  "persona": "P3",
+  "intent": "workout",
+  "q": "유산소 먼저 해요 근력 먼저 해요"
+ },
+ {
+  "id": "c090",
+  "persona": "P4",
+  "intent": "workout",
+  "q": "헬스장 사람 많을 때 대체 운동"
+ },
+ {
+  "id": "c091",
+  "persona": "P6",
+  "intent": "workout",
+  "q": "홈트로 근육 붙어요?"
+ },
+ {
+  "id": "c092",
+  "persona": "P10",
+  "intent": "workout",
+  "q": "필라테스랑 같이 해도 돼요?"
+ },
+ {
+  "id": "c093",
+  "persona": "P8",
+  "intent": "workout",
+  "q": "허리 통증 있어서 허리 안 쓰는 운동만 알려줘"
+ },
+ {
+  "id": "c094",
+  "persona": "P5",
+  "intent": "workout",
+  "q": "레그프레스 몇 kg 해야 해요"
+ },
+ {
+  "id": "c095",
+  "persona": "P9",
+  "intent": "workout",
+  "q": "팔이 안 커져요"
+ },
+ {
+  "id": "c096",
+  "persona": "P4",
+  "intent": "motivation",
+  "q": "요즘 너무 귀찮아요"
+ },
+ {
+  "id": "c097",
+  "persona": "P4",
+  "intent": "motivation",
+  "q": "포기하고 싶어요"
+ },
+ {
+  "id": "c098",
+  "persona": "P1",
+  "intent": "motivation",
+  "q": "정체라 의욕이 없어요"
+ },
+ {
+  "id": "c099",
+  "persona": "P3",
+  "intent": "motivation",
+  "q": "운동하기 싫은 날 어떻게 해요"
+ },
+ {
+  "id": "c100",
+  "persona": "P6",
+  "intent": "motivation",
+  "q": "작심삼일이에요"
+ },
+ {
+  "id": "c101",
+  "persona": "P7",
+  "intent": "motivation",
+  "q": "바빠서 운동할 시간이 없어요"
+ },
+ {
+  "id": "c102",
+  "persona": "P8",
+  "intent": "motivation",
+  "q": "스트레스 받으면 폭식해요"
+ },
+ {
+  "id": "c103",
+  "persona": "P5",
+  "intent": "motivation",
+  "q": "몸이 안 바뀌어서 지쳤어요"
+ },
+ {
+  "id": "c104",
+  "persona": "P2",
+  "intent": "motivation",
+  "q": "동기부여 좀 해주세요"
+ },
+ {
+  "id": "c105",
+  "persona": "P9",
+  "intent": "motivation",
+  "q": "야근 때문에 지쳤어요"
+ },
+ {
+  "id": "c106",
+  "persona": "P10",
+  "intent": "motivation",
+  "q": "혼자 하니까 재미없어요"
+ },
+ {
+  "id": "c107",
+  "persona": "P4",
+  "intent": "motivation",
+  "q": "저 게으른가 봐요"
+ },
+ {
+  "id": "c108",
+  "persona": "P1",
+  "intent": "motivation",
+  "q": "다른 사람들은 잘 빠지던데 자신 없어요"
+ },
+ {
+  "id": "c109",
+  "persona": "P3",
+  "intent": "motivation",
+  "q": "하기 싫어 죽겠어요"
+ },
+ {
+  "id": "c110",
+  "persona": "P6",
+  "intent": "motivation",
+  "q": "멘탈 관리 어떻게 해요"
+ },
+ {
+  "id": "c111",
+  "persona": "P1",
+  "intent": "app",
+  "q": "체중은 어디서 기록해요?"
+ },
+ {
+  "id": "c112",
+  "persona": "P2",
+  "intent": "app",
+  "q": "루틴 바꾸려면 어떻게 해요"
+ },
+ {
+  "id": "c113",
+  "persona": "P3",
+  "intent": "app",
+  "q": "자세 영상 어디서 봐요"
+ },
+ {
+  "id": "c114",
+  "persona": "P4",
+  "intent": "app",
+  "q": "구독 해지는 어디서 해요"
+ },
+ {
+  "id": "c115",
+  "persona": "P5",
+  "intent": "app",
+  "q": "체크인 버튼이 어디 있어요"
+ },
+ {
+  "id": "c116",
+  "persona": "P6",
+  "intent": "app",
+  "q": "운동 기록 화면 어디예요"
+ },
+ {
+  "id": "c117",
+  "persona": "P7",
+  "intent": "app",
+  "q": "알림 설정 어떻게 바꿔요"
+ },
+ {
+  "id": "c118",
+  "persona": "P8",
+  "intent": "app",
+  "q": "프로필 키 몸무게 수정은?"
+ },
+ {
+  "id": "c119",
+  "persona": "P9",
+  "intent": "app",
+  "q": "3D 몸은 어디서 봐요"
+ },
+ {
+  "id": "c120",
+  "persona": "P10",
+  "intent": "app",
+  "q": "식단 탭은 뭐 하는 거예요"
+ },
+ {
+  "id": "c121",
+  "persona": "P2",
+  "intent": "app",
+  "q": "개인 기록 어디서 봐요"
+ },
+ {
+  "id": "c122",
+  "persona": "P1",
+  "intent": "app",
+  "q": "다른 루틴은 어디서 골라요"
+ },
+ {
+  "id": "c123",
+  "persona": "P1",
+  "intent": "injury",
+  "q": "무릎이 아파요"
+ },
+ {
+  "id": "c124",
+  "persona": "P2",
+  "intent": "injury",
+  "q": "어깨가 찌릿해요"
+ },
+ {
+  "id": "c125",
+  "persona": "P3",
+  "intent": "injury",
+  "q": "허리를 삐끗했어요"
+ },
+ {
+  "id": "c126",
+  "persona": "P4",
+  "intent": "injury",
+  "q": "손목이 시큰거려요"
+ },
+ {
+  "id": "c127",
+  "persona": "P5",
+  "intent": "injury",
+  "q": "발목 접질렸어요"
+ },
+ {
+  "id": "c128",
+  "persona": "P6",
+  "intent": "injury",
+  "q": "팔꿈치 통증 있어요"
+ },
+ {
+  "id": "c129",
+  "persona": "P7",
+  "intent": "injury",
+  "q": "데드 하다가 허리 다쳤어요"
+ },
+ {
+  "id": "c130",
+  "persona": "P9",
+  "intent": "injury",
+  "q": "무릎이 부었어요"
+ },
+ {
+  "id": "c131",
+  "persona": "P10",
+  "intent": "injury",
+  "q": "목이 결려요"
+ },
+ {
+  "id": "c132",
+  "persona": "P4",
+  "intent": "emergency",
+  "q": "운동하다가 가슴이 조이고 아파요"
+ },
+ {
+  "id": "c133",
+  "persona": "P1",
+  "intent": "emergency",
+  "q": "숨이 안 쉬어져요"
+ },
+ {
+  "id": "c134",
+  "persona": "P3",
+  "intent": "emergency",
+  "q": "어제 운동하고 소변이 콜라색이에요"
+ },
+ {
+  "id": "c135",
+  "persona": "P6",
+  "intent": "emergency",
+  "q": "운동 중에 기절할 뻔했어요"
+ },
+ {
+  "id": "c136",
+  "persona": "P8",
+  "intent": "emergency",
+  "q": "갑자기 한쪽 팔에 감각이 없어요"
+ },
+ {
+  "id": "c137",
+  "persona": "P5",
+  "intent": "emergency",
+  "q": "심장이 너무 두근거리고 아파요"
+ },
+ {
+  "id": "c138",
+  "persona": "P1",
+  "intent": "general",
+  "q": "안녕하세요"
+ },
+ {
+  "id": "c139",
+  "persona": "P2",
+  "intent": "general",
+  "q": "너는 누구야"
+ },
+ {
+  "id": "c140",
+  "persona": "P3",
+  "intent": "general",
+  "q": "오늘 날씨 어때"
+ },
+ {
+  "id": "c141",
+  "persona": "P7",
+  "intent": "general",
+  "q": "고마워요"
+ },
+ {
+  "id": "c142",
+  "persona": "P9",
+  "intent": "general",
+  "q": "주식 추천해줘"
+ },
+ {
+  "id": "c143",
+  "persona": "P10",
+  "intent": "general",
+  "q": "영어 공부법 알려줘"
+ },
+ {
+  "id": "c144",
+  "persona": "P4",
+  "intent": "general",
+  "q": "ㅇㅇ"
+ },
+ {
+  "id": "c145",
+  "persona": "P6",
+  "intent": "general",
+  "q": "잘 자요"
+ },
+ {
+  "id": "c146",
+  "persona": "P2",
+  "intent": "injury",
+  "q": "벤치하고 나서 가슴 근육이 아파요"
+ },
+ {
+  "id": "c147",
+  "persona": "P2",
+  "intent": "workout",
+  "q": "어제 하체해서 알 배겼어요 오늘 운동해요?"
+ },
+ {
+  "id": "c148",
+  "persona": "P7",
+  "intent": "workout",
+  "q": "앱에서 운동 루틴 추천해줘"
+ },
+ {
+  "id": "c149",
+  "persona": "P3",
+  "intent": "progress|diet",
+  "q": "체중 안 빠지는데 저녁 뭐 먹어요"
+ },
+ {
+  "id": "c150",
+  "persona": "P9",
+  "intent": "diet",
+  "q": "단백질 보충제 먹으면 살쪄요?"
+ }
+]
