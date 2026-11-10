@@ -128,7 +128,7 @@ export interface Nutrition {
 
 /**
  * Mifflin-St Jeor × 활동계수 — 앱의 모든 하루 칼로리(식단 탭 · 내 정보 · 코치 · 프로젝트 카드)가 이 함수 하나에서 나온다.
- * strategy 를 주면 그 카드의 속도: 감량 주 체중의 1% · 0.5%, 증량 유지 +300(린매스업) · +500(벌크업).
+ * strategy 를 주면 그 카드의 속도: 감량 주 체중의 1% · 0.5%, 증량은 gainSurplus(성별 · 경력에 따른 근육 속도에서 계산).
  * strategy 가 없으면 예전 값(감량 0.5%, 증량 +250/+150) — 명세 예시 A~E 와 기존 프로젝트가 그대로 나오게.
  */
 export function phaseNutrition(phase: Phase, c: NutritionCtx, strategy?: Strategy): Nutrition {
@@ -142,7 +142,7 @@ export function phaseNutrition(phase: Phase, c: NutritionCtx, strategy?: Strateg
     kcal = Math.max(kcal, KCAL_FLOOR[c.sex], Math.round(bmr));
     protein = c.weightKg * 2.0;
   } else if (phase === 'gain') {
-    kcal = tdee + (st?.surplus ?? (c.level === 1 ? 250 : 150));
+    kcal = tdee + (strategy && st?.phase === 'gain' ? gainSurplus(c.sex, c.level as Level, strategy) : (c.level === 1 ? 250 : 150));
   }
   return { phase, kcal: Math.round(kcal / 10) * 10, proteinG: Math.round(protein), tdee };
 }
@@ -312,8 +312,8 @@ export interface StrategySpec {
   how: string;
   /** 감량: 주 체중의 비율 */
   cutRate?: number;
-  /** 증량: 유지 칼로리 + kcal */
-  surplus?: number;
+  /** 증량: 근육 1kg 이 붙을 때 같이 붙는 지방 kg — 잉여 칼로리는 여기서 거꾸로 계산한다(gainSurplus) */
+  fatRatio?: number;
   /** 증량: 근육 증가 한도 중 실제로 붙는 비율 (잉여가 작을수록 덜 붙는다) */
   leanShare?: number;
   /** 감량 중 근육 증가(재구성) 계수 — 빠른 감량은 절반 */
@@ -323,14 +323,28 @@ export interface StrategySpec {
 export const STRATEGY: Record<Strategy, StrategySpec> = {
   cut_fast: { phase: 'cut', name: '최대 감량', how: '주 체중의 약 1% 감량', cutRate: 0.01, recompShare: 0.5 },
   cut: { phase: 'cut', name: '근육 유지 감량', how: '주 체중의 약 0.5% 감량', cutRate: CUT_RATE, recompShare: 1 },
-  leanmass: { phase: 'gain', name: '린매스업', how: '유지 칼로리 + 300kcal', surplus: 300, leanShare: 0.85 },
-  bulk: { phase: 'gain', name: '벌크업', how: '유지 칼로리 + 500kcal', surplus: 500, leanShare: 1 },
+  // 증량은 "현실적인 근육 증가 한도"에서 출발한다(11/7 대표 피드백 — 여성 45kg → 12개월 57.6kg 은 대부분 지방이라 목표 몸이 뱃살처럼 보였다).
+  // 근육이 붙는 속도(GAIN: 성별 · 경력) × 지방 비율로 체중 증가를 정하고, 잉여 칼로리도 그 값에서 거꾸로 계산한다.
+  leanmass: { phase: 'gain', name: '린매스업', how: '천천히 증량 — 늘어나는 체중의 약 70%가 근육', fatRatio: 0.4, leanShare: 0.9 },
+  bulk: { phase: 'gain', name: '벌크업', how: '빠른 증량 — 늘어나는 체중의 절반이 근육', fatRatio: 1.0, leanShare: 1 },
 };
 
 /** 증량 잉여 칼로리 중 몸에 저장되는 비율(나머지는 활동 · 열로 소모 — 보수적), 근육 1kg 을 만드는 데 드는 kcal */
 const SURPLUS_STORED = 0.5;
 const LEAN_KCAL = 4000;
 const DAYS_PER_MONTH = 30.44;
+
+/**
+ * 증량 카드의 하루 잉여 칼로리 — 한 달에 붙는 근육(GAIN · 성별 · 경력) + 지방(fatRatio)을 만드는 데 드는 kcal 을
+ * 저장 비율(SURPLUS_STORED)로 나눈 값. 150~600kcal, 10 단위. 시뮬레이션과 같은 근육 속도라 카드 숫자와 몸이 맞는다.
+ */
+export function gainSurplus(sex: Sex, level: Level, strategy: Strategy): number {
+  const st = STRATEGY[strategy];
+  const lean = GAIN[sex][level] * K * (st.leanShare ?? 1);
+  const kcalPerMonth = lean * LEAN_KCAL + lean * (st.fatRatio ?? 0.5) * 7700;
+  const perDay = kcalPerMonth / DAYS_PER_MONTH / SURPLUS_STORED;
+  return Math.round(Math.min(600, Math.max(150, perDay)) / 10) * 10;
+}
 
 /** 한 가지 방식으로만 months 개월 — 감량은 stopBf(기본: 체지방 하한 + 1)에 닿으면 멈추고 유지 */
 export function simulateStrategy(
@@ -363,8 +377,7 @@ export function simulateStrategy(
       }
     } else {
       dL = gain * (st.leanShare ?? 1);
-      const stored = (st.surplus ?? 300) * DAYS_PER_MONTH * SURPLUS_STORED;
-      dF = Math.max(0, (stored - dL * LEAN_KCAL) / 7700);
+      dF = dL * (st.fatRatio ?? 0.5);
     }
     track.push({ m, weightKg: W, bfPct: BF, nffmi: NF, cell: toCell(sex, BF, NF), phase });
     fm += dF;
