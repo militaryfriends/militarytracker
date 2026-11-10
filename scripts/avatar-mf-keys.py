@@ -1,9 +1,10 @@
 """밀프 원본 셰이프 키 보강 — mus_down 이 근육 부피를 줄이고, 근육 결을 지우는 'soft' 키를 더한다.
-usage: cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/avatar-mf-keys.py IN.blend OUT.blend [mus_k detail_m deflate fat_detail iters neck_keep armpit_it chin_it]
-2026-11-10 앱에 넣은 값: 1.25 0 0.3 0 160 0.6 25 200
+usage: cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/avatar-mf-keys.py IN.blend OUT.blend [mus_k detail_m deflate fat_detail iters neck_keep armpit_it chin_it waist_cut leg_mus arm_mus]
+앱에 넣은 값(2026-11-11 v20): 1.25 0 0.3 0 160 0.6 25 200 0.47 0.47 0.7
   · mus_down 1.25배 + 근육 부피 축소, soft = 근육 결을 Taubin 으로 편 차이(세기는 morph.ts softFor())
   · 목: 마른 몸에서 목이 가늘고 길어 보이지 않게 목 부위 fat_down · mus_down 을 60% 덜
   · 겨드랑이: 팔 · 몸통 경계에서 줄어드는 양을 넓게 펴고 덜 줄여 M1 의 주름 · 깨진 면을 없앰
+  · 실측 보정: 허리 띠의 fat_up 47% 덜(배만 커지던 것), 하체 mus_down 47% · 팔 70% 만(M1 허벅지 · 엉덩이가 너무 가늘던 것)
   · 턱 밑: 머리 아랫면과 목이 꺾이는 곳을 목 쪽에서 둥글게 메워 검은 띠를 얇게(얼굴은 그대로, 모든 키에 같이 옮김)"""
 import bpy, sys, numpy as np
 a = sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else sys.argv[1:]
@@ -108,6 +109,22 @@ if CHIN_IT > 0:
         c = co(k) + chin; k.data.foreach_set('co', c.astype(np.float32).ravel())
     basis = basis + chin
 put_fd = fd
+# ── 실측 보정 (2026-11-11) — 25칸을 둘레로 재서 실제 체형 범위에 맞춘다(scripts/avatar-measure.py)
+#  ① fat_up 이 배(허리 띠)에만 너무 몰려 F3~F5 허리가 실제보다 9~17cm 큼 → 허리 띠의 fat_up 을 줄인다
+#  ② mus_down 이 엉덩이 · 허벅지를 너무 줄여 M1 이 허리=엉덩이, 허벅지 35cm(키 176 기준) → 하체는 덜, 팔은 조금 덜
+WAIST_CUT, LEG_MUS, ARM_MUS = (float(x) for x in (a[10:13] if len(a) >= 13 else (0.0, 1.0, 1.0)))
+Wr = rest @ Mw[:3, :3].T + Mw[:3, 3]
+zlo, zhi = Wr[:, 2].min(), Wr[:, 2].max(); Hh = zhi - zlo; zr = (Wr[:, 2] - zlo) / Hh
+torso_x = np.clip((0.3 * Hh - np.abs(Wr[:, 0])) / (0.05 * Hh), 0, 1)
+waist_m = np.exp(-0.5 * ((zr - 0.6) / 0.045) ** 2) * torso_x
+for _ in range(6): waist_m = avg(waist_m)
+new_fu = new_fu * (1 - WAIST_CUT * waist_m)[:, None]
+leg_m = np.clip((0.57 - zr) / 0.05, 0, 1)
+arm_m = np.clip(wpre(('DEF-upper_arm', 'DEF-forearm', 'DEF-hand')) * 1.5, 0, 1)
+for _ in range(6): leg_m = avg(leg_m); arm_m = avg(arm_m)
+mscale = 1 - (1 - LEG_MUS) * leg_m - (1 - ARM_MUS) * arm_m * (1 - leg_m)
+new_md = new_md * mscale[:, None]
+print('calib', WAIST_CUT, LEG_MUS, ARM_MUS)
 def put(name, delta):
     v = (basis + delta).astype(np.float32).ravel(); kb[name].data.foreach_set('co', v)
 put('mus_down', new_md); put('fat_up', new_fu); put('fat_down', put_fd)

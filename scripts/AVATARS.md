@@ -3,10 +3,13 @@
 > **2026-11-10 — 남성은 다시 밀프 원본 .blend(클라이언트가 셰이프 키 fat_up · fat_down · mus_up · mus_down 조각)로.**
 > 원본 키는 그대로 두고 `scripts/avatar-mf-keys.py` 가 ① mus_down 을 1.25배 + 근육 부피를 살짝 줄이고 ② 근육 결(복근 · 가슴 선)을 펴는 `soft` 키를 더한다.
 > `build-avatar-3d.py` 는 몸에 `soft` 키가 있으면 같이 내보낸다. 앱에서 soft 세기 = `morph.ts` softFor()(체지방 높을수록 · 근육 낮을수록 1).
+> **실측 보정(2026-11-11)**: `scripts/avatar-measure.py` 로 25칸 둘레를 재서(키 176cm 환산) 맞췄다 — 보정 전 F4M2 허리 103cm(같은 체지방의 실제 평균 남성 약 85cm),
+> F1M1 허벅지 35cm · 엉덩이 = 허리. 보정 뒤 허리(M3) F1 78 · F2 81 · F3 84 · F4 90 · F5 99cm, 허리/엉덩이 0.86~0.97, M1 허벅지 45~61cm.
+> 모델 · 키 · morph.ts 를 바꾸면 다시 재서 이 범위인지 본다.
 > 같은 스크립트가 목(마른 몸에서 덜 가늘게) · 겨드랑이(M1 주름) · 턱 밑(머리 아랫면 꺾임) 도 고친다.
 > 팔 6°(손바닥이 허벅지를 향한 힘 뺀 선 자세), 반바지 텍스처는 1.9배 밝게.
 > ```bash
-> cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/avatar-mf-keys.py MF.blend /tmp/mf_keys.blend 1.25 0 0.3 0 160 0.6 25 200
+> cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/avatar-mf-keys.py MF.blend /tmp/mf_keys.blend 1.25 0 0.3 0 160 0.6 25 200 0.47 0.47 0.7
 > ~/.venv-bpy/bin/python <저장소>/scripts/build-avatar-3d.py -- --blend /tmp/mf_keys.blend --sex m --out /tmp/avatar_m.raw.glb --hq /tmp/m_tex --arm-angle 6
 > ```
 

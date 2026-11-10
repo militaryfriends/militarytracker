@@ -31,12 +31,18 @@ export const BASE: Record<Sex, Coord> = {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+/**
+ * fat_up 곡선 — 실제 사람은 체지방이 낮을 때 허리가 천천히, 높을 때 빠르게 는다(RFM: 허리 ∝ 1/(64 − 체지방)).
+ * 남 1.8 = 25칸 실측(scripts/avatar-measure.py, 키 176 환산)에서 허리가 F2 80 · F3 84 · F4 90 · F5 98cm 가 되는 값.
+ */
+const FAT_CURVE: Record<Sex, number> = { male: 1.8, female: 1 };
+
 export function morphFor(sex: Sex, c: Coord): Morph {
   const b = BASE[sex];
   const f = clamp(c.f, 1, 5);
   const m = clamp(c.m, 1, 5);
   return {
-    fat_up: f > b.f ? (f - b.f) / (5 - b.f) : 0,
+    fat_up: f > b.f ? Math.pow((f - b.f) / (5 - b.f), FAT_CURVE[sex]) : 0,
     fat_down: f < b.f ? (b.f - f) / (b.f - 1) : 0,
     mus_up: m > b.m ? (m - b.m) / (5 - b.m) : 0,
     mus_down: m < b.m ? (b.m - m) / (b.m - 1) : 0,
