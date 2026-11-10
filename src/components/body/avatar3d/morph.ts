@@ -9,7 +9,11 @@
  */
 import { parseCell, toCoord, type Coord, type Sex } from '../../../utils/bodyComp';
 
-export type MorphKey = 'fat_up' | 'fat_down' | 'mus_up' | 'mus_down';
+export type MorphKey = 'fat_up' | 'fat_down' | 'mus_up' | 'mus_down' | 'soft';
+/**
+ * soft = 근육 결 · 복근 칸을 지운 몸(밀프 원본 남성만 가진 키 — 없는 모델은 무시된다).
+ * 실제 사람은 체지방이 15% 를 넘으면 복근이 거의 안 보이고, 근육이 적으면 결이 없다 — 그 곡선을 여기서 정한다.
+ */
 export type Morph = Record<MorphKey, number>;
 
 /** 성별별 3D 모델 — 없는 성별은 2D 실루엣으로 그린다 */
@@ -20,7 +24,8 @@ export const MODEL_SEXES: readonly Sex[] = ['male', 'female'];
  * 남 = 중간 체형(근육 0.5 · 체중 0.5 ≈ F3M3) — 근육 결이 은은한 몸에서 빼고 더한다. 여 = 근육 0.55 · 체중 0.38 ≈ F2M3.
  */
 export const BASE: Record<Sex, Coord> = {
-  male: { f: 3.0, m: 3.0 },
+  // 남 = 밀리터리프렌즈 원본 몸(체지방 약 11% · 근육질 ≈ F1.6M4) + 대표 셰이프 키 4개 + soft (2026-11-10)
+  male: { f: 1.6, m: 4.0 },
   female: { f: 2.0, m: 3.0 },
 };
 
@@ -35,7 +40,19 @@ export function morphFor(sex: Sex, c: Coord): Morph {
     fat_down: f < b.f ? (b.f - f) / (b.f - 1) : 0,
     mus_up: m > b.m ? (m - b.m) / (5 - b.m) : 0,
     mus_down: m < b.m ? (b.m - m) / (b.m - 1) : 0,
+    soft: softFor(sex, f, m),
   };
+}
+
+/**
+ * 결 지우기 세기 — 체지방: F1 0 · F2 약 0.3 · F3 약 0.8 · F4 이상 1 (남 9 · 13 · 17 · 22%),
+ * 근육: M4 이상 0 · M3 0.25 · M2 0.5 · M1 0.7. 둘을 합칠 때는 1 - (1-a)(1-b).
+ */
+function softFor(sex: Sex, f: number, m: number): number {
+  if (sex !== 'male') return 0;
+  const fs = clamp((f - 1.6) / (3.6 - 1.6), 0, 1);
+  const ms = clamp((4 - m) / 3, 0, 1) * 0.7;
+  return 1 - (1 - Math.pow(fs, 0.85)) * (1 - ms);
 }
 
 /** 체지방률 · nFFMI → 좌표 */

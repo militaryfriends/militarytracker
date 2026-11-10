@@ -451,6 +451,7 @@ def preview(objs, folder):
 # ── main ─────────────────────────────────────────────────────────────────
 
 def main():
+    global KEYS
     a = parse_args()
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(a.blend), load_ui=False)
     sc = bpy.context.scene
@@ -464,6 +465,10 @@ def main():
     log('몸', body.name, len(body.data.vertices), '| 옷', [o.name for o in clothes])
     ra.freeze_animation([rig, rig.data] + [o.data.shape_keys for o in [body] + clothes if o.data.shape_keys])
 
+    # 선택 키 'soft'(근육 결 · 복근 칸을 지운 몸) — 있으면 같이 내보낸다(앱 morph.ts 가 좌표로 세기를 정한다)
+    if body.data.shape_keys and 'soft' in body.data.shape_keys.key_blocks and 'soft' not in KEYS:
+        KEYS = KEYS + ('soft',)
+        log('선택 키 soft 사용')
     # 모델러 키가 있으면 기본 상태에서는 0
     sk = body.data.shape_keys
     if sk:

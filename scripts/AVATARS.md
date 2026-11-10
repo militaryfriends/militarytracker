@@ -1,5 +1,14 @@
 # 3D 아바타 (웹에서 지금 쓰는 방식)
 
+> **2026-11-10 — 남성은 다시 밀프 원본 .blend(클라이언트가 셰이프 키 fat_up · fat_down · mus_up · mus_down 조각)로.**
+> 원본 키는 그대로 두고 `scripts/avatar-mf-keys.py` 가 ① mus_down 을 1.25배 + 근육 부피를 살짝 줄이고 ② 근육 결(복근 · 가슴 선)을 펴는 `soft` 키를 더한다.
+> `build-avatar-3d.py` 는 몸에 `soft` 키가 있으면 같이 내보낸다. 앱에서 soft 세기 = `morph.ts` softFor()(체지방 높을수록 · 근육 낮을수록 1).
+> 팔 6°(손바닥이 허벅지를 향한 힘 뺀 선 자세), 반바지 텍스처는 1.9배 밝게.
+> ```bash
+> cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/avatar-mf-keys.py MF.blend /tmp/mf_keys.blend 1.25 0 0.3 0 160
+> ~/.venv-bpy/bin/python <저장소>/scripts/build-avatar-3d.py -- --blend /tmp/mf_keys.blend --sex m --out /tmp/avatar_m.raw.glb --hq /tmp/m_tex --arm-angle 6
+> ```
+
 > **2026-11-01 — 남녀 모두 `scripts/build-avatar-mh.py`(MakeHuman CC0 + 진짜 체중 · 근육 매크로 타깃)로 바꿨다.**
 > 남성 기본 몸 = 중간 체형(F3M3), 살은 몸 전체에(아랫배 한 덩어리 · 옆구리 · 엉덩이 · 팔다리 · 목/턱 밑), 근육 결은 살에 묻힌다.
 > 자세 = 힘 뺀 선 자세(팔 9°, 살 · 근육 모프에서 더 벌림, 팔꿈치 8°, 쇄골 4° 내림, 옆에서 위팔 수직). 노멀맵은 쓰지 않고 AO 만.

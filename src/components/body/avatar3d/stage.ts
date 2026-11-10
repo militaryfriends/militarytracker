@@ -137,7 +137,7 @@ export function applyMorph(st: Stage, mo: Morph) {
   }
   // 노멀맵 · AO 는 기본 몸의 결 · 그늘이다 — 살이 붙거나 근육이 줄면 결도 그늘도 묻히게 같이 약하게
   // (AO 를 그대로 두면 복근 · 가슴 아래 그림자가 살 위에 남는다)
-  const ns = Math.min(1, Math.max(0.08, 1 - 0.9 * mo.fat_up - 0.6 * mo.mus_down));
+  const ns = Math.min(1, Math.max(0.08, (1 - 0.9 * mo.fat_up - 0.6 * mo.mus_down) * (1 - 0.6 * mo.soft)));
   const ao = Math.max(0.35, ns);
   for (const mat of st.bodyMats) {
     mat.normalScale.set(ns, ns);
@@ -166,6 +166,7 @@ export const mixMorph = (a: Morph, b: Morph, e: number): Morph => ({
   fat_down: a.fat_down + (b.fat_down - a.fat_down) * e,
   mus_up: a.mus_up + (b.mus_up - a.mus_up) * e,
   mus_down: a.mus_down + (b.mus_down - a.mus_down) * e,
+  soft: a.soft + (b.soft - a.soft) * e,
 });
 
 /** 처음 나타날 때 천천히 한 바퀴 돌며 들어온다(3D 피드백 P4 — 배 · 등 두께를 한 번에 보여 준다) */

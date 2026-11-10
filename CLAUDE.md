@@ -78,7 +78,9 @@ O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 �
   기기 캐시가 원본처럼 쓰이고 서버에서는 사흘마다 · 새 기기에서만 받는다(`session.ts` syncBody). 계정 삭제가 네 컬렉션을 지운다.
 - 진행 중인 프로젝트가 있으면 `calcBodyStats(p, weights, project)` 의 칼로리 · 단백질은 지금 단계(감량/린벌크/유지) 값.
 - 아바타: 남성 · 여성 모두 **3D**(`src/components/body/avatar3d/`, 모델 + 모프 4개 + 텍스처 jpg, 만드는 법 `scripts/AVATARS.md`).
-  남녀 모두 MakeHuman(CC0) + 진짜 체중 · 근육 타깃(`scripts/build-avatar-mh.py`, 2026-11-01 — 기본 몸 남 F3M3 · 여 F2M3, 힘 뺀 선 자세).
+  **남성 = 밀프 원본 모델**(클라이언트가 조각한 셰이프 키 .blend, 2026-11-10) → `scripts/avatar-mf-keys.py` 로 mus_down 보강 + 근육 결을 지우는
+  `soft` 키 추가 → `build-avatar-3d.py --arm-angle 6`. 기본 몸 F1.6M4(`morph.ts` BASE), soft 세기는 `softFor()`(체지방↑ · 근육↓ 에서 1).
+  여성 = MakeHuman(CC0) + 진짜 체중 · 근육 타깃(`scripts/build-avatar-female.py`/`build-avatar-mh.py`, 기본 몸 F2M3). 힘 뺀 선 자세, 손바닥은 허벅지 쪽.
   재질은 무광 클레이(roughness 0.78), 테두리 빛 약하게, AO 는 살에 따라 약하게, 밝은 화면 노출 1.0 · 어두운 화면 0.75, 기본 각도 3/4(`DEFAULT_YAW`).
   모델을 바꾸면 `scripts/avatar-review/` 로 25칸 시트를 뽑아 밀프 검수를 받는다.
   웹 = three.js(`engine.web.ts`, 모델 `avatar_m.glb` meshopt), 앱 = expo-gl GLView + three.js(`engine.native.ts`, 모델 `avatar_m_native.glb`
