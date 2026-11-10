@@ -20,7 +20,9 @@ import { morphFor } from '../../src/components/body/avatar3d/morph';
   const c = { f: +(q.get('f') || 0) || (sex === 'male' ? 1.6 : 2), m: +(q.get('m') || 0) || (sex === 'male' ? 4 : 3) };
   applyMorph(st, morphFor(sex, c));
   st.pivot.rotation.y = q.get('yaw') === null ? 0.4 : +q.get('yaw')!;
-  if (q.get('head')) { const h = st.height; st.camera.position.set(0, h * 0.86, h * 0.9); st.camera.lookAt(0, h * 0.86, 0); st.camera.updateProjectionMatrix(); }
+  // 가까이 보기: head=1 → 머리 · 목, head=2 → 가슴 · 겨드랑이
+  const hv = q.get('head');
+  if (hv) { const h = st.height; const y = h * (hv === '2' ? 0.72 : 0.86); st.camera.position.set(0, y, h * 0.9); st.camera.lookAt(0, y, 0); st.camera.updateProjectionMatrix(); }
   r.render(st.scene, st.camera);
   (window as any).done = true;
 })();
