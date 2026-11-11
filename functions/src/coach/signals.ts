@@ -77,6 +77,8 @@ export interface SignalResult {
   phase: Phase;
   status: StatusLine[];
   signals: Signal[];
+  /** 오늘 운동 기록이 있다 */
+  todayDone: boolean;
 }
 
 const DAY = 86_400_000;
@@ -159,7 +161,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   status.push({ g: 'week', t: leftW
     ? `이번 주 운동: ${thisWeek}회 함 — 목표 ${target}회까지 ${leftW}회 남음 (오늘 ${WEEKDAYS[weekday]}요일, ${leftW <= daysLeft ? '남은 요일로 채울 수 있음' : '이번 주에 다 채우기는 어려움'})`
     : `이번 주 운동: ${thisWeek}회 함 — 이번 주 목표 ${target}회를 채움 (오늘 ${WEEKDAYS[weekday]}요일)` });
-  status.push({ g: 'week', t: sinceLast === null ? '운동 기록: 아직 없음' : `마지막 운동: ${agoKo(sinceLast)}` });
+  status.push({ g: 'week', t: sinceLast === null ? '운동 기록: 아직 없음' : `마지막 운동: ${agoKo(sinceLast)}${sinceLast <= 0 ? ' (오늘은 이미 운동함)' : ''}` });
   const metWeeks = [1, 2, 3].filter((w) => inWeek(w) >= target).length;
   const avg3 = (inWeek(1) + inWeek(2) + inWeek(3)) / 3;
   if (dates.length) {
@@ -314,7 +316,8 @@ export function computeSignals(i: SignalInput): SignalResult {
         status.push({ g: 'plan', t: Math.abs(diff) < 0.05
           ? '엔진 예상 대비: 실제 체중이 예상과 같음'
           : `엔진 예상 대비: 실제 체중이 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무거움' : '가벼움'} — ${
-            behind ? '계획보다 뒤처짐' : far || tooFast ? (diff > 0 ? '계획보다 많이 늘어 있음' : '계획보다 많이 빠져 있음') : '계획 범위 안'}` });
+            behind ? '계획보다 뒤처짐' : far || tooFast ? (diff > 0 ? '계획보다 많이 늘어 있음' : '계획보다 많이 빠져 있음')
+              : signals.some((x) => x.key === 'plateau') ? '아직 계획 범위 안이지만 최근은 정체' : '계획 범위 안'}` });
         if (behind) {
           // 원인 후보도 코드가 하나만 고른다 — 모델에게 맡기면 두세 개를 늘어놓는다
           const cause = dates.length && avg3 < target - 0.5
@@ -350,7 +353,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   }
 
   signals.sort((a, b) => b.priority - a.priority);
-  return { phase, status, signals };
+  return { phase, status, signals, todayDone: sinceLast !== null && sinceLast <= 0 };
 }
 
 /** 이번 달 → 다음 달 예상 변화를 주 단위로 */
@@ -457,8 +460,8 @@ export function pickFocus(
     if (!re.test(q)) continue;
     const hit = keys.map((k) => problems.find((x) => x.key === k)).find(Boolean);
     if (hit) {
-      // 의욕 질문이면 사실부터 들이밀지 않게
-      focus = { ...hit, mode: 'main', action: intent === 'motivation' ? `먼저 한 문장으로 공감한다. ${hit.action}` : hit.action };
+      // 의욕 질문이면 사실부터 들이밀지 않는다 — 공감과 작은 행동이 먼저고, 그 문제는 서버가 끝 문장으로 붙인다
+      focus = { ...hit, mode: intent === 'motivation' ? 'mention' : 'main' };
       break;
     }
   }

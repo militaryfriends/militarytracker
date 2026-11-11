@@ -22,6 +22,7 @@ const { routeTurn, SAFETY_REPLY } = require('../../functions/lib/coach/intent');
 const { computeSignals, signalsText, pickFocus, statusFor } = require('../../functions/lib/coach/signals');
 const { allowedNumbers, checkText } = require('../../functions/lib/coach/validate');
 const { runCoach } = require('../../functions/lib/coach/answer');
+const { knowFor, stepFor } = require('../../functions/lib/coach/know');
 const { P } = require('./personas.cjs');
 const cases = require('./cases.json');
 
@@ -90,9 +91,11 @@ function prepare(c) {
   const sigText = signalsText(sig);
   const fw = pickFocus(r.intent, sig, {}, Date.now(), c.q);
   const status = statusFor(r.intent, sig, fw.focus);
-  const turn = buildTurn({ intent: r.intent, injury, status, focus: fw.focus, win: fw.win, data: p.data, question: c.q });
+  const know = knowFor(r.intent, c.q, p.data);
+  const step = stepFor(r.intent, sig, p.data);
+  const turn = buildTurn({ intent: r.intent, injury, status, focus: fw.focus, win: fw.win, data: p.data, question: c.q, know, step });
   const dk = Number((p.data.match(/하루 목표 ([\d,]+)\s?kcal/) ?? [])[1]?.replace(/,/g, '')) || undefined;
-  return { p, r, sig, sigText, status, ...fw, injury, dk, messages: [...hist, { role: 'user', content: turn }] };
+  return { p, r, sig, sigText, status, know, step, ...fw, injury, dk, messages: [...hist, { role: 'user', content: turn }] };
 }
 
 /** 코치(모델)가 쓴 부분만 — 서버가 끝에 붙인 문장을 뗀다 */
@@ -146,6 +149,7 @@ const JUDGE_SYS = [
   '    [성과] 는 한 문장 이내(운동 질문에서는 서버가 cheer 줄로 붙인다). 없으면 칭찬을 지어내지 않는다.',
   '(c) 회원이 할 일은 하나로 모은다(next). 조언을 구하는 질문에는 next 가 있어야 한다. 사실만 묻는 질문(수치, 된다/안 된다)에 지시 없이 답했다면 next 가 null 이어도 되고(감점하지 않는다), 앱 사용법 · 인사 · 범위 밖 요청은 null 이어야 한다. 글에서 무언가 시켰는데 next 가 null 이면 감점. 되묻기만 하고 답이 없으면 감점.',
   '(d) 직설적인 PT 말투 — "회원님", 짧게(2~4문장 + 서버가 붙인 한 문장), 필러 · 설교 · 이모지 · 목록 없음. 차갑거나 무례하면 감점. 진단 · 결과 약속 · 극단 식단 금지.',
+  '(g) [서버가 준 운동 지식] · [서버가 정한 작은 행동] 이 있으면 그것이 이 코치의 기준이다 — 그대로 따른 것은 감점하지 않고, 어긋나면 감점한다. 의욕 질문에서는 남은 횟수를 요일에 나눠 주지 않고 작은 행동 하나만 주는 것이 맞다.',
   '(f) 하루 전체 · 일주일 식단을 달라는 요청에는 한 끼 카드 + "하루 전체 식단은 식단 탭에서 받을 수 있다" 는 안내가 이 앱의 정해진 응대다(하루 식단은 식단 탭의 별도 기능) — 감점하지 않는다.',
   '(e) 식단을 제안하는 답의 첫 문장은 계산 근거("176cm · 80kg · 감량 기준 하루 2,150kcal = 유지 2,650 − 500")다 — 이 앱의 정해진 형식이므로 감점하지 않는다.',
   '항목(각 1~5 정수):',
@@ -169,6 +173,8 @@ function judgeInput(c, prep, out) {
     `[서버가 끝에 붙인 문장] ${prep.focus?.mode === 'mention' ? prep.focus.say : '없음'}`,
     `[성과] ${prep.win ? `${prep.win.text} (${prep.win.where === 'cheer' ? '서버가 cheer 줄로 붙임' : '코치가 글에 한 문장으로'})` : '없음'}`,
     ...(prep.injury ? ['[부상] 회원이 아픈 곳을 말함 — 그 부위 운동 제외'] : []),
+    ...(prep.know.length ? [`[서버가 준 운동 지식 — 코치는 이것을 따라야 한다] ${prep.know.join(' / ')}`] : []),
+    ...(prep.step ? [`[서버가 정한 작은 행동 — 의욕 질문의 next 는 이것] ${prep.step}`] : []),
     ...(c.history?.length ? [`앞 대화:\n${c.history.map((m) => `${m.role === 'user' ? '회원' : '코치'}: ${m.content}`).join('\n')}`] : []),
     `질문: ${c.q}`,
     ...(c.expect ? [`[기대] ${c.expect}`] : []),

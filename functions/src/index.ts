@@ -37,6 +37,7 @@ import { routeTurn, SAFETY_REPLY } from './coach/intent';
 import { loadSignals, loadSaid, markSaid, cleanExNames, signalsText } from './coach/context';
 import { pickFocus, statusFor } from './coach/signals';
 import { runCoach } from './coach/answer';
+import { knowFor, stepFor } from './coach/know';
 import { systemFor, buildTurn, PREFILL, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
 import { allowedNumbers } from './coach/validate';
 
@@ -586,6 +587,7 @@ export const aiCoach = onCall(
       role: 'user',
       content: buildTurn({
         intent: routed.intent, injury: routed.injury, status: statusFor(routed.intent, sig, focus), focus, win, data: context,
+        know: knowFor(routed.intent, question, context), step: stepFor(routed.intent, sig, context),
         question: question.replace(/<\/?(question|focus|aside|win|status|data|intent|injury)>/g, ''),
       }),
     };
