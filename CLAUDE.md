@@ -184,22 +184,46 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 
 ## AI 코치 구조 (2026-11-11, 기획안 1단계 — 판단은 코드, 말은 AI)
 
-- `functions/src/coach/`: `intent.ts`(규칙 의도 분류 — 응급 · 부상은 AI 없이 `SAFETY_REPLY`, 한도도 안 씀) →
-  `context.ts`(서버가 users · plans · workoutLogs · weights · bodyProjects · checkins 를 직접 읽음) → `signals.ts`(정체 · 빠른 감량 ·
-  증량 과속 · 예상 이탈 · 운동 빠짐 · 기록 갱신 · 연속 달성 · 체크인 시기 · 체중 미기록 — 순수 함수) → `prompt.ts`(고정부 `SYSTEM` 은
-  모두에게 같아 캐시, 가변부 `buildTurn` 은 마지막 user 턴에 `<intent> <signals> <data>`) → Haiku → `validate.ts`(데이터에 없는
-  kcal · g · kg · % 숫자 · 금지어면 한 번 다시 쓰게, 그래도면 그 문장 삭제).
+한 턴의 길(`functions/src/coach/`): `intent.ts` 규칙 의도 분류(`routeTurn` — 응급 · 부상은 AI 없이 `SAFETY_REPLY`, 한도도 안 씀)
+→ `context.ts` 서버가 users · plans · workoutLogs · weights · bodyProjects · checkins 를 직접 읽음 → `signals.ts` 현황 · 신호 계산
+→ `signals.pickFocus` 이번 답에서 꺼낼 것 고르기 → `prompt.ts` 고정부(`systemFor`) + 가변부(`buildTurn`) → Haiku 4.5
+→ `answer.ts` 읽기 · 검증(`validate.ts`) · 다시 쓰기 · 문장 삭제 · 마무리.
+
+- **모델에는 이 질문에 필요한 것만 준다.** 보여 준 것은 답에 끌려 나온다(식단 질문에 체중 추세를 주면 묻지 않은 정체 이야기를 한다).
+  현황은 질문 종류별 묶음만(`statusFor`), 앱 데이터도 줄 단위로(`sliceData`), 짚을 문제는 코드가 고른 하나.
+- **현황에는 판정까지 적는다** — "주 +0.2kg — 적정 속도로 느는 중", "목표 3회까지 2회 남음(남은 요일로 채울 수 있음)", "계획 범위 안".
+  숫자만 주면 Haiku 가 "느리다 · 채웠다 · 끊겼다" 를 지어낸다. 새 현황 줄을 더할 때도 판정을 붙일 것.
+- **문제를 꺼내는 방식 두 가지**: 답의 중심(`<focus>`, 모델이 씀) — 진행 질문, 회원이 그 문제를 직접 말했을 때(`ASKED`), 의욕 질문의 운동 빠짐.
+  끝 문장(mention) — 그 밖의 질문에서는 신호의 `say` 문장을 **서버가** 답 끝에 붙인다(모델에게 "끝에 한 문장만" 을 시키면 원인 분석이 따라붙는다).
+  같은 신호 · 성과는 `coachState/{uid}.said` 로 72시간(빠른 감량 20시간) 안에 다시 꺼내지 않는다(진행 질문은 예외). 계정 삭제가 함께 지운다.
+- 성과(win: 기록 갱신 · 연속 달성 · 시작 대비 변화)는 진행 · 의욕 질문에서는 모델이 글에, 운동 질문에서는 서버가 cheer 줄로.
+- **고정부 = 공통(BASE) + 질문 종류별 묶음(PACK)**, 덩어리마다 캐시 지점. 공통에 규칙 · 앱 사용법 · 인사, 묶음에 가이드 · 예시 ·
+  자료(운동 = `catalog.ts` 종목 이름, 식단 = `facts.ts` 식품표). 호출당 약 4,800~9,900토큰(한 덩어리일 때 14,500).
+  Haiku 4.5 는 **4,096토큰이 넘어야 캐시**된다 — 공통을 그보다 줄이면 "다른 종류 질문은 공통만 캐시에서 읽기" 가 깨진다.
+  고정부에 사용자별 내용을 넣지 말 것.
+- 답은 `{"next":"` 로 시작시킨다(`PREFILL`, 따옴표까지 — `{"next":` 만 주면 여는 따옴표를 빼먹어 JSON 이 깨진다). 줄 것이 없으면 `""`.
+  `stop_sequences` 는 공백만으로 된 값을 못 쓴다.
+- 서버가 답에 손대는 것(`answer.ts`): 데이터에 없는 kcal · g · kg · % 숫자 · 금지어면 한 번 다시 쓰게 → 그래도면 그 문장 삭제,
+  식단 카드에서 못 먹는 음식 빼기(`dropAllergens`), 끝 문장 · cheer 붙이기, 앱 사용법 답의 next 지우기. 깨진 JSON 은 회원에게 보여 주지 않는다.
 - 신호는 칼로리 숫자를 만들지 않는다(숫자는 한 곳에서만) — 정체 · 이탈은 "체크인 때 엔진이 다시 계산" 으로 안내.
-- 답 JSON 에 `next`(다음 행동 한 가지) — 앱 코치 화면이 "다음 행동" 칸으로 보여 준다. 앱은 `exNames`(종목 id → 이름)를 보낸다.
-- 고정부에 사용자별 내용을 넣지 말 것(캐시가 깨져 원가가 오른다). 프롬프트를 바꾸면 `PROMPT_VERSION` 을 올리고 평가셋을 돌린다:
-  `node scripts/coach-eval/route-check.cjs`(의도 150문항) · `signals-check.cjs`(가상 회원 10명) — 키 없이,
-  `node scripts/coach-eval/run-live.cjs [--judge]` — 실제 모델 답 + 코드 검사(+ Sonnet 채점).
+- 종목을 더하거나 이름을 바꾸면 `npm run coach:catalog`(→ `catalog.ts`). `facts.ts` 의 음식 숫자는 어림값 — 밀프 검수 대상.
+
+**프롬프트를 바꾸면** `PROMPT_VERSION` 을 올리고 평가를 돌린다(`scripts/coach-eval/`, 가상 회원 10명 × 160문항):
+```bash
+node scripts/coach-eval/route-check.cjs      # 의도 분류 (키 없이)
+node scripts/coach-eval/signals-check.cjs    # 신호 · 검증기 (키 없이, -v 로 현황 문구까지)
+node scripts/coach-eval/dup-check.cjs        # 프롬프트 예시 질문이 평가 문항과 겹치는지 — 겹치면 점수가 부풀려진다
+cd functions && npx tsc -p . && cd ..
+node scripts/coach-eval/run-live.cjs --tag <이름> --judge   # 실제 모델 답(서버와 같은 answer.runCoach) + 코드 검사 + Sonnet 채점
+```
+결과는 `scripts/coach-eval/out/<이름>.json`(같은 `--tag` 로 이어 돌린다). 점수보다 **22점 이하 문항을 하나씩 읽는 것**이 일이다 —
+심사 모델도 틀린다(같은 프롬프트로 ±0.2). 2026-11-11 기준 g판 23.8/25 · 코드 검사 91% · 답 1개 약 3.6원.
 - **Anthropic 키 로컬 사본은 `functions/.secret.local`**(`ANTHROPIC_API_KEY=…` 한 줄, gitignore). 평가 · 에뮬레이터가 읽는다.
   서버 비밀값은 그 파일에서 넣는다: `grep ^ANTHROPIC_API_KEY= functions/.secret.local | cut -d= -f2- | npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY --data-file -` → 함수 재배포.
 
 ## AI 코치 식단 카드 · WARNING
 
-- `aiCoach` 는 JSON `{ text, meal, warning }` 을 받아 `{ reply, meal, warning, quota }` 를 돌려준다(`functions/src/coachMeal.ts`).
+- `aiCoach` 는 JSON `{ next, text, meal, warning, cheer }` 를 받아 `{ reply, meal, warning, cheer, next, quota }` 를 돌려준다(카드 계산 `functions/src/coachMeal.ts`).
   음식 kcal · 단백질은 서버 식품표로 다시 계산(표에 없는 음식만 AI 값 + approx), "목표의 N%" 는 앱이 보낸 `dayKcal`(엔진 값) 기준.
   화면은 `src/components/CoachCards.tsx`. 식품표에 음식을 더하면 카드 숫자가 더 정확해진다.
 
