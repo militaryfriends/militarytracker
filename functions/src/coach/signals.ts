@@ -365,8 +365,8 @@ function expectedWeeklyGain(p: SigProject, now: number): number | null {
 
 /** 모델 글이 이미 그 문제를 말했는지 보는 낱말 — 말했으면 끝 문장을 또 붙이지 않는다(answer.finishCoach) */
 export const SAID_ALREADY: Partial<Record<SignalKey, RegExp>> = {
-  fast_loss: /빠르게\s?빠|빨리\s?빠|너무\s?빠/,
-  fast_gain: /빠르게\s?(늘|찌)|빨리\s?(늘|찌)/,
+  fast_loss: /(체중|살|몸무게).{0,16}(빠르|빨리)|(빠르게|빨리)\s?(빠|내려|줄)|너무\s?빠/,
+  fast_gain: /(체중|살|몸무게).{0,16}(빠르|빨리)|(빠르게|빨리)\s?(늘|찌|오르)/,
   off_track: /예상보다|계획보다/,
   plateau: /제자리|정체/,
   missed: /일 전|일째|쉬었|운동 기록이 없/,
@@ -388,7 +388,8 @@ const STATUS_FOR: Record<string, StatusGroup[]> = {
   progress: ['phase', 'week', 'habit', 'weight', 'plan', 'project'],
   diet: ['phase'],
   workout: ['phase', 'week', 'lifts'],
-  motivation: ['phase', 'week', 'habit'],
+  // 의욕 질문에 지난 3주 출석을 주면 "처음 3주가 중요" 같은 말을 지어낸다 — 해낸 일은 <win> 으로만
+  motivation: ['phase', 'week'],
   general: [],
   app: [],
 };

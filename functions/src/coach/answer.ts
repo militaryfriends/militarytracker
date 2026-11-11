@@ -77,12 +77,50 @@ export function stripCoach(o: CoachOut, tokens: string[]): CoachOut {
 }
 
 /**
+ * 못 먹는 음식 — 앱이 보낸 환경 줄("알레르기 · 못 먹는 음식 우유 · 유제품")에서 낱말을 뽑고, 흔한 것은 그 음식이 든 것까지 넓힌다.
+ * 프롬프트에도 규칙이 있지만 식단 카드에 한 번이라도 섞이면 안 되므로 코드로 한 번 더 거른다.
+ */
+const ALLERGY_FAMILY: [RegExp, RegExp][] = [
+  [/우유|유제품|유당|락토/, /우유|밀크|요거트|요구르트|치즈|라떼|유청|웨이|카제인|버터|크림|아이스크림|프로틴\s?(쉐이크|파우더)/],
+  [/견과|땅콩|아몬드|호두/, /견과|아몬드|땅콩|호두|캐슈|피스타치오|피넛|잣|그래놀라/],
+  [/계란|달걀|난류/, /계란|달걀|메추리알|마요/],
+  [/밀|글루텐/, /빵|식빵|면|국수|파스타|라면|우동|시리얼|또띠아|베이글/],
+  [/갑각|새우|꽃게/, /새우|게살|꽃게|대게|랍스터|크랩/],
+  [/생선|해산물|어패/, /생선|연어|참치|고등어|새우|오징어|조개|굴|회덮밥|초밥/],
+  [/콩|대두/, /두부|두유|콩|된장|낫토/],
+  [/돼지/, /돼지|삼겹|목살|베이컨|햄|소시지/],
+  [/소고기|쇠고기/, /소고기|쇠고기|불고기|스테이크|차돌/],
+];
+
+export function allergyFilter(data: string): RegExp | null {
+  const m = data.match(/알레르기\s?·\s?못 먹는 음식\s*([^\n]*)/);
+  const raw = (m?.[1] ?? '').trim();
+  if (!raw || /^없음/.test(raw)) return null;
+  const words = raw.split(/[·,\/\s]+/).map((w) => w.trim()).filter((w) => w.length >= 1 && w.length <= 10);
+  const parts = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  for (const [key, family] of ALLERGY_FAMILY) if (key.test(raw)) parts.push(family.source);
+  return parts.length ? new RegExp(parts.join('|')) : null;
+}
+
+/** 식단 카드에서 못 먹는 음식을 뺀다 — 두 가지 미만이 남으면 카드를 내지 않는다 */
+export function dropAllergens(out: CoachOut, data: string, dayKcal?: number): CoachOut {
+  const re = out.meal ? allergyFilter(data) : null;
+  if (!re || !out.meal) return out;
+  const items = out.meal.items.filter((i) => !re.test(i.n));
+  if (items.length === out.meal.items.length) return out;
+  return { ...out, meal: items.length >= 2 ? normalizeMeal({ t: out.meal.t, items }, dayKcal) : null };
+}
+
+/**
  * 마무리 — 코드가 정한 것을 답에 얹는다.
  *  · focus(mention): 서버가 쓴 한 문장을 답 끝에. 모델은 이 내용을 쓰지 않도록 안내받는다(prompt <aside>).
  *  · win(cheer): 성과를 응원 줄로. 모델이 쓴 응원 줄보다 실제 기록이 낫다.
  *  · 앱 사용법 답에는 다음 행동을 붙이지 않는다.
  */
-export function finishCoach(out: CoachOut, o: { intent: Intent; focus: Focus['focus']; win: Focus['win'] }): CoachOut {
+export function finishCoach(
+  src: CoachOut, o: { intent: Intent; focus: Focus['focus']; win: Focus['win']; data?: string; dayKcal?: number },
+): CoachOut {
+  const out = o.data ? dropAllergens(src, o.data, o.dayKcal) : src;
   let { reply, cheer, next } = out;
   if (o.intent === 'app') next = null;
   // 모델이 이미 같은 말을 했으면 또 붙이지 않는다(<aside> 를 보여 주면 가끔 제 글에도 쓴다)
@@ -105,6 +143,8 @@ export async function runCoach(o: {
   intent: Intent;
   focus: Focus['focus'];
   win: Focus['win'];
+  /** 앱이 보낸 회원 정보 — 못 먹는 음식을 카드에서 거르는 데 쓴다 */
+  data?: string;
 }): Promise<{ out: CoachOut | null; raw: string; retried: boolean; stripped: boolean }> {
   let raw = await o.call(o.messages);
   let out = raw ? parseCoach(raw, o.dayKcal) : null;

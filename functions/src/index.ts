@@ -608,7 +608,7 @@ export const aiCoach = onCall(
     const { result, quota } = await withQuota(
       acc.uid, 'coach', acc.isAdmin,
       async () => {
-        const r = await runCoach({ call, messages, allowed, dayKcal: dk, intent: routed.intent, focus, win });
+        const r = await runCoach({ call, messages, allowed, dayKcal: dk, intent: routed.intent, focus, win, data: context });
         retried = r.retried;
         stripped = r.stripped;
         return r.out;

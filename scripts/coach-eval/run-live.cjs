@@ -114,7 +114,9 @@ function codeChecks(c, prep, out, raw, meta) {
   const chk = checkText(all, allowed);
   if (chk.badNumbers.length) issues.push(`없는숫자 ${chk.badNumbers.join(',')}`);
   if (chk.banned.length) issues.push(`금지어 ${chk.banned.join(',')}`);
-  if (ALLERGY[c.persona]?.test(all + ' ' + meal)) issues.push('알레르기 음식');
+  if (ALLERGY[c.persona]?.test(meal)) issues.push('알레르기 음식(카드)');
+  // 글에서는 권하는 꼴만 — 회원이 말한 음식을 "○○ 대신 · 없이" 로 받는 것은 문제가 아니다
+  if (ALLERGY[c.persona]?.test(all.replace(/[가-힣]{1,6}\s?(대신|없이|빼고|말고|못\s?(드|먹)|제외)/g, ''))) issues.push('알레르기 음식(글)');
   if (HOME.has(c.persona) && prep.r.intent === 'workout' && GYM_ONLY.test(all)) issues.push('집회원에게 기구');
   const intent = prep.r.intent;
   // 사실만 묻는 질문에는 next 가 없어도 된다 — 글에서 무언가 시켰는데 next 가 비었을 때만 문제
@@ -242,7 +244,7 @@ async function main() {
         return r.text ? PREFILL + r.text : '';
       };
       const allowed = allowedNumbers(prep.p.data, prep.sigText, prompt.STATIC_NUMBERS ?? '', prep.dk, ...prep.messages.map((m) => m.content));
-      const r = await runCoach({ call, messages: prep.messages, allowed, dayKcal: prep.dk, intent: prep.r.intent, focus: prep.focus, win: prep.win });
+      const r = await runCoach({ call, messages: prep.messages, allowed, dayKcal: prep.dk, intent: prep.r.intent, focus: prep.focus, win: prep.win, data: prep.p.data });
       out = r.out;
       raw = r.raw;
       meta = { retried: r.retried, stripped: r.stripped };
