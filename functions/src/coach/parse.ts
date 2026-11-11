@@ -30,14 +30,17 @@ export function firstJson(raw: string): Record<string, unknown> | null {
       }
     }
   }
-  // 끝이 잘렸거나 깨진 경우 — text 만이라도
-  const m = s.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-  if (m) {
+  // 끝이 잘렸거나 깨진 경우 — 글자 값만이라도(text 가 있어야 답으로 친다)
+  const pick = (k: string): string | undefined => {
+    const m = s.match(new RegExp(`"${k}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+    if (!m) return undefined;
     try {
-      return { text: JSON.parse(`"${m[1]}"`) };
+      return JSON.parse(`"${m[1]}"`) as string;
     } catch {
-      return null;
+      return undefined;
     }
-  }
-  return null;
+  };
+  const text = pick('text');
+  if (text === undefined) return null;
+  return { text, next: pick('next') ?? null, warning: pick('warning') ?? null };
 }

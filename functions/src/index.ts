@@ -33,13 +33,12 @@ import {
   docId, loadActiveProject, macrosOf, mealK, mealTargets, mergePhases, monthsElapsed, r1, sanitizeInput,
   signed, templateReport, timelineText, validateReport,
 } from './bodyProject';
-import { normalizeCheer, normalizeMeal, normalizeWarning, CoachMeal } from './coachMeal';
 import { routeTurn, SAFETY_REPLY } from './coach/intent';
 import { loadSignals, loadSaid, markSaid, cleanExNames, signalsText } from './coach/context';
 import { pickFocus, statusFor } from './coach/signals';
-import { firstJson } from './coach/parse';
-import { SYSTEM, buildTurn, PREFILL, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
-import { allowedNumbers, checkText, stripSentences } from './coach/validate';
+import { runCoach } from './coach/answer';
+import { SYSTEM, buildTurn, PREFILL, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
+import { allowedNumbers } from './coach/validate';
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 
@@ -110,6 +109,8 @@ async function callAnthropic(opts: {
   model: string;
   /** 있으면 이 사용자의 이번 달 AI 원가(aiCost/{uid})에 더한다 */
   uid?: string;
+  /** 여기서 끊는다(코치: JSON 한 줄 뒤의 군더더기) */
+  stop?: string[];
 }): Promise<string> {
   const workspace = await anthropicWorkspace();
   const controller = new AbortController();
@@ -130,6 +131,7 @@ async function callAnthropic(opts: {
         // 규칙(시스템 프롬프트)은 고정 문자열이라 캐시한다 — 길이가 캐시 최소 길이에 못 미치면 API 가 그냥 무시한다
         system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
         messages: opts.messages,
+        ...(opts.stop?.length ? { stop_sequences: opts.stop } : {}),
       }),
       signal: controller.signal,
     });
@@ -524,50 +526,6 @@ interface CoachReq {
   exNames?: Record<string, string>;
 }
 
-/** 코치 응답(JSON) → 글 · 식단 카드 · 경고. JSON 이 깨지면 받은 글을 그대로 쓴다 */
-type CoachOut = { reply: string; meal: CoachMeal | null; warning: string | null; cheer: string | null; next: string | null };
-
-function parseCoach(raw: string, dayKcal?: number): CoachOut | null {
-  const d = firstJson(raw);
-  if (d) {
-    const reply = str(d.text, 1200).trim();
-    const meal = normalizeMeal(d.meal, dayKcal);
-    if (reply || meal) {
-      return { reply: reply || '식단을 구성했습니다.', meal, warning: normalizeWarning(d.warning), cheer: normalizeCheer(d.cheer), next: normalizeCheer(d.next) };
-    }
-    return null;
-  }
-  // JSON 이 아니라 그냥 글로 답한 경우만 그대로 쓴다. 깨진 JSON 을 회원에게 보여 주지 않는다
-  const plain = raw.replace(/```(json)?/g, '').trim();
-  return plain && !/^\s*[{[]/.test(plain) && !plain.includes('"text"')
-    ? { reply: plain.slice(0, 1200), meal: null, warning: null, cheer: null, next: null }
-    : null;
-}
-
-/** 답의 kcal · g · kg · % 숫자 검사 — 서버가 계산한 식단 카드 숫자도 허용 목록에 */
-function checkCoach(o: CoachOut, allowed: number[]) {
-  const mealNums = o.meal
-    ? [o.meal.kcal, o.meal.p, o.meal.pct, o.meal.dayKcal ?? 0, ...o.meal.items.flatMap((i) => [i.q, i.kcal, i.p])]
-    : [];
-  const all = [...allowed, ...mealNums];
-  const parts = [o.reply, o.warning ?? '', o.cheer ?? '', o.next ?? ''];
-  const res = parts.map((t) => checkText(t, all));
-  return {
-    ok: res.every((r) => r.ok),
-    tokens: [...new Set(res.flatMap((r) => [...r.badNumbers, ...r.banned]))],
-  };
-}
-
-function stripCoach(o: CoachOut, tokens: string[]): CoachOut {
-  const f = (t: string | null) => {
-    if (!t) return t;
-    const s = stripSentences(t, tokens);
-    return s.length >= 4 ? s : null;
-  };
-  return { ...o, reply: f(o.reply) || '이 질문은 기록을 조금 더 보고 답드리겠습니다. 질문을 조금 더 구체적으로 해 주세요.',
-    warning: f(o.warning), cheer: f(o.cheer), next: f(o.next) };
-}
-
 /** 최근 턴부터 예산 안에 들어오는 만큼만 남긴다 */
 function trimMessages(incoming: unknown, budget: number): AnthropicMessage[] {
   const list = (Array.isArray(incoming) ? incoming : [])
@@ -618,15 +576,15 @@ export const aiCoach = onCall(
 
     // ② 서버가 기록을 직접 읽어 현황 · 신호를 계산하고, 이번 답에서 꺼낼 것까지 고른다(판단은 코드가)
     const [sig, said] = await Promise.all([loadSignals(acc.uid, cleanExNames(req.data?.exNames)), loadSaid(acc.uid)]);
-    const { focus, win } = pickFocus(routed.intent, sig, said);
+    const { focus, win } = pickFocus(routed.intent, sig, said, Date.now(), question);
 
     // ③ 가변부는 마지막 user 턴 — 고정부(SYSTEM)는 모두에게 같아 캐시된다.
     // 앱이 만든 사용자 데이터는 system 이 아니라 user 턴의 <data> — 클라이언트가 규칙을 덧쓸 수 없다.
     messages[last] = {
       role: 'user',
       content: buildTurn({
-        intent: routed.intent, injury: routed.injury, status: statusFor(routed.intent, sig), focus, win, data: context,
-        question: question.replace(/<\/?question>/g, ''),
+        intent: routed.intent, injury: routed.injury, status: statusFor(routed.intent, sig, focus), focus, win, data: context,
+        question: question.replace(/<\/?(question|focus|aside|win|status|data|intent|injury)>/g, ''),
       }),
     };
 
@@ -636,7 +594,7 @@ export const aiCoach = onCall(
     // 답을 PREFILL 로 시작시킨다 — JSON 밖의 글 · 울타리를 막고, 행동(next)을 먼저 정하게 한다
     const call = async (msgs: AnthropicMessage[]) => {
       const out = await callAnthropic({
-        system: SYSTEM, messages: [...msgs, { role: 'assistant', content: PREFILL }], maxTokens: 900,
+        system: SYSTEM, messages: [...msgs, { role: 'assistant', content: PREFILL }], maxTokens: 900, stop: STOP,
         apiKey: ANTHROPIC_API_KEY.value(), model: MODEL_CHAT, uid: acc.uid,
       });
       return out ? PREFILL + out : '';
@@ -644,43 +602,22 @@ export const aiCoach = onCall(
     let retried = false;
     let stripped = false;
 
+    // ④ 읽기 → 검증(자료에 없는 숫자 · 금지어면 한 번 다시, 그래도면 그 문장 삭제) → 마무리 — coach/answer.ts
     const { result, quota } = await withQuota(
       acc.uid, 'coach', acc.isAdmin,
       async () => {
-        const raw = await call(messages);
-        if (!raw) return null;
-        let out = parseCoach(raw, dk);
-        if (!out) return null;
-        let chk = checkCoach(out, allowed);
-        // ④ 검증 — 자료에 없는 숫자 · 금지어면 한 번 다시, 그래도면 그 문장을 뺀다
-        if (!chk.ok) {
-          retried = true;
-          const raw2 = await call([...messages, { role: 'assistant', content: raw }, {
-            role: 'user',
-            content: `규칙 위반: ${chk.tokens.join(', ')} — 자료(<data> · <status> · <food_facts>)에 없는 숫자이거나 금지된 표현이다. `
-              + '그 부분을 빼거나 자료의 숫자로 바꿔서, 같은 JSON 형식으로 답 전체를 다시 써라.',
-          }]).catch(() => '');
-          const out2 = raw2 ? parseCoach(raw2, dk) : null;
-          if (out2) {
-            out = out2;
-            chk = checkCoach(out, allowed);
-          }
-          if (!chk.ok) {
-            stripped = true;
-            out = stripCoach(out, chk.tokens);
-          }
-        }
-        // 앱 사용법 답에는 다음 행동을 붙이지 않는다(코드로 고정)
-        if (routed.intent === 'app') out = { ...out, next: null };
-        return out;
+        const r = await runCoach({ call, messages, allowed, dayKcal: dk, intent: routed.intent, focus, win });
+        retried = r.retried;
+        stripped = r.stripped;
+        return r.out;
       },
       (r) => !r || !r.reply
     );
-    // 꺼낸 신호를 적어 둔다 — 다음 답에서 같은 말을 되풀이하지 않게(진행 질문은 예외, signals.pickFocus)
-    if (focus) await markSaid(acc.uid, focus.key);
+    // 꺼낸 신호 · 성과를 적어 둔다 — 다음 답에서 같은 말을 되풀이하지 않게(진행 질문은 예외, signals.pickFocus)
+    await Promise.all([focus ? markSaid(acc.uid, focus.key) : null, win ? markSaid(acc.uid, win.key) : null]);
     logger.info('coach', {
       uid: acc.uid, intent: routed.intent, injury: routed.injury, signals: sig?.signals.map((x) => x.key) ?? null,
-      focus: focus ? `${focus.key}:${focus.mode}` : null, win: win?.key ?? null, retried, stripped, v: PROMPT_VERSION,
+      focus: focus ? `${focus.key}:${focus.mode}` : null, win: win ? `${win.key}:${win.where}` : null, retried, stripped, v: PROMPT_VERSION,
     });
     return { reply: result!.reply, meal: result!.meal, warning: result!.warning, cheer: result!.cheer, next: result!.next, quota };
   }

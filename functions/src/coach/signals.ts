@@ -49,7 +49,7 @@ export interface SignalInput {
 }
 
 export type SignalKey =
-  | 'fast_loss' | 'off_track' | 'missed' | 'plateau' | 'fast_gain' | 'checkin_due' | 'pr' | 'streak' | 'no_weight';
+  | 'fast_loss' | 'off_track' | 'missed' | 'plateau' | 'fast_gain' | 'checkin_due' | 'pr' | 'streak' | 'no_weight' | 'journey';
 
 export interface Signal {
   key: SignalKey;
@@ -59,10 +59,15 @@ export interface Signal {
   text: string;
   /** 이 신호가 답의 중심일 때 코치가 할 일 */
   action: string;
+  /**
+   * 완성된 한 문장 — 문제 신호는 답 끝에 서버가 붙이는 말(mention), 성과 신호는 응원 한 줄(cheer).
+   * 모델에게 "끝에 한 문장으로만" 을 시키면 원인 분석 · 추가 지시가 따라붙어서, 문장을 코드가 쓴다.
+   */
+  say: string;
 }
 
 /** 현황 줄 — 묶음(g)으로 질문 종류에 맞는 것만 모델에 준다 */
-export type StatusGroup = 'phase' | 'workout' | 'weight' | 'project' | 'journey';
+export type StatusGroup = 'phase' | 'week' | 'habit' | 'weight' | 'plan' | 'project';
 export interface StatusLine {
   g: StatusGroup;
   t: string;
@@ -129,7 +134,7 @@ export function phaseNow(p: SigProject | null, now: number, fallback: Phase): Ph
   return span?.phase ?? fallback;
 }
 
-const PHASE_KO: Record<Phase, string> = { cut: '감량', gain: '증량(린매스업)', keep: '유지' };
+const PHASE_KO: Record<Phase, string> = { cut: '감량', gain: '증량', keep: '유지' };
 
 export function computeSignals(i: SignalInput): SignalResult {
   const today = kstDate(i.now);
@@ -147,19 +152,28 @@ export function computeSignals(i: SignalInput): SignalResult {
   const thisWeek = inWeek(0);
   const last = dates.length ? dates[dates.length - 1] : null;
   const sinceLast = last ? todayN - dayNum(last) : null;
-  // "1/3회" 처럼 쓰면 모델이 "채웠다" 로 읽는다 — 한 것 · 목표 · 남은 것을 따로 적는다
-  status.push({ g: 'workout', t: `이번 주 운동: ${thisWeek}회 함 · 목표 ${target}회 · 남은 ${Math.max(0, target - thisWeek)}회 (오늘 ${WEEKDAYS[weekday]}요일)` });
-  status.push({ g: 'workout', t: sinceLast === null ? '운동 기록: 아직 없음' : `마지막 운동: ${agoKo(sinceLast)}` });
+  // 숫자를 늘어놓으면 모델이 바꿔 읽는다("1/3회" → "채웠다", "2회 · 0회 · 5회" → 순서를 거꾸로) — 판정까지 문장으로 적는다
+  const leftW = Math.max(0, target - thisWeek);
+  status.push({ g: 'week', t: leftW
+    ? `이번 주 운동: ${thisWeek}회 함 — 목표 ${target}회까지 ${leftW}회 남음 (오늘 ${WEEKDAYS[weekday]}요일)`
+    : `이번 주 운동: ${thisWeek}회 함 — 이번 주 목표 ${target}회를 채움 (오늘 ${WEEKDAYS[weekday]}요일)` });
+  status.push({ g: 'week', t: sinceLast === null ? '운동 기록: 아직 없음' : `마지막 운동: ${agoKo(sinceLast)}` });
+  const metWeeks = [1, 2, 3].filter((w) => inWeek(w) >= target).length;
+  const avg3 = (inWeek(1) + inWeek(2) + inWeek(3)) / 3;
   if (dates.length) {
-    status.push({ g: 'workout', t: `지난 3주 운동 횟수(지난주 · 2주 전 · 3주 전): ${inWeek(1)}회 · ${inWeek(2)}회 · ${inWeek(3)}회` });
+    status.push({ g: 'habit', t: metWeeks === 3
+      ? `지난 3주: 3주 모두 목표(주 ${target}회)를 채움`
+      : `지난 3주: 목표(주 ${target}회)를 채운 주는 ${metWeeks}주 · 지난주는 ${inWeek(1)}회` });
   }
 
   if (sinceLast !== null && sinceLast >= 5) {
     signals.push({ key: 'missed', priority: 60, text: `마지막 운동이 ${sinceLast}일 전`,
-      action: '비난하지 않는다. 오늘 할 가장 작은 운동(플랜 첫 종목 2~3세트, 10~20분)을 next 로 주고, 무엇이 막는지는 끝에 하나만 묻는다' });
+      action: '비난하지 않는다. 오늘 할 가장 작은 운동(플랜 첫 종목 2~3세트, 10~20분)을 next 로 주고, 무엇이 막는지는 끝에 하나만 묻는다',
+      say: `참고로 마지막 운동이 ${sinceLast}일 전입니다.` });
   } else if (sinceLast !== null && weekday >= 3 && thisWeek === 0) {
     signals.push({ key: 'missed', priority: 55, text: `이번 주 운동을 아직 한 번도 안 함(${WEEKDAYS[weekday]}요일)`,
-      action: '비난하지 않는다. 남은 요일에 맞춘 현실적인 횟수 하나를 next 로' });
+      action: '비난하지 않는다. 남은 요일에 맞춘 현실적인 횟수 하나를 next 로',
+      say: '참고로 이번 주는 아직 운동 기록이 없습니다.' });
   }
 
   // 연속 달성 주
@@ -169,7 +183,8 @@ export function computeSignals(i: SignalInput): SignalResult {
     else break;
   }
   if (streak >= 2) {
-    signals.push({ key: 'streak', priority: 25, text: `지난주까지 ${streak}주 연속 주 ${target}회 목표 달성`, action: '꾸준함을 짧게 인정' });
+    signals.push({ key: 'streak', priority: 25, text: `지난주까지 ${streak}주 연속 주 ${target}회 목표 달성`, action: '꾸준함을 짧게 인정',
+      say: `지난주까지 ${streak}주 연속으로 주 ${target}회를 채우셨습니다.` });
   }
 
   // 기록 갱신 — 최근 7일 기록이 그 전 최고(추정 1RM)를 넘은 종목
@@ -188,7 +203,8 @@ export function computeSignals(i: SignalInput): SignalResult {
     }
   }
   if (prs.length) {
-    signals.push({ key: 'pr', priority: 30, text: `이번 주 개인 기록 갱신: ${prs.slice(0, 2).join(', ')}`, action: '종목과 숫자를 그대로 짚어 인정' });
+    signals.push({ key: 'pr', priority: 30, text: `이번 주 개인 기록 갱신: ${prs.slice(0, 2).join(', ')}`, action: '종목과 숫자를 그대로 짚어 인정',
+      say: `이번 주 ${prs[0]}, 개인 기록 갱신입니다.` });
   }
 
   // ── 체중 ──
@@ -197,6 +213,10 @@ export function computeSignals(i: SignalInput): SignalResult {
     .filter((w) => Number.isFinite(w.t) && w.kg > 25 && w.kg < 300)
     .sort((a, b) => a.t - b.t);
   const latest = ws.length ? ws[ws.length - 1] : null;
+  /** 이번 달 계획 속도(kg/주) — 프로젝트가 있을 때만 */
+  const planWk = i.project ? expectedWeeklyGain(i.project, i.now) : null;
+  /** 너무 빠른 감량 · 증량 — 이때는 '지금까지 온 거리' 를 성과로 치지 않는다 */
+  let tooFast = false;
   if (!latest) {
     status.push({ g: 'weight', t: '체중 기록: 없음' });
   } else {
@@ -204,32 +224,49 @@ export function computeSignals(i: SignalInput): SignalResult {
     status.push({ g: 'weight', t: `최근 체중: ${r1(latest.kg)}kg (${agoKo(ago)} 기록)` });
     if (ago >= 7) {
       signals.push({ key: 'no_weight', priority: 20, text: `체중 기록이 ${ago}일째 없음`,
-        action: '추세를 말할 수 없다고 알리고, 내일 아침 공복 체중 기록을 next 로' });
+        action: '추세를 말할 수 없다고 알리고, 내일 아침 공복 체중 기록을 next 로',
+        say: `참고로 체중 기록이 ${ago}일째 없어서 추세가 최신이 아닙니다.` });
     }
     const win = ws.filter((w) => i.now - w.t <= 21 * DAY);
     const span = win.length ? (win[win.length - 1].t - win[0].t) / DAY : 0;
     if (win.length >= 3 && span >= 7) {
       const wk = slope(win) * 7;
-      status.push({ g: 'weight', t: `최근 ${Math.round(span)}일 체중 추세: 주 ${sgn(wk)}kg` });
+      const days = Math.round(span);
       const pct = Math.abs(wk) / latest.kg * 100;
-      if (span >= 13 && phase === 'cut' && wk < -0.01 * latest.kg) {
+      const long = span >= 13;
+      // 추세 판정을 코드가 붙인다 — 숫자만 주면 모델이 "느리다 · 잘 가고 있다" 를 지어낸다
+      let verdict = '아직 판정하기엔 기록 기간이 짧음';
+      if (long && phase === 'cut' && wk < -0.01 * latest.kg) {
+        verdict = '너무 빠름';
+        tooFast = true;
         signals.push({ key: 'fast_loss', priority: 90,
           text: `체중이 주 ${sgn(wk)}kg(체중의 ${r1(pct)}%)로 너무 빠르게 빠지는 중 — 근손실 위험, 먹는 양을 줄이지 말고 하루 목표 칼로리를 다 채워야 함`,
-          action: '더 줄이려는 생각을 분명히 말린다. 하루 목표 칼로리를 다 채우는 것을 next 로' });
-      } else if (span >= 13 && phase === 'cut' && wk > -0.1) {
-        signals.push({ key: 'plateau', priority: 55, text: `감량 단계인데 최근 ${Math.round(span)}일 체중이 제자리(주 ${sgn(wk)}kg) — 정체`,
+          action: '더 줄이려는 생각을 분명히 말린다. 하루 목표 칼로리를 다 채우는 것을 next 로',
+          say: `그리고 지금 체중이 주 ${sgn(wk)}kg 으로 너무 빠르게 빠지고 있습니다 — 먹는 양은 더 줄이면 안 됩니다.` });
+      } else if (long && phase === 'cut' && wk > -0.1) {
+        verdict = '정체';
+        signals.push({ key: 'plateau', priority: 55, text: `감량 단계인데 최근 ${days}일 체중이 제자리(주 ${sgn(wk)}kg) — 정체`,
           action: '가장 흔한 원인 하나(기록에 안 잡히는 음료 · 소스 · 간식)를 짚고, "7일 동안 전부 기록" 또는 "걸음 수 늘리기" 중 하나만 next 로. '
-            + '하루 목표 칼로리는 그대로 — 체크인 때 엔진이 다시 계산한다고 알린다' });
+            + '하루 목표 칼로리는 그대로 — 체크인 때 엔진이 다시 계산한다고 알린다',
+          say: `참고로 최근 ${days}일은 체중이 제자리입니다.` });
+      } else if (long && phase === 'cut') {
+        verdict = '적정 속도로 빠지는 중';
       }
-      if (span >= 13 && phase === 'gain') {
-        const exp = i.project ? expectedWeeklyGain(i.project, i.now) : null;
-        const lim = Math.max(0.35, (exp ?? 0.25) * 1.5);
+      if (long && phase === 'gain') {
+        const lim = Math.max(0.35, (planWk ?? 0.25) * 1.5);
         if (wk > lim) {
+          verdict = '계획보다 빠름';
+          tooFast = true;
           signals.push({ key: 'fast_gain', priority: 50,
-            text: `증량 단계인데 체중이 주 ${sgn(wk)}kg 로 ${exp !== null ? `엔진 예상(주 ${sgn(exp)}kg)보다` : '권장보다'} 빠르게 느는 중 — 늘어난 만큼 체지방 비중이 커짐`,
-            action: '하루 목표 칼로리를 넘기지 않게, 간식 · 야식 중 하나를 줄이는 것을 next 로' });
+            text: `증량 단계인데 체중이 주 ${sgn(wk)}kg 로 ${planWk !== null ? `엔진 계획(주 ${sgn(planWk)}kg)보다` : '권장보다'} 빠르게 느는 중 — 늘어난 만큼 체지방 비중이 커짐`,
+            action: '하루 목표 칼로리를 넘기지 않게, 간식 · 야식 중 하나를 줄이는 것을 next 로',
+            say: `참고로 체중이 주 ${sgn(wk)}kg 으로 ${planWk !== null ? '엔진 계획보다' : '권장보다'} 빠르게 늘고 있습니다.` });
+        } else {
+          verdict = wk < 0.03 ? '거의 늘지 않는 중' : '적정 속도로 느는 중';
         }
       }
+      if (phase === 'keep') verdict = Math.abs(wk) <= 0.25 ? '유지되는 중' : wk > 0 ? '늘고 있음' : '빠지고 있음';
+      status.push({ g: 'weight', t: `최근 ${days}일 체중 추세: 주 ${sgn(wk)}kg — ${verdict}` });
     }
   }
 
@@ -244,20 +281,35 @@ export function computeSignals(i: SignalInput): SignalResult {
     const expNext = expectedAt(p, m + 1);
     const expEnd = expectedAt(p, p.months);
     if (expNow !== null && expNext !== null && expEnd !== null) {
-      status.push({ g: 'project', t: `엔진 예상 체중: 지금 ${r1(expNow)}kg · 한 달 뒤 ${r1(expNext)}kg · 프로젝트 끝 ${r1(expEnd)}kg` });
+      status.push({ g: 'plan', t: `엔진 예상 체중: 지금 ${r1(expNow)}kg · 한 달 뒤 ${r1(expNext)}kg · 프로젝트 끝 ${r1(expEnd)}kg` });
+      if (planWk !== null) status.push({ g: 'plan', t: `엔진 계획 속도(이번 달): 주 ${sgn(planWk)}kg` });
       if (latest) {
         const diff = latest.kg - expNow;
-        status.push({ g: 'project', t: Math.abs(diff) < 0.05
-          ? '실제 체중이 엔진 예상과 같음'
-          : `실제 체중이 엔진 예상보다 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무거움' : '가벼움'}` });
         const behind = (phase === 'cut' && diff > 2) || (phase === 'gain' && diff < -2);
+        const far = Math.abs(diff) > 2;
+        status.push({ g: 'plan', t: Math.abs(diff) < 0.05
+          ? '엔진 예상 대비: 실제 체중이 예상과 같음'
+          : `엔진 예상 대비: 실제 체중이 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무거움' : '가벼움'} — ${
+            behind ? '계획보다 뒤처짐' : far || tooFast ? (diff > 0 ? '계획보다 많이 늘어 있음' : '계획보다 많이 빠져 있음') : '계획 범위 안'}` });
         if (behind) {
+          // 원인 후보도 코드가 하나만 고른다 — 모델에게 맡기면 두세 개를 늘어놓는다
+          const cause = dates.length && avg3 < target - 0.5
+            ? `지난 3주 운동이 목표(주 ${target}회)에 못 미침`
+            : '기록에 안 잡히는 음료 · 소스 · 간식';
           signals.push({ key: 'off_track', priority: 70,
-            text: `체중이 엔진 예상보다 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무거움 — 예상보다 덜 빠짐' : '가벼움 — 예상보다 덜 늘어남'}`,
-            action: '현황에 있는 원인 후보 하나(운동 빠짐 등, 없으면 기록 누락)를 짚고 이번 주 행동 하나를 next 로. 체크인하면 트랙이 다시 계산된다고 알린다' });
+            text: `체중이 엔진 예상보다 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무거움 — 예상보다 덜 빠짐' : '가벼움 — 예상보다 덜 늘어남'}. 원인 후보: ${cause}`,
+            action: '원인 후보 하나만 짚고(다른 원인은 꺼내지 않는다) 그것을 고치는 이번 주 행동 하나를 next 로. 체크인하면 계획이 다시 계산된다고 한 문장',
+            say: `참고로 지금 체중은 엔진 예상보다 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무겁습니다' : '가볍습니다'} — 체크인하면 계획이 다시 계산됩니다.` });
         }
         const d = latest.kg - p.startWeightKg;
-        status.push({ g: 'journey', t: `프로젝트 시작 체중 ${r1(p.startWeightKg)}kg → 지금 ${r1(latest.kg)}kg (${sgn(d)}kg)` });
+        status.push({ g: 'project', t: `프로젝트 시작 체중 ${r1(p.startWeightKg)}kg → 지금 ${r1(latest.kg)}kg (${sgn(d)}kg)` });
+        // 방향이 맞고 너무 빠르지 않을 때만 성과로 — "예상보다 빨리 찐 2kg" 을 칭찬하지 않게
+        const rightWay = (phase === 'cut' && d <= -1) || (phase === 'gain' && d >= 1);
+        if (rightWay && !tooFast) {
+          signals.push({ key: 'journey', priority: 15, text: `프로젝트 시작 뒤 체중 ${sgn(d)}kg (${r1(p.startWeightKg)}kg → ${r1(latest.kg)}kg)`,
+            action: '지금까지 온 거리를 짧게 인정',
+            say: `프로젝트 시작 뒤 ${Math.abs(r1(d))}kg ${d < 0 ? '줄였습니다' : '늘렸습니다'}.` });
+        }
       }
     }
     // 체크인 — "N일 전" 만 주면 모델이 "N일 뒤" 로 읽는다. 다음 체크인까지 남은 날을 직접 적는다
@@ -269,7 +321,8 @@ export function computeSignals(i: SignalInput): SignalResult {
       : `4주 체크인: 다음 체크인까지 ${28 - sinceBase}일 남음` });
     if (due) {
       signals.push({ key: 'checkin_due', priority: 40, text: '4주 체크인을 할 때가 됨',
-        action: '홈의 프로젝트 카드에서 체크인하는 것을 next 로 — 체크인하면 예상 트랙과 칼로리가 다시 계산된다' });
+        action: '홈의 프로젝트 카드에서 체크인하는 것을 next 로 — 체크인하면 예상 트랙과 칼로리가 다시 계산된다',
+        say: '참고로 4주 체크인을 할 때가 됐습니다 — 홈의 프로젝트 카드에서 할 수 있습니다.' });
     }
   }
 
@@ -277,7 +330,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   return { phase, status, signals };
 }
 
-/** 이번 달 → 다음 달 예상 증가를 주 단위로 */
+/** 이번 달 → 다음 달 예상 변화를 주 단위로 */
 function expectedWeeklyGain(p: SigProject, now: number): number | null {
   const m = monthsSince(p.startedAt, now);
   const a = expectedAt(p, Math.floor(m));
@@ -287,68 +340,107 @@ function expectedWeeklyGain(p: SigProject, now: number): number | null {
 
 // ── 이번 답에 무엇을 보여 줄지 ──
 
-/** 질문 종류별로 모델에 주는 현황 묶음 — 운동 질문에 체중 추세를 주면 묻지 않은 정체 이야기를 꺼낸다 */
+const PROBLEMS: SignalKey[] = ['fast_loss', 'off_track', 'missed', 'plateau', 'fast_gain', 'checkin_due', 'no_weight'];
+const WINS: SignalKey[] = ['pr', 'streak', 'journey'];
+/** 체중 쪽 문제 — 이것이 답의 중심이면 운동 현황은 주지 않는다(원인을 두세 개 늘어놓게 된다) */
+const WEIGHT_FOCUS: SignalKey[] = ['fast_loss', 'off_track', 'plateau', 'fast_gain', 'checkin_due', 'no_weight'];
+
+/**
+ * 질문 종류별로 모델에 주는 현황 묶음. 보여 준 것은 답에 끌려 나온다 —
+ * 식단 질문에 체중 추세를 주면 "지금 주 +0.2kg 이니…" 가 붙고, 운동 질문에 지난 3주를 주면 묻지 않은 출석 이야기를 한다.
+ * 체중 · 출석 문제는 focus 로만 전한다.
+ */
 const STATUS_FOR: Record<string, StatusGroup[]> = {
-  progress: ['phase', 'workout', 'weight', 'project', 'journey'],
-  diet: ['phase', 'weight'],
-  workout: ['phase', 'workout'],
-  motivation: ['phase', 'workout', 'journey'],
-  general: ['workout'],
+  progress: ['phase', 'week', 'habit', 'weight', 'plan', 'project'],
+  diet: ['phase'],
+  workout: ['phase', 'week'],
+  motivation: ['phase', 'week', 'habit'],
+  general: [],
   app: [],
 };
 
-export function statusFor(intent: string, r: SignalResult | null): string[] {
+export function statusFor(intent: string, r: SignalResult | null, focus: Focus['focus'] = null): string[] {
   if (!r) return [];
-  const g = STATUS_FOR[intent] ?? [];
+  let g = STATUS_FOR[intent] ?? [];
+  if (focus?.mode === 'main') {
+    g = WEIGHT_FOCUS.includes(focus.key)
+      ? [...new Set<StatusGroup>([...g.filter((x) => x !== 'week' && x !== 'habit'), 'weight', 'plan'])]
+      : g;
+  }
   return r.status.filter((s) => g.includes(s.g)).map((s) => s.t);
 }
 
 /**
  * 이번 답에서 코치가 꺼낼 신호를 코드가 고른다 — "어떤 신호를 언제 말할지" 를 모델 판단에 맡기지 않는다.
- *  focus = 짚을 문제 하나. mode 'main' 은 답의 중심(행동까지), 'mention' 은 질문에 답한 뒤 한 문장으로 사실만.
- *  win   = 인정해 줄 성과 하나.
- * 빠른 감량은 안전 문제라 앱 사용법만 빼고 어떤 질문에도 붙는다. 그 밖에는 질문 종류와 닿는 것만.
- * 같은 신호를 답마다 되풀이하지 않게, 최근에 말한 신호(said)는 진행 질문이 아니면 건너뛴다.
+ *  focus = 짚을 문제 하나. mode 'main' 은 답의 중심(모델이 쓴다), 'mention' 은 서버가 답 끝에 한 문장(say)을 붙인다.
+ *  win   = 인정해 줄 성과 하나. where 'text' 는 모델이 답에 녹이고(진행 · 의욕 질문), 'cheer' 는 서버가 응원 줄로 붙인다(운동 질문).
+ * 회원이 그 문제를 직접 말하면("정체예요", "너무 빨리 빠져요") 질문 종류와 상관없이 답의 중심이 된다.
+ * 빠른 감량은 안전 문제라 식단 · 운동 · 의욕 어디에나 붙는다. 그 밖에는 질문 종류와 닿는 것만.
+ * 같은 신호 · 성과를 답마다 되풀이하지 않게, 최근에 말한 것(said)은 진행 질문이 아니면 건너뛴다.
  */
 const FOCUS_MAIN: Record<string, SignalKey[]> = {
-  progress: ['fast_loss', 'off_track', 'missed', 'plateau', 'fast_gain', 'checkin_due', 'no_weight'],
+  progress: ['fast_loss', 'off_track', 'missed', 'plateau', 'fast_gain', 'checkin_due'],
   diet: ['fast_loss', 'fast_gain'],
   motivation: ['missed'],
 };
 const FOCUS_MENTION: Record<string, SignalKey[]> = {
+  progress: ['no_weight'],
   diet: ['off_track', 'plateau'],
   workout: ['fast_loss', 'missed'],
   motivation: ['fast_loss'],
-  general: ['fast_loss'],
 };
-const WIN_ALLOW = new Set(['progress', 'workout', 'motivation', 'general']);
+/** 회원이 직접 꺼낸 문제 → 그 신호가 있으면 답의 중심 */
+const ASKED: [RegExp, SignalKey[]][] = [
+  [/빨리\s?빠|너무\s?빠지|급하게\s?빠|쭉쭉\s?빠/, ['fast_loss']],
+  [/빨리\s?찌|너무\s?찌|배만\s?나|살만\s?찌|너무\s?늘/, ['fast_gain']],
+  [/정체|제자리|그대로|안\s?빠|안\s?줄|안\s?바뀌|안\s?변|변화가?\s?없|효과가?\s?없|안\s?늘/, ['plateau', 'off_track', 'fast_gain', 'fast_loss']],
+  [/체크인/, ['checkin_due']],
+];
+const WIN_WHERE: Record<string, 'text' | 'cheer'> = { progress: 'text', motivation: 'text', workout: 'cheer' };
 /** 같은 신호를 다시 꺼내기까지(시간) — 진행 질문은 예외 */
 export const FOCUS_COOLDOWN_H: Partial<Record<SignalKey, number>> = { fast_loss: 20 };
 const COOLDOWN_DEFAULT_H = 72;
 
 export interface Focus {
   focus: (Signal & { mode: 'main' | 'mention' }) | null;
-  win: Signal | null;
+  win: (Signal & { where: 'text' | 'cheer' }) | null;
 }
 
-export function pickFocus(intent: string, r: SignalResult | null, said: Partial<Record<SignalKey, string>> = {}, now = Date.now()): Focus {
-  if (!r) return { focus: null, win: null };
+export function pickFocus(
+  intent: string, r: SignalResult | null, said: Partial<Record<SignalKey, string>> = {}, now = Date.now(), question = '',
+): Focus {
+  if (!r || intent === 'app') return { focus: null, win: null };
   const cooled = (k: SignalKey) => {
     if (intent === 'progress') return false;
     const t = said[k] ? Date.parse(said[k]!) : NaN;
     return Number.isFinite(t) && now - t < (FOCUS_COOLDOWN_H[k] ?? COOLDOWN_DEFAULT_H) * 3_600_000;
   };
-  const main = FOCUS_MAIN[intent] ?? [];
-  const mention = FOCUS_MENTION[intent] ?? [];
-  const s = r.signals.find((x) => (main.includes(x.key) || mention.includes(x.key)) && !cooled(x.key)) ?? null;
-  const win = WIN_ALLOW.has(intent) ? r.signals.find((x) => x.key === 'pr' || x.key === 'streak') ?? null : null;
-  return { focus: s ? { ...s, mode: main.includes(s.key) ? 'main' : 'mention' } : null, win };
+  const problems = r.signals.filter((x) => PROBLEMS.includes(x.key));
+  const q = question.replace(/\s+/g, ' ');
+  let focus: Focus['focus'] = null;
+  for (const [re, keys] of ASKED) {
+    if (!re.test(q)) continue;
+    const hit = keys.map((k) => problems.find((x) => x.key === k)).find(Boolean);
+    if (hit) {
+      focus = { ...hit, mode: 'main' };
+      break;
+    }
+  }
+  if (!focus) {
+    const main = FOCUS_MAIN[intent] ?? [];
+    const mention = FOCUS_MENTION[intent] ?? [];
+    const s = problems.find((x) => (main.includes(x.key) || mention.includes(x.key)) && !cooled(x.key)) ?? null;
+    focus = s ? { ...s, mode: main.includes(s.key) ? 'main' : 'mention' } : null;
+  }
+  const where = WIN_WHERE[intent];
+  const w = where ? r.signals.find((x) => WINS.includes(x.key) && !cooled(x.key)) ?? null : null;
+  return { focus, win: w && where ? { ...w, where } : null };
 }
 
 /** 검증기 · 로그용 — 현황과 신호 전체를 글로 */
 export function signalsText(r: SignalResult): string {
   return [
     ...r.status.map((s) => `- ${s.t}`),
-    ...r.signals.map((s) => `* ${s.text}`),
+    ...r.signals.map((s) => `* ${s.text} / ${s.say}`),
   ].join('\n');
 }
