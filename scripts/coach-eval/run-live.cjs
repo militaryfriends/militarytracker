@@ -24,7 +24,13 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const has = (k) => process.argv.includes(k);
 const MODEL = arg('--model') || 'claude-haiku-4-5-20251001';
 const JUDGE = 'claude-sonnet-4-5';
-const KEY = process.env.ANTHROPIC_API_KEY;
+// 키: 환경변수, 없으면 scripts/coach-eval/.env 의 ANTHROPIC_API_KEY=… 한 줄(git 에 안 올라감)
+const KEY = process.env.ANTHROPIC_API_KEY || (() => {
+  try {
+    const m = fs.readFileSync(path.join(__dirname, '.env'), 'utf8').match(/^ANTHROPIC_API_KEY=(.+)$/m);
+    return m ? m[1].trim() : '';
+  } catch { return ''; }
+})();
 
 const ALLERGY = { P8: /우유|유제품|치즈|요거트|요구르트|라떼|유청|웨이|카제인/, P9: /견과|아몬드|땅콩|호두|캐슈|피스타치오|피넛/ };
 const HOME = new Set(['P3', 'P6']);
