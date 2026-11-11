@@ -4,7 +4,8 @@
  * 분 · 세트 · 회 같은 운동 처방 숫자는 보지 않는다(코칭에 필요하고 위험하지 않다).
  */
 
-const NUM_UNIT = /(\d[\d,]*(?:\.\d+)?)\s?(kcal|킬로칼로리|칼로리|kg|킬로그램|킬로|g(?![a-z])|그램|%|퍼센트)/gi;
+/** 단위가 붙은 숫자 — 범위("350~400kcal")는 앞 숫자(1)도 함께 본다 */
+const NUM_UNIT = /(?:(\d[\d,]*(?:\.\d+)?)\s?[~∼〜\-–]\s?)?(\d[\d,]*(?:\.\d+)?)\s?(kcal|킬로칼로리|칼로리|kg|킬로그램|킬로|g(?![a-z])|그램|%|퍼센트)/gi;
 const ANY_NUM = /\d[\d,]*(?:\.\d+)?/g;
 
 /** 금지 — 결과 약속 · 약물 · 극단 식단 */
@@ -46,9 +47,8 @@ export interface Check {
 export function checkText(text: string, allowed: number[]): Check {
   const badNumbers: string[] = [];
   for (const m of text.matchAll(NUM_UNIT)) {
-    const n = toNum(m[1]);
-    if (!Number.isFinite(n)) continue;
-    if (!allowed.some((a) => close(a, n))) badNumbers.push(m[0]);
+    const nums = [m[1], m[2]].filter(Boolean).map(toNum).filter((n) => Number.isFinite(n));
+    if (nums.some((n) => !allowed.some((a) => close(a, n)))) badNumbers.push(m[0]);
   }
   const banned = BANNED.flatMap((r) => {
     const m = text.match(r);

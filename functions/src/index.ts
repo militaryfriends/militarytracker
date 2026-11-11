@@ -37,7 +37,7 @@ import { routeTurn, SAFETY_REPLY } from './coach/intent';
 import { loadSignals, loadSaid, markSaid, cleanExNames, signalsText } from './coach/context';
 import { pickFocus, statusFor } from './coach/signals';
 import { runCoach } from './coach/answer';
-import { SYSTEM, buildTurn, PREFILL, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
+import { systemFor, buildTurn, PREFILL, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
 import { allowedNumbers } from './coach/validate';
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
@@ -102,7 +102,8 @@ async function anthropicWorkspace(): Promise<string | null> {
 }
 
 async function callAnthropic(opts: {
-  system: string;
+  /** 여러 덩어리면 덩어리마다 캐시 지점을 둔다(앞 덩어리만 같아도 그만큼은 캐시에서 읽는다) */
+  system: string | string[];
   messages: AnthropicMessage[];
   maxTokens: number;
   apiKey: string;
@@ -129,7 +130,8 @@ async function callAnthropic(opts: {
         model: opts.model,
         max_tokens: opts.maxTokens,
         // 규칙(시스템 프롬프트)은 고정 문자열이라 캐시한다 — 길이가 캐시 최소 길이에 못 미치면 API 가 그냥 무시한다
-        system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
+        system: (Array.isArray(opts.system) ? opts.system : [opts.system])
+          .map((text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } })),
         messages: opts.messages,
         ...(opts.stop?.length ? { stop_sequences: opts.stop } : {}),
       }),
@@ -578,7 +580,7 @@ export const aiCoach = onCall(
     const [sig, said] = await Promise.all([loadSignals(acc.uid, cleanExNames(req.data?.exNames)), loadSaid(acc.uid)]);
     const { focus, win } = pickFocus(routed.intent, sig, said, Date.now(), question);
 
-    // ③ 가변부는 마지막 user 턴 — 고정부(SYSTEM)는 모두에게 같아 캐시된다.
+    // ③ 가변부는 마지막 user 턴 — 고정부(systemFor: 공통 + 질문 종류별 묶음)는 모두에게 같아 캐시된다.
     // 앱이 만든 사용자 데이터는 system 이 아니라 user 턴의 <data> — 클라이언트가 규칙을 덧쓸 수 없다.
     messages[last] = {
       role: 'user',
@@ -594,7 +596,7 @@ export const aiCoach = onCall(
     // 답을 PREFILL 로 시작시킨다 — JSON 밖의 글 · 울타리를 막고, 행동(next)을 먼저 정하게 한다
     const call = async (msgs: AnthropicMessage[]) => {
       const out = await callAnthropic({
-        system: SYSTEM, messages: [...msgs, { role: 'assistant', content: PREFILL }], maxTokens: 900, stop: STOP,
+        system: systemFor(routed.intent), messages: [...msgs, { role: 'assistant', content: PREFILL }], maxTokens: 900, stop: STOP,
         apiKey: ANTHROPIC_API_KEY.value(), model: MODEL_CHAT, uid: acc.uid,
       });
       return out ? PREFILL + out : '';

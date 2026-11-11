@@ -25,7 +25,7 @@ const { runCoach } = require('../../functions/lib/coach/answer');
 const { P } = require('./personas.cjs');
 const cases = require('./cases.json');
 
-const { SYSTEM, buildTurn, PROMPT_VERSION } = prompt;
+const { systemFor, SYSTEM_PARTS, buildTurn, PROMPT_VERSION } = prompt;
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const has = (k) => process.argv.includes(k);
 const MODEL = arg('--model') || 'claude-haiku-4-5-20251001';
@@ -67,7 +67,7 @@ async function api(model, system, messages, maxTokens = 1000, stop = null) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: maxTokens, system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }], messages, ...(stop ? { stop_sequences: stop } : {}) }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: (Array.isArray(system) ? system : [system]).map((text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } })), messages, ...(stop ? { stop_sequences: stop } : {}) }),
     });
     if ((res.status === 429 || res.status >= 500) && t < 5) { await sleep(2000 * (t + 1) + Math.random() * 1500); continue; }
     if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
@@ -95,6 +95,12 @@ function prepare(c) {
   return { p, r, sig, sigText, status, ...fw, injury, dk, messages: [...hist, { role: 'user', content: turn }] };
 }
 
+/** 코치(모델)가 쓴 부분만 — 서버가 끝에 붙인 문장을 뗀다 */
+function coachText(out, prep) {
+  const say = prep.focus?.mode === 'mention' ? prep.focus.say : '';
+  return say && out.reply.endsWith(say) ? out.reply.slice(0, -say.length).trim() : out.reply;
+}
+
 /** out = 서버가 회원에게 돌려주는 최종 답 { reply, meal, warning, cheer, next } */
 function codeChecks(c, prep, out, raw, meta) {
   const issues = [];
@@ -111,7 +117,8 @@ function codeChecks(c, prep, out, raw, meta) {
   if (ALLERGY[c.persona]?.test(all + ' ' + meal)) issues.push('알레르기 음식');
   if (HOME.has(c.persona) && prep.r.intent === 'workout' && GYM_ONLY.test(all)) issues.push('집회원에게 기구');
   const intent = prep.r.intent;
-  if (['diet', 'workout', 'progress', 'motivation'].includes(intent) && !out.next) issues.push('next없음');
+  // 사실만 묻는 질문에는 next 가 없어도 된다 — 글에서 무언가 시켰는데 next 가 비었을 때만 문제
+  if (['diet', 'workout', 'progress', 'motivation'].includes(intent) && !out.next && /(하|가|드|먹|채우|넣|보|두|마시|쉬|재|걸|줄이|늘리|바꾸|기록하)세요/.test(coachText(out, prep))) issues.push('next없음(지시 있음)');
   if (['app'].includes(intent) && out.next) issues.push('next있음(앱)');
   if (prep.focus && !FOCUS_WORDS[prep.focus.key].test(all)) issues.push(`focus안짚음(${prep.focus.key})`);
   const sentences = out.reply.split(/(?<=[.?!])\s+/).filter((x) => x.trim().length > 1).length;
@@ -132,10 +139,10 @@ const JUDGE_SYS = [
   '    식단 카드(meal)의 음식별 kcal · 단백질은 서버가 식품표로 계산해 넣은 값이다 — 카드 안 숫자는 감점하지 않는다.',
   '(b) 코치에게는 질문 종류에 맞는 현황만 줬다("코치에게 준 현황"). 그 밖의 현황을 몰라서 말하지 않은 것은 감점하지 않는다.',
   '    [짚을 문제 — 답의 중심] 이 있으면: 질문에 먼저 답하고, 그 문제와 할 일을 중심으로 써야 한다.',
-  '    [서버가 끝에 붙인 문장] 이 있으면: 그 문장은 코드가 붙인 것이다(있어야 정상). 코치 글이 그 내용을 되풀이하거나 어긋나면 감점.',
+  '    [서버가 끝에 붙인 문장] 이 있으면: 회원의 다른 문제를 서버가 한 문장으로 알려 주는 것이다. 코치 글과 따로 적어 준다 — 이 문장이 있다는 것, 코치가 그 문제를 더 다루지 않은 것 모두 감점하지 않는다. 코치 글이 그 내용을 되풀이하거나 어긋날 때만 감점.',
   '    둘 다 없으면: 진행(progress) 질문은 현황을 요약해 답하는 것이 맞고, 그 밖의 질문에서 묻지 않은 체중 추세 · 정체 · 체크인 · 출석 이야기를 꺼내면 감점.',
   '    [성과] 는 한 문장 이내(운동 질문에서는 서버가 cheer 줄로 붙인다). 없으면 칭찬을 지어내지 않는다.',
-  '(c) 회원이 할 일은 하나로 모은다(next). 식단 · 운동 · 진행 · 의욕 질문에는 next 가 있어야 하고, 앱 사용법 · 인사 · 범위 밖 요청은 next 가 null 이어야 한다. 되묻기만 하고 답이 없으면 감점.',
+  '(c) 회원이 할 일은 하나로 모은다(next). 조언을 구하는 질문에는 next 가 있어야 한다. 사실만 묻는 질문(수치, 된다/안 된다)에 지시 없이 답했다면 next 가 null 이어도 되고(감점하지 않는다), 앱 사용법 · 인사 · 범위 밖 요청은 null 이어야 한다. 글에서 무언가 시켰는데 next 가 null 이면 감점. 되묻기만 하고 답이 없으면 감점.',
   '(d) 직설적인 PT 말투 — "회원님", 짧게(2~4문장 + 서버가 붙인 한 문장), 필러 · 설교 · 이모지 · 목록 없음. 차갑거나 무례하면 감점. 진단 · 결과 약속 · 극단 식단 금지.',
   '(e) 식단을 제안하는 답의 첫 문장은 계산 근거("176cm · 80kg · 감량 기준 하루 2,150kcal = 유지 2,650 − 500")다 — 이 앱의 정해진 형식이므로 감점하지 않는다.',
   '항목(각 1~5 정수):',
@@ -162,7 +169,7 @@ function judgeInput(c, prep, out) {
     ...(c.history?.length ? [`앞 대화:\n${c.history.map((m) => `${m.role === 'user' ? '회원' : '코치'}: ${m.content}`).join('\n')}`] : []),
     `질문: ${c.q}`,
     ...(c.expect ? [`[기대] ${c.expect}`] : []),
-    `코치 답(최종): ${JSON.stringify({ text: out.reply, next: out.next, meal: out.meal ? { t: out.meal.t, kcal: out.meal.kcal, items: out.meal.items.map((i) => `${i.n} ${i.q}${i.u}`) } : null, warning: out.warning, cheer: out.cheer })}`,
+    `코치 답: ${JSON.stringify({ text: coachText(out, prep), next: out.next, meal: out.meal ? { t: out.meal.t, kcal: out.meal.kcal, items: out.meal.items.map((i) => `${i.n} ${i.q}${i.u}`) } : null, warning: out.warning, cheer: out.cheer })}`,
   ].join('\n');
 }
 
@@ -197,7 +204,7 @@ function report(rows) {
 }
 
 async function main() {
-  console.log(`프롬프트 ${PROMPT_VERSION} · 고정부 ${SYSTEM.length.toLocaleString()}자 · 모델 ${MODEL}${PREFILL ? ' · 프리필' : ''}`);
+  console.log(`프롬프트 ${PROMPT_VERSION} · 고정부(자) ${Object.entries(SYSTEM_PARTS).map(([k, v]) => `${k} ${v.length.toLocaleString()}`).join(' · ')} · 모델 ${MODEL}${PREFILL ? ' · 프리필' : ''}`);
   let list = cases;
   if (arg('--only')) list = cases.filter((c) => arg('--only').split(',').includes(c.id));
   if (arg('--n')) list = list.filter((_, i) => i % Math.ceil(cases.length / Number(arg('--n'))) === 0);
@@ -228,7 +235,7 @@ async function main() {
     const usage = { input_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, output_tokens: 0, calls: 0 };
     try {
       const call = async (msgs) => {
-        const r = await api(MODEL, SYSTEM, PREFILL ? [...msgs, { role: 'assistant', content: PREFILL }] : msgs, 900, prompt.STOP ?? null);
+        const r = await api(MODEL, systemFor(prep.r.intent), PREFILL ? [...msgs, { role: 'assistant', content: PREFILL }] : msgs, 900, prompt.STOP ?? null);
         for (const k of Object.keys(usage)) usage[k] += r.usage?.[k] ?? 0;
         usage.calls++;
         return r.text ? PREFILL + r.text : '';

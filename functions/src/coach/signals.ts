@@ -67,7 +67,7 @@ export interface Signal {
 }
 
 /** 현황 줄 — 묶음(g)으로 질문 종류에 맞는 것만 모델에 준다 */
-export type StatusGroup = 'phase' | 'week' | 'habit' | 'weight' | 'plan' | 'project';
+export type StatusGroup = 'phase' | 'week' | 'lifts' | 'habit' | 'weight' | 'plan' | 'project';
 export interface StatusLine {
   g: StatusGroup;
   t: string;
@@ -169,7 +169,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   if (sinceLast !== null && sinceLast >= 5) {
     signals.push({ key: 'missed', priority: 60, text: `마지막 운동이 ${sinceLast}일 전`,
       action: '비난하지 않는다. 오늘 할 가장 작은 운동(플랜 첫 종목 2~3세트, 10~20분)을 next 로 주고, 무엇이 막는지는 끝에 하나만 묻는다',
-      say: `참고로 마지막 운동이 ${sinceLast}일 전입니다.` });
+      say: `참고로 마지막 운동이 ${sinceLast}일 전입니다 — 오늘 10분만 해도 흐름이 이어집니다.` });
   } else if (sinceLast !== null && weekday >= 3 && thisWeek === 0) {
     signals.push({ key: 'missed', priority: 55, text: `이번 주 운동을 아직 한 번도 안 함(${WEEKDAYS[weekday]}요일)`,
       action: '비난하지 않는다. 남은 요일에 맞춘 현실적인 횟수 하나를 next 로',
@@ -206,6 +206,28 @@ export function computeSignals(i: SignalInput): SignalResult {
     signals.push({ key: 'pr', priority: 30, text: `이번 주 개인 기록 갱신: ${prs.slice(0, 2).join(', ')}`, action: '종목과 숫자를 그대로 짚어 인정',
       say: `이번 주 ${prs[0]}, 개인 기록 갱신입니다.` });
   }
+
+  // 종목별 최근 기록 — "언제 올려요 · 몇 kg 해요" 에 답할 재료(앱이 보내는 최근 기록 줄에는 무게가 없다)
+  const lifts: string[] = [];
+  const seen = new Set<string>();
+  for (const l of [...i.logs].sort((a, b) => b.date.localeCompare(a.date))) {
+    if (todayN - dayNum(l.date) > 28) break;
+    for (const ex of l.exercises) {
+      const name = i.exNames[ex.id];
+      if (!name || seen.has(ex.id) || !ex.best || !(ex.best.w > 0) || !(ex.best.r > 0)) continue;
+      seen.add(ex.id);
+      if (lifts.length < 6) lifts.push(`${name} ${ex.best.w}kg × ${ex.best.r}회`);
+    }
+  }
+  if (lifts.length) status.push({ g: 'lifts', t: `종목별 최근 기록: ${lifts.join(' · ')}` });
+
+  // 체크인까지 — 끝 문장(say)에서 "N일 뒤 체크인 때 다시 계산" 을 말하려고 먼저 구한다
+  const projDays = i.project ? Math.floor((i.now - Date.parse(i.project.startedAt)) / DAY) : null;
+  const lastC = i.lastCheckinAt ? Math.floor((i.now - Date.parse(i.lastCheckinAt)) / DAY) : null;
+  const sinceBase = projDays === null ? null : lastC ?? projDays;
+  const recalc = sinceBase === null
+    ? '먹는 것을 일주일만 빠짐없이 기록해 보면 원인이 보입니다'
+    : sinceBase >= 28 ? '지금 체크인하면 엔진이 계획을 다시 계산합니다' : `${28 - sinceBase}일 뒤 체크인 때 엔진이 계획을 다시 계산합니다`;
 
   // ── 체중 ──
   const ws = i.weights
@@ -248,7 +270,7 @@ export function computeSignals(i: SignalInput): SignalResult {
         signals.push({ key: 'plateau', priority: 55, text: `감량 단계인데 최근 ${days}일 체중이 제자리(주 ${sgn(wk)}kg) — 정체`,
           action: '가장 흔한 원인 하나(기록에 안 잡히는 음료 · 소스 · 간식)를 짚고, "7일 동안 전부 기록" 또는 "걸음 수 늘리기" 중 하나만 next 로. '
             + '하루 목표 칼로리는 그대로 — 체크인 때 엔진이 다시 계산한다고 알린다',
-          say: `참고로 최근 ${days}일은 체중이 제자리입니다.` });
+          say: `참고로 최근 ${days}일은 체중이 제자리입니다 — ${recalc}.` });
       } else if (long && phase === 'cut') {
         verdict = '적정 속도로 빠지는 중';
       }
@@ -258,9 +280,9 @@ export function computeSignals(i: SignalInput): SignalResult {
           verdict = '계획보다 빠름';
           tooFast = true;
           signals.push({ key: 'fast_gain', priority: 50,
-            text: `증량 단계인데 체중이 주 ${sgn(wk)}kg 로 ${planWk !== null ? `엔진 계획(주 ${sgn(planWk)}kg)보다` : '권장보다'} 빠르게 느는 중 — 늘어난 만큼 체지방 비중이 커짐`,
-            action: '하루 목표 칼로리를 넘기지 않게, 간식 · 야식 중 하나를 줄이는 것을 next 로',
-            say: `참고로 체중이 주 ${sgn(wk)}kg 으로 ${planWk !== null ? '엔진 계획보다' : '권장보다'} 빠르게 늘고 있습니다.` });
+            text: `증량 단계인데 체중이 주 ${sgn(wk)}kg 로 ${planWk !== null ? `엔진 계획(주 ${sgn(planWk)}kg)보다` : '권장보다'} 빠르게 느는 중 — 이 속도는 늦춰야 함(늘어난 만큼 체지방 비중이 커진다)`,
+            action: '속도를 늦춰야 한다고 분명히 말한다. 하루 목표 칼로리를 넘기지 않게, 간식 · 야식 중 하나를 줄이는 것을 next 로',
+            say: `참고로 체중이 주 ${sgn(wk)}kg 으로 ${planWk !== null ? '엔진 계획보다' : '권장보다'} 빠르게 늘고 있습니다 — 하루 목표 칼로리를 넘기고 있지 않은지 봐야 합니다.` });
         } else {
           verdict = wk < 0.03 ? '거의 늘지 않는 중' : '적정 속도로 느는 중';
         }
@@ -273,7 +295,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   // ── 프로젝트 ──
   if (i.project) {
     const p = i.project;
-    const days = Math.floor((i.now - Date.parse(p.startedAt)) / DAY);
+    const days = projDays ?? 0;
     const m = monthsSince(p.startedAt, i.now);
     const left = Math.max(0, Math.round(p.months - m));
     status.push({ g: 'project', t: `프로젝트: ${days}일째 · 전체 ${p.months}개월 중 ${Math.min(p.months, Math.floor(m) + 1)}개월째 · 끝까지 약 ${left}개월` });
@@ -313,12 +335,11 @@ export function computeSignals(i: SignalInput): SignalResult {
       }
     }
     // 체크인 — "N일 전" 만 주면 모델이 "N일 뒤" 로 읽는다. 다음 체크인까지 남은 날을 직접 적는다
-    const lastC = i.lastCheckinAt ? Math.floor((i.now - Date.parse(i.lastCheckinAt)) / DAY) : null;
-    const sinceBase = lastC ?? days;
-    const due = sinceBase >= 28;
+    const since = sinceBase ?? days;
+    const due = since >= 28;
     status.push({ g: 'project', t: due
       ? `4주 체크인: 지금 할 때가 됨(${lastC === null ? '아직 한 번도 안 함' : `마지막 체크인 ${lastC}일 전`})`
-      : `4주 체크인: 다음 체크인까지 ${28 - sinceBase}일 남음` });
+      : `4주 체크인: 다음 체크인까지 ${28 - since}일 남음` });
     if (due) {
       signals.push({ key: 'checkin_due', priority: 40, text: '4주 체크인을 할 때가 됨',
         action: '홈의 프로젝트 카드에서 체크인하는 것을 next 로 — 체크인하면 예상 트랙과 칼로리가 다시 계산된다',
@@ -353,7 +374,7 @@ const WEIGHT_FOCUS: SignalKey[] = ['fast_loss', 'off_track', 'plateau', 'fast_ga
 const STATUS_FOR: Record<string, StatusGroup[]> = {
   progress: ['phase', 'week', 'habit', 'weight', 'plan', 'project'],
   diet: ['phase'],
-  workout: ['phase', 'week'],
+  workout: ['phase', 'week', 'lifts'],
   motivation: ['phase', 'week', 'habit'],
   general: [],
   app: [],
@@ -374,18 +395,18 @@ export function statusFor(intent: string, r: SignalResult | null, focus: Focus['
  * 이번 답에서 코치가 꺼낼 신호를 코드가 고른다 — "어떤 신호를 언제 말할지" 를 모델 판단에 맡기지 않는다.
  *  focus = 짚을 문제 하나. mode 'main' 은 답의 중심(모델이 쓴다), 'mention' 은 서버가 답 끝에 한 문장(say)을 붙인다.
  *  win   = 인정해 줄 성과 하나. where 'text' 는 모델이 답에 녹이고(진행 · 의욕 질문), 'cheer' 는 서버가 응원 줄로 붙인다(운동 질문).
- * 회원이 그 문제를 직접 말하면("정체예요", "너무 빨리 빠져요") 질문 종류와 상관없이 답의 중심이 된다.
- * 빠른 감량은 안전 문제라 식단 · 운동 · 의욕 어디에나 붙는다. 그 밖에는 질문 종류와 닿는 것만.
+ * 답의 중심이 되는 것은 진행 질문, 그리고 회원이 그 문제를 직접 말했을 때("정체예요", "너무 빨리 빠져요")뿐이다.
+ * 빠른 감량은 안전 문제라 식단 · 운동 · 의욕 어디에나 끝 문장으로 붙는다. 그 밖에는 질문 종류와 닿는 것만.
  * 같은 신호 · 성과를 답마다 되풀이하지 않게, 최근에 말한 것(said)은 진행 질문이 아니면 건너뛴다.
  */
 const FOCUS_MAIN: Record<string, SignalKey[]> = {
   progress: ['fast_loss', 'off_track', 'missed', 'plateau', 'fast_gain', 'checkin_due'],
-  diet: ['fast_loss', 'fast_gain'],
   motivation: ['missed'],
 };
+// 식단 · 운동 질문에서는 질문에 답하는 것이 먼저다 — 문제는 끝 문장으로만(답의 중심으로 두면 "야식 먹어도 돼요?" 에 속도 이야기만 한다)
 const FOCUS_MENTION: Record<string, SignalKey[]> = {
   progress: ['no_weight'],
-  diet: ['off_track', 'plateau'],
+  diet: ['fast_loss', 'fast_gain', 'off_track', 'plateau'],
   workout: ['fast_loss', 'missed'],
   motivation: ['fast_loss'],
 };
@@ -409,7 +430,7 @@ export interface Focus {
 export function pickFocus(
   intent: string, r: SignalResult | null, said: Partial<Record<SignalKey, string>> = {}, now = Date.now(), question = '',
 ): Focus {
-  if (!r || intent === 'app') return { focus: null, win: null };
+  if (!r || intent === 'app' || intent === 'general') return { focus: null, win: null };
   const cooled = (k: SignalKey) => {
     if (intent === 'progress') return false;
     const t = said[k] ? Date.parse(said[k]!) : NaN;
@@ -422,7 +443,8 @@ export function pickFocus(
     if (!re.test(q)) continue;
     const hit = keys.map((k) => problems.find((x) => x.key === k)).find(Boolean);
     if (hit) {
-      focus = { ...hit, mode: 'main' };
+      // 의욕 질문이면 사실부터 들이밀지 않게
+      focus = { ...hit, mode: 'main', action: intent === 'motivation' ? `먼저 한 문장으로 공감한다. ${hit.action}` : hit.action };
       break;
     }
   }
