@@ -7,7 +7,7 @@
 import { normalizeCheer, normalizeMeal, normalizeWarning, type CoachMeal } from '../coachMeal';
 import type { Intent } from './intent';
 import { firstJson } from './parse';
-import type { Focus } from './signals';
+import { SAID_ALREADY, type Focus } from './signals';
 import { checkText, stripSentences } from './validate';
 
 export interface CoachOut {
@@ -85,7 +85,8 @@ export function stripCoach(o: CoachOut, tokens: string[]): CoachOut {
 export function finishCoach(out: CoachOut, o: { intent: Intent; focus: Focus['focus']; win: Focus['win'] }): CoachOut {
   let { reply, cheer, next } = out;
   if (o.intent === 'app') next = null;
-  if (o.focus?.mode === 'mention' && reply !== FALLBACK_REPLY) {
+  // 모델이 이미 같은 말을 했으면 또 붙이지 않는다(<aside> 를 보여 주면 가끔 제 글에도 쓴다)
+  if (o.focus?.mode === 'mention' && reply !== FALLBACK_REPLY && !SAID_ALREADY[o.focus.key]?.test(reply)) {
     reply = `${reply.trimEnd()} ${o.focus.say}`;
   }
   if (o.win?.where === 'cheer') cheer = o.win.say;

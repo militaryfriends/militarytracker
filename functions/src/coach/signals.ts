@@ -154,8 +154,10 @@ export function computeSignals(i: SignalInput): SignalResult {
   const sinceLast = last ? todayN - dayNum(last) : null;
   // 숫자를 늘어놓으면 모델이 바꿔 읽는다("1/3회" → "채웠다", "2회 · 0회 · 5회" → 순서를 거꾸로) — 판정까지 문장으로 적는다
   const leftW = Math.max(0, target - thisWeek);
+  // 주 중간의 "0회 · 3회 남음" 을 "끊겼다 · 줄었다" 로 읽지 않게, 남은 요일로 채울 수 있는지도 적는다
+  const daysLeft = 7 - weekday; // 오늘 포함
   status.push({ g: 'week', t: leftW
-    ? `이번 주 운동: ${thisWeek}회 함 — 목표 ${target}회까지 ${leftW}회 남음 (오늘 ${WEEKDAYS[weekday]}요일)`
+    ? `이번 주 운동: ${thisWeek}회 함 — 목표 ${target}회까지 ${leftW}회 남음 (오늘 ${WEEKDAYS[weekday]}요일, ${leftW <= daysLeft ? '남은 요일로 채울 수 있음' : '이번 주에 다 채우기는 어려움'})`
     : `이번 주 운동: ${thisWeek}회 함 — 이번 주 목표 ${target}회를 채움 (오늘 ${WEEKDAYS[weekday]}요일)` });
   status.push({ g: 'week', t: sinceLast === null ? '운동 기록: 아직 없음' : `마지막 운동: ${agoKo(sinceLast)}` });
   const metWeeks = [1, 2, 3].filter((w) => inWeek(w) >= target).length;
@@ -360,6 +362,17 @@ function expectedWeeklyGain(p: SigProject, now: number): number | null {
 }
 
 // ── 이번 답에 무엇을 보여 줄지 ──
+
+/** 모델 글이 이미 그 문제를 말했는지 보는 낱말 — 말했으면 끝 문장을 또 붙이지 않는다(answer.finishCoach) */
+export const SAID_ALREADY: Partial<Record<SignalKey, RegExp>> = {
+  fast_loss: /빠르게\s?빠|빨리\s?빠|너무\s?빠/,
+  fast_gain: /빠르게\s?(늘|찌)|빨리\s?(늘|찌)/,
+  off_track: /예상보다|계획보다/,
+  plateau: /제자리|정체/,
+  missed: /일 전|일째|쉬었|운동 기록이 없/,
+  no_weight: /체중 기록/,
+  checkin_due: /체크인/,
+};
 
 const PROBLEMS: SignalKey[] = ['fast_loss', 'off_track', 'missed', 'plateau', 'fast_gain', 'checkin_due', 'no_weight'];
 const WINS: SignalKey[] = ['pr', 'streak', 'journey'];

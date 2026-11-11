@@ -35,7 +35,8 @@ export function allowedNumbers(...sources: (string | number | null | undefined)[
   return out;
 }
 
-const close = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.05, Math.abs(a) * 0.01);
+/** 같은 숫자인가 — 1% 까지 봐주면 63kg 이 있을 때 62.5kg 이 통과한다. 표기 차이(소수 반올림)만 허용 */
+const close = (a: number, b: number) => Math.abs(a - b) <= 0.05;
 
 export interface Check {
   ok: boolean;
