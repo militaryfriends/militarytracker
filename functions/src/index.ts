@@ -656,6 +656,8 @@ export const aiCoach = onCall(
             out = stripCoach(out, chk.tokens);
           }
         }
+        // 앱 사용법 답에는 다음 행동을 붙이지 않는다(코드로 고정)
+        if (routed.intent === 'app') out = { ...out, next: null };
         return out;
       },
       (r) => !r || !r.reply
