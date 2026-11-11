@@ -260,6 +260,34 @@ function expectedWeeklyGain(p: SigProject, now: number): number | null {
   return a && b ? (b - a) / 4.35 : null;
 }
 
+/**
+ * 이번 답에서 코치가 꺼낼 신호를 코드가 고른다 — "어떤 신호를 언제 말할지" 를 모델 판단에 맡기지 않는다.
+ *  focus = 짚어야 할 문제 하나(없으면 신호 이야기를 하지 않는다), win = 인정해 줄 성과 하나.
+ * 빠른 감량은 안전 문제라 앱 사용법만 빼고 어떤 질문에도 붙는다. 그 밖에는 질문 종류와 닿는 것만.
+ */
+const FOCUS_ALLOW: Record<string, SignalKey[]> = {
+  progress: ['fast_loss', 'off_track', 'missed', 'plateau', 'fast_gain', 'checkin_due', 'no_weight'],
+  diet: ['fast_loss', 'off_track', 'plateau', 'fast_gain'],
+  workout: ['fast_loss', 'missed'],
+  motivation: ['fast_loss', 'missed'],
+  general: ['fast_loss'],
+  app: [],
+};
+const WIN_ALLOW = new Set(['progress', 'workout', 'motivation', 'general']);
+
+export interface Focus {
+  focus: Signal | null;
+  win: Signal | null;
+}
+
+export function pickFocus(intent: string, r: SignalResult | null): Focus {
+  if (!r) return { focus: null, win: null };
+  const allow = FOCUS_ALLOW[intent] ?? [];
+  const focus = r.signals.find((s) => allow.includes(s.key)) ?? null;
+  const win = WIN_ALLOW.has(intent) ? r.signals.find((s) => s.key === 'pr' || s.key === 'streak') ?? null : null;
+  return { focus, win };
+}
+
 /** 프롬프트에 붙일 <signals> 본문 */
 export function signalsText(r: SignalResult): string {
   return [

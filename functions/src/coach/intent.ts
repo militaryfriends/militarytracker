@@ -25,7 +25,7 @@ const JOINT = /관절|무릎|허리|어깨|손목|발목|팔꿈치|목이|목\s|
 
 const KEYS: Record<'diet' | 'workout' | 'progress' | 'motivation' | 'app', RegExp[]> = {
   progress: [/체중|몸무게|살이|살\s?찌|찌는|쪘/, /안\s?빠|안\s?늘|안\s?줄|정체|그대로|들쑥날쑥/, /언제쯤|언제\s?(빠|되|목표|보일|도달)|목표까지|예상|복근\s?보/,
-    /진행|체지방률?|속도|잘하고\s?있|퍼센트|몇\s?%|어디쯤|얼마나\s?왔|인바디|근육량/, /빠졌|빠지|늘었|늘어|줄었|배만\s?나|배가\s?나/, /체크인/],
+    /살\s?(빼|뺄)|빼고\s?싶|감량|진행|체지방률?|속도|잘하고\s?있|퍼센트|몇\s?%|어디쯤|얼마나\s?왔|인바디|근육량/, /빠졌|빠지|늘었|늘어|줄었|배만\s?나|배가\s?나/, /체크인/],
   diet: [/먹|식단|칼로리|kcal|단백질|탄수|지방|식사|끼니|식욕/, /밥|메뉴|간식|야식|배달|외식|회식|편의점|치팅|약속|삼겹살|고기|국밥|수분|물\s?(하루|얼마|몇)/, /술|음주|맥주|소주/, /치킨|라면|피자|햄버거|과자|빵|떡볶이|탄산|콜라|커피|과일/,
     /보충제|프로틴|쉐이크|닭가슴살|계란|고구마/, /아침|점심|저녁/],
   workout: [/운동|루틴|프로그램|분할/, /세트|반복|횟수|중량|무게|RPE|1RM/i, /자세|폼/, /스쿼트|벤치|데드|풀업|턱걸이|푸시업|팔굽|런지|로우|프레스|컬|딥스|플랭크|랫풀|풀다운|힙\s?쓰러스트|필라테스|요가/,
@@ -50,6 +50,12 @@ export interface Routed {
   injury: boolean;
 }
 
+/** 아픈 곳을 말한 문장인가(근육통 제외) — 앞선 대화에서 말한 부상을 이어 가는 데 쓴다 */
+export function mentionsInjury(text: string): boolean {
+  const t = text.replace(/\s+/g, ' ');
+  return INJURY.test(t) && !(DOMS.test(t) && !JOINT.test(t));
+}
+
 export function classify(text: string): Intent {
   return route(text).intent;
 }
@@ -61,6 +67,28 @@ export function route(text: string): Routed {
   const hurt = INJURY.test(t) && !(DOMS.test(t) && !JOINT.test(t));
   if (hurt && !AROUND.test(t)) return { intent: 'injury', injury: true };
   return { intent: scoreIntent(t), injury: hurt };
+}
+
+/**
+ * 대화 속 한 턴 분류 — 앞선 회원 말을 함께 본다.
+ *  · "어제 그렇게 못 했어요", "더 짧게" 처럼 단어가 없는 후속 질문은 바로 앞 주제를 이어받는다.
+ *  · 최근 3턴 안에 아픈 곳을 말했으면 이번 답에서도 그 부위를 뺀다.
+ */
+export function routeTurn(question: string, prevUser: string[]): Routed {
+  const r = route(question);
+  if (r.intent === 'emergency' || r.intent === 'injury') return r;
+  const recent = prevUser.slice(-3);
+  let intent = r.intent;
+  // 인사 · 감사 · 맞장구는 주제를 이어받지 않는다
+  const smalltalk = /^(고마|감사|안녕|넵|네[\s.!~]*$|알겠|오케이|ㅇㅋ|ㅇㅇ|ㅎㅎ|ㅋㅋ|잘\s?자|수고|좋아요?[\s.!~]*$)/.test(question.trim());
+  if (intent === 'general' && !smalltalk) {
+    for (let i = prevUser.length - 1; i >= 0 && i >= prevUser.length - 3; i--) {
+      const p = route(prevUser[i]).intent;
+      if (p === 'injury' || p === 'emergency') { intent = 'workout'; break; }
+      if (p !== 'general') { intent = p; break; }
+    }
+  }
+  return { intent, injury: r.injury || recent.some(mentionsInjury) };
 }
 
 function scoreIntent(t: string): Intent {

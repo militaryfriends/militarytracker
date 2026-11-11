@@ -34,7 +34,7 @@ import {
   signed, templateReport, timelineText, validateReport,
 } from './bodyProject';
 import { normalizeCheer, normalizeMeal, normalizeWarning, CoachMeal } from './coachMeal';
-import { route, SAFETY_REPLY } from './coach/intent';
+import { routeTurn, SAFETY_REPLY } from './coach/intent';
 import { loadSignals, cleanExNames, signalsText } from './coach/context';
 import { SYSTEM, buildTurn, PROMPT_VERSION } from './coach/prompt';
 import { allowedNumbers, checkText, stripSentences } from './coach/validate';
@@ -605,7 +605,7 @@ export const aiCoach = onCall(
     const question = messages[last].content;
 
     // ① 의도 — 응급 · 부상은 AI 없이 고정 안내(한도도 쓰지 않는다)
-    const routed = route(question);
+    const routed = routeTurn(question, messages.slice(0, last).filter((m) => m.role === 'user').map((m) => m.content));
     if (routed.intent === 'emergency' || routed.intent === 'injury') {
       const s = SAFETY_REPLY[routed.intent];
       logger.info('coach', { uid: acc.uid, intent: routed.intent, safety: true, v: PROMPT_VERSION });
