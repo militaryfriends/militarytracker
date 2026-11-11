@@ -119,6 +119,7 @@ async function main() {
     try {
       const r = await api(MODEL, SYSTEM, [{ role: 'user', content: prep.turn }]);
       out = parse(r.text);
+      if (out && prep.r.intent === 'app') out.next = null; // 서버와 같게(index.ts)
       usage = r.usage;
     } catch (e) {
       rows.push({ id: c.id, error: String(e) });
