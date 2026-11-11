@@ -14,7 +14,7 @@ for (const [k, p] of Object.entries(P)) {
   const ok = !miss.length && !extra.length;
   if (!ok) fail++;
   console.log(`${ok ? '✓' : '✗'} ${k} ${p.desc}\n   신호: ${keys.join(', ') || '없음'}${miss.length ? `  (빠짐: ${miss})` : ''}${extra.length ? `  (나오면 안 됨: ${extra})` : ''}`);
-  if (process.argv.includes('-v')) console.log(signalsText(r).replace(/^/gm, '     '));
+  if (process.argv.includes('-v')) console.log(r.status.map((x) => `[${x.g}] ${x.t}`).concat(r.signals.map((x) => `* ${x.key}: ${x.text}`)).join('\n').replace(/^/gm, '     '));
 }
 // 검증기
 const allowed = allowedNumbers('하루 목표 2,150kcal (유지 − 500), 단백질 145g', '예상보다 1.2kg');

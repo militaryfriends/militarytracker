@@ -35,8 +35,10 @@ import {
 } from './bodyProject';
 import { normalizeCheer, normalizeMeal, normalizeWarning, CoachMeal } from './coachMeal';
 import { routeTurn, SAFETY_REPLY } from './coach/intent';
-import { loadSignals, cleanExNames, signalsText } from './coach/context';
-import { SYSTEM, buildTurn, PROMPT_VERSION } from './coach/prompt';
+import { loadSignals, loadSaid, markSaid, cleanExNames, signalsText } from './coach/context';
+import { pickFocus, statusFor } from './coach/signals';
+import { firstJson } from './coach/parse';
+import { SYSTEM, buildTurn, PREFILL, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
 import { allowedNumbers, checkText, stripSentences } from './coach/validate';
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
@@ -525,19 +527,21 @@ interface CoachReq {
 /** 코치 응답(JSON) → 글 · 식단 카드 · 경고. JSON 이 깨지면 받은 글을 그대로 쓴다 */
 type CoachOut = { reply: string; meal: CoachMeal | null; warning: string | null; cheer: string | null; next: string | null };
 
-function parseCoach(raw: string, dayKcal?: number): CoachOut {
-  try {
-    const d = parseJson<{ text?: unknown; meal?: unknown; warning?: unknown; cheer?: unknown; next?: unknown }>(raw);
+function parseCoach(raw: string, dayKcal?: number): CoachOut | null {
+  const d = firstJson(raw);
+  if (d) {
     const reply = str(d.text, 1200).trim();
     const meal = normalizeMeal(d.meal, dayKcal);
-    const warning = normalizeWarning(d.warning);
-    const cheer = normalizeCheer(d.cheer);
-    const next = normalizeCheer(d.next);
-    if (reply || meal) return { reply: reply || '식단을 구성했습니다.', meal, warning, cheer, next };
-  } catch {
-    // 아래로
+    if (reply || meal) {
+      return { reply: reply || '식단을 구성했습니다.', meal, warning: normalizeWarning(d.warning), cheer: normalizeCheer(d.cheer), next: normalizeCheer(d.next) };
+    }
+    return null;
   }
-  return { reply: raw.replace(/```(json)?/g, '').trim().slice(0, 1200), meal: null, warning: null, cheer: null, next: null };
+  // JSON 이 아니라 그냥 글로 답한 경우만 그대로 쓴다. 깨진 JSON 을 회원에게 보여 주지 않는다
+  const plain = raw.replace(/```(json)?/g, '').trim();
+  return plain && !/^\s*[{[]/.test(plain) && !plain.includes('"text"')
+    ? { reply: plain.slice(0, 1200), meal: null, warning: null, cheer: null, next: null }
+    : null;
 }
 
 /** 답의 kcal · g · kg · % 숫자 검사 — 서버가 계산한 식단 카드 숫자도 허용 목록에 */
@@ -612,23 +616,31 @@ export const aiCoach = onCall(
       return { reply: s.text, meal: null, warning: s.warning, cheer: null, next: null };
     }
 
-    // ② 서버가 기록을 직접 읽어 현황 · 신호를 계산(판정은 코드가)
-    const sig = await loadSignals(acc.uid, cleanExNames(req.data?.exNames));
-    const sigText = sig ? signalsText(sig) : '[현황] 기록을 읽지 못함 — <data> 만 참고';
+    // ② 서버가 기록을 직접 읽어 현황 · 신호를 계산하고, 이번 답에서 꺼낼 것까지 고른다(판단은 코드가)
+    const [sig, said] = await Promise.all([loadSignals(acc.uid, cleanExNames(req.data?.exNames)), loadSaid(acc.uid)]);
+    const { focus, win } = pickFocus(routed.intent, sig, said);
 
-    // ③ 가변부는 마지막 user 턴 앞에 — 고정부(SYSTEM)는 모두에게 같아 캐시된다.
+    // ③ 가변부는 마지막 user 턴 — 고정부(SYSTEM)는 모두에게 같아 캐시된다.
     // 앱이 만든 사용자 데이터는 system 이 아니라 user 턴의 <data> — 클라이언트가 규칙을 덧쓸 수 없다.
     messages[last] = {
       role: 'user',
-      content: buildTurn({ intent: routed.intent, injury: routed.injury, signals: sigText, data: context, question }),
+      content: buildTurn({
+        intent: routed.intent, injury: routed.injury, status: statusFor(routed.intent, sig), focus, win, data: context,
+        question: question.replace(/<\/?question>/g, ''),
+      }),
     };
 
     const dayKcal = Math.round(Number(req.data?.dayKcal));
     const dk = dayKcal > 800 && dayKcal < 6000 ? dayKcal : undefined;
-    const allowed = allowedNumbers(context, sigText, dk, ...messages.filter((m) => m.role === 'user').map((m) => m.content));
-    const call = (msgs: AnthropicMessage[]) => callAnthropic({
-      system: SYSTEM, messages: msgs, maxTokens: 1000, apiKey: ANTHROPIC_API_KEY.value(), model: MODEL_CHAT, uid: acc.uid,
-    });
+    const allowed = allowedNumbers(context, sig ? signalsText(sig) : '', STATIC_NUMBERS, dk, ...messages.map((m) => m.content));
+    // 답을 PREFILL 로 시작시킨다 — JSON 밖의 글 · 울타리를 막고, 행동(next)을 먼저 정하게 한다
+    const call = async (msgs: AnthropicMessage[]) => {
+      const out = await callAnthropic({
+        system: SYSTEM, messages: [...msgs, { role: 'assistant', content: PREFILL }], maxTokens: 900,
+        apiKey: ANTHROPIC_API_KEY.value(), model: MODEL_CHAT, uid: acc.uid,
+      });
+      return out ? PREFILL + out : '';
+    };
     let retried = false;
     let stripped = false;
 
@@ -638,17 +650,19 @@ export const aiCoach = onCall(
         const raw = await call(messages);
         if (!raw) return null;
         let out = parseCoach(raw, dk);
+        if (!out) return null;
         let chk = checkCoach(out, allowed);
-        // ④ 검증 — 데이터에 없는 숫자 · 금지어면 한 번 다시, 그래도면 그 문장을 뺀다
+        // ④ 검증 — 자료에 없는 숫자 · 금지어면 한 번 다시, 그래도면 그 문장을 뺀다
         if (!chk.ok) {
           retried = true;
           const raw2 = await call([...messages, { role: 'assistant', content: raw }, {
             role: 'user',
-            content: `규칙 위반: ${chk.tokens.join(', ')} — <data> · <signals> 에 없는 숫자이거나 금지된 표현이다. `
-              + '그 부분을 빼거나 데이터의 숫자로 바꿔서, 같은 JSON 형식으로 답 전체를 다시 써라.',
+            content: `규칙 위반: ${chk.tokens.join(', ')} — 자료(<data> · <status> · <food_facts>)에 없는 숫자이거나 금지된 표현이다. `
+              + '그 부분을 빼거나 자료의 숫자로 바꿔서, 같은 JSON 형식으로 답 전체를 다시 써라.',
           }]).catch(() => '');
-          if (raw2) {
-            out = parseCoach(raw2, dk);
+          const out2 = raw2 ? parseCoach(raw2, dk) : null;
+          if (out2) {
+            out = out2;
             chk = checkCoach(out, allowed);
           }
           if (!chk.ok) {
@@ -662,9 +676,11 @@ export const aiCoach = onCall(
       },
       (r) => !r || !r.reply
     );
+    // 꺼낸 신호를 적어 둔다 — 다음 답에서 같은 말을 되풀이하지 않게(진행 질문은 예외, signals.pickFocus)
+    if (focus) await markSaid(acc.uid, focus.key);
     logger.info('coach', {
       uid: acc.uid, intent: routed.intent, injury: routed.injury, signals: sig?.signals.map((x) => x.key) ?? null,
-      retried, stripped, v: PROMPT_VERSION,
+      focus: focus ? `${focus.key}:${focus.mode}` : null, win: win?.key ?? null, retried, stripped, v: PROMPT_VERSION,
     });
     return { reply: result!.reply, meal: result!.meal, warning: result!.warning, cheer: result!.cheer, next: result!.next, quota };
   }

@@ -58,7 +58,8 @@
     "media:upload": "node scripts/upload-videos.mjs",
     "media:r2": "node scripts/media-r2.mjs",
     "check:plans": "npx -y esbuild@0.24.0 scripts/plan-check.ts --bundle --platform=node --outfile=.cache/plan-check.cjs --loader:.json=json --log-level=error && node .cache/plan-check.cjs",
-    "check:scenarios": "npx -y esbuild@0.24.0 scripts/scenario-check.ts --bundle --platform=node --outfile=.cache/scenario-check.cjs --loader:.json=json --log-level=error && node .cache/scenario-check.cjs"
+    "check:scenarios": "npx -y esbuild@0.24.0 scripts/scenario-check.ts --bundle --platform=node --outfile=.cache/scenario-check.cjs --loader:.json=json --log-level=error && node .cache/scenario-check.cjs",
+    "coach:catalog": "node scripts/gen-coach-catalog.cjs"
   },
   "private": true
 }

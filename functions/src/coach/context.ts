@@ -5,7 +5,8 @@
  */
 import * as logger from 'firebase-functions/logger';
 import { db } from '../entitlement';
-import { computeSignals, signalsText, type Phase, type SigLog, type SigProject, type SigWeight, type SignalResult } from './signals';
+import { FieldValue } from 'firebase-admin/firestore';
+import { computeSignals, signalsText, type Phase, type SigLog, type SigProject, type SigWeight, type SignalKey, type SignalResult } from './signals';
 
 const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : Number(x));
 
@@ -85,6 +86,25 @@ export async function loadSignals(uid: string, exNames: Record<string, string>, 
     logger.warn('coach signals failed', { uid, e: String(e) });
     return null;
   }
+}
+
+/**
+ * 코치가 최근에 꺼낸 신호 — coachState/{uid} { said: { plateau: ISO, … } } (서버만 읽고 쓴다, 규칙의 기본 거부).
+ * 같은 문제를 답마다 되풀이하지 않게 pickFocus 가 본다. 계정 삭제가 함께 지운다.
+ */
+export async function loadSaid(uid: string): Promise<Partial<Record<SignalKey, string>>> {
+  try {
+    const s = await db.collection('coachState').doc(uid).get();
+    return (s.get('said') ?? {}) as Partial<Record<SignalKey, string>>;
+  } catch {
+    return {};
+  }
+}
+
+export function markSaid(uid: string, key: SignalKey): Promise<unknown> {
+  return db.collection('coachState').doc(uid)
+    .set({ said: { [key]: new Date().toISOString() }, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+    .catch((e) => logger.warn('coachState write failed', { uid, e: String(e) }));
 }
 
 export { signalsText };

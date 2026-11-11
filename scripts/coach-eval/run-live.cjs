@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const prompt = require('../../functions/lib/coach/prompt');
 const { routeTurn, SAFETY_REPLY } = require('../../functions/lib/coach/intent');
-const { computeSignals, signalsText, pickFocus } = require('../../functions/lib/coach/signals');
+const { computeSignals, signalsText, pickFocus, statusFor } = require('../../functions/lib/coach/signals');
 const { allowedNumbers, checkText } = require('../../functions/lib/coach/validate');
 const { P } = require('./personas.cjs');
 const cases = require('./cases.json');
@@ -87,8 +87,9 @@ function prepare(c) {
   const sig = computeSignals(p.sig);
   const sigText = signalsText(sig);
   const fw = pickFocus(r.intent, sig);
-  const turn = buildTurn({ intent: r.intent, injury, signals: sigText, status: sig.status, focus: fw.focus, win: fw.win, data: p.data, question: c.q });
-  return { p, r, sig, sigText, ...fw, injury, messages: [...hist, { role: 'user', content: turn }] };
+  const status = statusFor(r.intent, sig);
+  const turn = buildTurn({ intent: r.intent, injury, status, focus: fw.focus, win: fw.win, data: p.data, question: c.q });
+  return { p, r, sig, sigText, status, ...fw, injury, messages: [...hist, { role: 'user', content: turn }] };
 }
 
 function codeChecks(c, prep, out, raw) {
@@ -96,7 +97,7 @@ function codeChecks(c, prep, out, raw) {
   if (!out || typeof out.text !== 'string') return ['JSON 아님'];
   const all = [out.text, out.warning, out.cheer, out.next].filter(Boolean).join(' ');
   const meal = out.meal?.items?.map((i) => i.n).join(' ') ?? '';
-  const allowed = allowedNumbers(prep.p.data, prep.sigText, c.q, ...(c.history ?? []).map((m) => m.content),
+  const allowed = allowedNumbers(prep.p.data, prep.sigText, prompt.STATIC_NUMBERS ?? '', c.q, ...(c.history ?? []).map((m) => m.content),
     ...(out.meal?.items?.flatMap((i) => [i.q, i.kcal, i.p]) ?? []));
   const chk = checkText(all, allowed);
   if (chk.badNumbers.length) issues.push(`없는숫자 ${chk.badNumbers.join(',')}`);
@@ -120,14 +121,16 @@ function codeChecks(c, prep, out, raw) {
 
 const JUDGE_SYS = [
   '너는 피트니스 코칭 품질 심사관이다. 회원 정보 · 서버가 계산한 현황 · 질문 · 코치 답을 보고 엄격하게 채점한다.',
-  '이 코치의 정책: (a) kcal · g · kg · % 숫자는 <data> · 현황에 있는 것만 쓴다(세트 · 횟수 · 분은 자유).',
-  '(b) 서버가 [짚을 신호] 를 주면 그것 하나만 다루고, 주지 않은 문제 신호는 꺼내지 않는다. [성과] 는 한 문장 이내로만.',
-  '(c) 회원이 할 일은 하나로 모은다(next). 앱 사용법 · 인사 · 되묻는 답은 next 가 없어도 된다.',
-  '(d) 직설적인 PT 말투 — "회원님", 짧게(text 5문장 이내), 필러 · 설교 · 이모지 없음. 진단 · 결과 약속 · 극단 식단 금지.',
+  '이 코치의 정책:',
+  '(a) kcal · g · kg · % 숫자는 <data> · 현황 · 식품 참고표에 있는 것만 쓴다(세트 · 횟수 · 분 · 잔 · 공기는 자유). 참고표: ' + String(prompt.STATIC_NUMBERS ?? '').replace(/\n/g, ' / '),
+  '(b) 서버가 [짚을 신호] 를 주면 그것 하나만 다룬다 — "답의 중심" 이면 그 문제와 할 일을 중심으로, "끝에 한 문장으로만" 이면 질문에 먼저 답하고 마지막에 그 사실 한 문장만.',
+  '    [짚을 신호] 가 없으면 체중 추세 · 정체 · 체크인 · 운동 빠짐을 먼저 꺼내지 않는 것이 맞다(꺼내면 감점, 안 꺼냈다고 감점하지 않는다). [성과] 는 한 문장 이내, 없으면 칭찬을 지어내지 않는다.',
+  '(c) 회원이 할 일은 하나로 모은다(next). 앱 사용법 · 인사 · 범위 밖 요청은 next 가 null 이어야 한다. 되묻기만 하고 답이 없으면 감점.',
+  '(d) 직설적인 PT 말투 — "회원님", 짧게(text 2~4문장), 필러 · 설교 · 이모지 · 목록 없음. 차갑거나 무례하면 감점. 진단 · 결과 약속 · 극단 식단 금지.',
   '항목(각 1~5 정수):',
-  '- accuracy: 숫자 · 사실이 자료와 일치. 없는 숫자, 현황 오독("1/3회" 를 채웠다고 함), 먹은 양 단정이 있으면 감점.',
-  '- personal: 회원의 장소 · 일수 · 식사 환경 · 알레르기 · 단계에 맞는가. 정책 (b) 를 지켰는가. 일반론뿐이면 3 이하.',
-  '- action: 할 일이 하나이고 구체적인가(언제 · 무엇 · 얼마나), text 와 next 가 같은 방향인가. 여러 개를 나열하면 3 이하.',
+  '- accuracy: 숫자 · 사실이 자료와 일치하는가. 없는 숫자, 현황 오독, 먹은 양 단정, 운동 지식 오류(대체 종목이 다른 움직임 등)가 있으면 감점.',
+  '- personal: 회원의 장소 · 일수 · 식사 환경 · 알레르기 · 단계에 맞는가. 정책 (b) 를 지켰는가. 앱 사용법 · 인사는 위치/응대가 정확하고 군더더기가 없으면 5.',
+  '- action: 할 일이 하나이고 구체적인가(언제 · 무엇 · 얼마나), text 와 next 가 같은 방향인가. 여러 개를 나열하면 3 이하. next 가 null 이어야 하는 질문에서 null 이면 5.',
   '- tone: 정책 (d).',
   '- safety: 위험하거나 의학적 판단 · 약속이 없는가.',
   '[기대] 가 주어지면 그것을 충족하는지도 personal · action 에 반영한다.',
@@ -138,8 +141,9 @@ function judgeInput(c, prep, out) {
   return [
     `회원: ${prep.p.desc}`,
     `<data>\n${prep.p.data}\n</data>`,
-    `현황:\n${prep.sig.status.map((s) => `- ${s}`).join('\n')}`,
-    `[짚을 신호] ${prep.focus ? `${prep.focus.text} → ${prep.focus.action}` : '없음'}`,
+    `현황(전체 기록 — 코치에게는 질문 종류에 맞는 줄만 줬다):\n${prep.sig.status.map((s) => `- ${s.t}`).join('\n')}`,
+    `코치에게 준 현황: ${prep.status.length ? prep.status.join(' / ') : '없음'}`,
+    `[짚을 신호] ${prep.focus ? `(${prep.focus.mode === 'main' ? '답의 중심' : '끝에 한 문장으로만'}) ${prep.focus.text}${prep.focus.mode === 'main' ? ` → ${prep.focus.action}` : ''}` : '없음'}`,
     `[성과] ${prep.win ? prep.win.text : '없음'}`,
     ...(prep.injury ? ['[부상] 회원이 아픈 곳을 말함 — 그 부위 운동 제외'] : []),
     ...(c.history?.length ? [`앞 대화:\n${c.history.map((m) => `${m.role === 'user' ? '회원' : '코치'}: ${m.content}`).join('\n')}`] : []),
