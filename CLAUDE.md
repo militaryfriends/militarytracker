@@ -193,7 +193,9 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - 답 JSON 에 `next`(다음 행동 한 가지) — 앱 코치 화면이 "다음 행동" 칸으로 보여 준다. 앱은 `exNames`(종목 id → 이름)를 보낸다.
 - 고정부에 사용자별 내용을 넣지 말 것(캐시가 깨져 원가가 오른다). 프롬프트를 바꾸면 `PROMPT_VERSION` 을 올리고 평가셋을 돌린다:
   `node scripts/coach-eval/route-check.cjs`(의도 150문항) · `signals-check.cjs`(가상 회원 10명) — 키 없이,
-  `ANTHROPIC_API_KEY=… node scripts/coach-eval/run-live.cjs [--judge]` — 실제 모델 답 + 코드 검사(+ Sonnet 채점).
+  `node scripts/coach-eval/run-live.cjs [--judge]` — 실제 모델 답 + 코드 검사(+ Sonnet 채점).
+- **Anthropic 키 로컬 사본은 `functions/.secret.local`**(`ANTHROPIC_API_KEY=…` 한 줄, gitignore). 평가 · 에뮬레이터가 읽는다.
+  서버 비밀값은 그 파일에서 넣는다: `grep ^ANTHROPIC_API_KEY= functions/.secret.local | cut -d= -f2- | npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY --data-file -` → 함수 재배포.
 
 ## AI 코치 식단 카드 · WARNING
 
