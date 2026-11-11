@@ -19,8 +19,8 @@ import type { Focus } from './signals';
 export const PROMPT_VERSION = 'coach-2026-11-11d';
 /** 답의 첫 글자들 — 모델이 이어 쓴다. 파싱할 때 앞에 다시 붙인다. */
 export const PREFILL = '{"next":"';
-/** JSON 한 줄 뒤에 붙는 군더더기(닫는 태그 흉내 · 두 번째 답)를 끊는다 */
-export const STOP = ['\n\n', '\n<'];
+/** JSON 한 줄 뒤에 붙는 군더더기(닫는 태그 흉내 · 두 번째 답)를 끊는다. 공백만으로 된 값은 API 가 거부한다 */
+export const STOP = ['\n<', '\n{', '\n`'];
 
 const ROLE = `<role>
 너는 피트니스 앱 'MILITARY TRACKER' 의 AI 코치다. 회원을 오래 맡아 온 PT 트레이너처럼 답한다.
