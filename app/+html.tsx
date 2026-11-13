@@ -1,4 +1,4 @@
-import { ScrollViewStyleReset } from 'expo-router/html';
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 import PALETTE from '../src/theme/palette.json';
 
@@ -11,8 +11,10 @@ import PALETTE from '../src/theme/palette.json';
  * app/_layout.tsx 가 mt-wait 를 걷는다. 스크립트가 실패해도 3초 뒤에는 연다.
  */
 export default function Root({ children }: PropsWithChildren) {
+  // SDK 58: 번들 <script> · 폰트 · RN Web 스타일은 이 노드로 온다 — 빼면 빈 화면(2026-11-14)
+  const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } = useServerDocumentContext();
   return (
-    <html lang="ko">
+    <html {...htmlAttributes} lang="ko">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -34,8 +36,12 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
 
         <style dangerouslySetInnerHTML={{ __html: css }} />
+        {headNodes}
       </head>
-      <body>{children}</body>
+      <body {...bodyAttributes}>
+        {children}
+        {bodyNodes}
+      </body>
     </html>
   );
 }
