@@ -220,10 +220,12 @@ function report(rows) {
     console.log(`   25점 만점 ${js.filter((r) => tot(r) === 25).length}개 · 22점 이하 ${js.filter((r) => tot(r) <= 22).length}개 · 20점 이하 ${js.filter((r) => tot(r) <= 20).length}개`);
   }
   const u = (k) => done.reduce((s, r) => s + (r.usage?.[k] ?? 0), 0);
-  const won = ((u('input_tokens') + u('cache_creation_input_tokens') * 1.25 + u('cache_read_input_tokens') * 0.1) * 1 + u('output_tokens') * 5) / 1e6 * 1400;
+  // 달러 / 100만 토큰 — Haiku 5.5 는 anthropic.com/claude-haiku-5-5 (100k 이하 프롬프트), Haiku 4.5 는 가격 문서
+  const PR = /haiku-5-5/.test(MODEL) ? { in: 0.1, w: 0.125, r: 0.01, out: 0.5 } : { in: 1, w: 1.25, r: 0.1, out: 5 };
+  const won = (u('input_tokens') * PR.in + u('cache_creation_input_tokens') * PR.w + u('cache_read_input_tokens') * PR.r + u('output_tokens') * PR.out) / 1e6 * 1400;
   const calls = done.reduce((a, r) => a + (r.usage?.calls ?? 1), 0);
   console.log(`모델 호출 ${calls}회(답 ${done.length}개 — 다시 쓰기 포함)`);
-  console.log(`토큰 — 입력 ${u('input_tokens')} · 캐시 읽기 ${u('cache_read_input_tokens')} · 캐시 쓰기 ${u('cache_creation_input_tokens')} · 출력 ${u('output_tokens')} → 답 1개 ${(won / Math.max(1, done.length)).toFixed(1)}원(Haiku 4.5 가격 기준), 출력 평균 ${Math.round(u('output_tokens') / Math.max(1, done.length))}토큰`);
+  console.log(`토큰 — 입력 ${u('input_tokens')} · 캐시 읽기 ${u('cache_read_input_tokens')} · 캐시 쓰기 ${u('cache_creation_input_tokens')} · 출력 ${u('output_tokens')} → 답 1개 ${(won / Math.max(1, done.length)).toFixed(1)}원(${MODEL} 가격 기준), 출력 평균 ${Math.round(u('output_tokens') / Math.max(1, done.length))}토큰`);
   if (err.length) console.log('오류 예:', err[0].error.slice(0, 160));
 }
 
