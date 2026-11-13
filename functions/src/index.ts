@@ -38,7 +38,8 @@ import { loadSignals, loadSaid, markSaid, cleanExNames, signalsText } from './co
 import { pickFocus, statusFor } from './coach/signals';
 import { runCoach } from './coach/answer';
 import { knowFor, stepFor, warnFor } from './coach/know';
-import { systemFor, buildTurn, PREFILL, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
+import { systemFor, buildTurn, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
+import { coachRequest } from './coach/model';
 import { allowedNumbers } from './coach/validate';
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
@@ -60,6 +61,8 @@ export {
 const MODEL_PLANNING = 'claude-sonnet-4-5';
 const MODEL_CHAT = 'claude-haiku-4-5-20251001';
 const MODEL_FAST = MODEL_CHAT;
+/** AI 코치 대화 모델 — 바꾸면 평가(scripts/coach-eval, --model)로 먼저 비교하고 PRICE 에 가격을 넣는다 */
+const MODEL_COACH = MODEL_CHAT;
 /** 원가 기록용 가격(USD / 100만 토큰) · 환율 — 대략값, 한도 판단에만 쓴다 */
 const PRICE: Record<string, { in: number; out: number }> = {
   [MODEL_CHAT]: { in: 1, out: 5 },
@@ -113,6 +116,8 @@ async function callAnthropic(opts: {
   uid?: string;
   /** 여기서 끊는다(코치: JSON 한 줄 뒤의 군더더기) */
   stop?: string[];
+  /** 요청 본문에 더할 것(코치: 모델별 thinking · output_config — coach/model.ts) */
+  extra?: Record<string, unknown>;
 }): Promise<string> {
   const workspace = await anthropicWorkspace();
   const controller = new AbortController();
@@ -135,6 +140,7 @@ async function callAnthropic(opts: {
           .map((text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } })),
         messages: opts.messages,
         ...(opts.stop?.length ? { stop_sequences: opts.stop } : {}),
+        ...(opts.extra ?? {}),
       }),
       signal: controller.signal,
     });
@@ -596,13 +602,16 @@ export const aiCoach = onCall(
     const dayKcal = Math.round(Number(req.data?.dayKcal));
     const dk = dayKcal > 800 && dayKcal < 6000 ? dayKcal : undefined;
     const allowed = allowedNumbers(context, sig ? signalsText(sig) : '', STATIC_NUMBERS, dk, ...messages.map((m) => m.content));
-    // 답을 PREFILL 로 시작시킨다 — JSON 밖의 글 · 울타리를 막고, 행동(next)을 먼저 정하게 한다
+    // 형식 강제는 모델별로(coach/model.ts): Haiku 4.5 는 답을 PREFILL 로 시작시키고, 5.x 는 JSON 스키마(structured outputs)
+    const mreq = coachRequest(MODEL_COACH);
     const call = async (msgs: AnthropicMessage[]) => {
       const out = await callAnthropic({
-        system: systemFor(routed.intent), messages: [...msgs, { role: 'assistant', content: PREFILL }], maxTokens: 900, stop: STOP,
-        apiKey: ANTHROPIC_API_KEY.value(), model: MODEL_CHAT, uid: acc.uid,
+        system: systemFor(routed.intent),
+        messages: mreq.prefill ? [...msgs, { role: 'assistant', content: mreq.prefill }] : msgs,
+        maxTokens: 900, stop: STOP, extra: mreq.body,
+        apiKey: ANTHROPIC_API_KEY.value(), model: MODEL_COACH, uid: acc.uid,
       });
-      return out ? PREFILL + out : '';
+      return out ? mreq.prefill + out : '';
     };
     let retried = false;
     let stripped = false;

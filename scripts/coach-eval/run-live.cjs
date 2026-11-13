@@ -35,7 +35,11 @@ const JUDGE = 'claude-sonnet-4-5';
 const CONC = Number(arg('--conc')) || 5;
 const BUDGET = (Number(arg('--budget')) || 1e9) * 1000;
 /** 서버(index.ts)와 같게 — 답을 "{" 로 시작시켜 JSON 을 강제한다 */
-const PREFILL = prompt.PREFILL && !has('--no-prefill') ? prompt.PREFILL : '';
+const { coachRequest } = require('../../functions/lib/coach/model');
+const REQ = coachRequest(MODEL, arg('--effort') || 'low');
+if (has('--no-prefill')) REQ.prefill = '';
+if (has('--think')) delete REQ.body.thinking; // 5.x: adaptive thinking 켜 둔 채로
+const PREFILL = REQ.prefill;
 const T0 = Date.now();
 
 const KEY = process.env.ANTHROPIC_API_KEY || (() => {
@@ -75,12 +79,12 @@ const TURN_CHECKS = {
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function api(model, system, messages, maxTokens = 1000, stop = null) {
+async function api(model, system, messages, maxTokens = 1000, stop = null, extra = null) {
   for (let t = 0; ; t++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: maxTokens, system: (Array.isArray(system) ? system : [system]).map((text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } })), messages, ...(stop ? { stop_sequences: stop } : {}) }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: (Array.isArray(system) ? system : [system]).map((text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } })), messages, ...(stop ? { stop_sequences: stop } : {}), ...(extra ?? {}) }),
     });
     if ((res.status === 429 || res.status >= 500) && t < 5) { await sleep(2000 * (t + 1) + Math.random() * 1500); continue; }
     if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
@@ -230,7 +234,7 @@ function report(rows) {
 }
 
 async function main() {
-  console.log(`프롬프트 ${PROMPT_VERSION} · 고정부(자) ${Object.entries(SYSTEM_PARTS).map(([k, v]) => `${k} ${v.length.toLocaleString()}`).join(' · ')} · 모델 ${MODEL}${PREFILL ? ' · 프리필' : ''}`);
+  console.log(`프롬프트 ${PROMPT_VERSION} · 고정부(자) ${Object.entries(SYSTEM_PARTS).map(([k, v]) => `${k} ${v.length.toLocaleString()}`).join(' · ')} · 모델 ${MODEL}${PREFILL ? ' · 프리필' : ` · ${JSON.stringify(REQ.body.output_config?.effort ?? '')} 스키마${REQ.body.thinking ? ' · thinking 끔' : ' · thinking 켬'}`}`);
   let list = cases;
   if (arg('--only')) list = cases.filter((c) => arg('--only').split(',').includes(c.id));
   if (arg('--n')) list = list.filter((_, i) => i % Math.ceil(cases.length / Number(arg('--n'))) === 0);
@@ -261,7 +265,7 @@ async function main() {
     const usage = { input_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, output_tokens: 0, calls: 0 };
     try {
       const call = async (msgs) => {
-        const r = await api(MODEL, systemFor(prep.r.intent), PREFILL ? [...msgs, { role: 'assistant', content: PREFILL }] : msgs, 900, prompt.STOP ?? null);
+        const r = await api(MODEL, systemFor(prep.r.intent), PREFILL ? [...msgs, { role: 'assistant', content: PREFILL }] : msgs, has('--think') ? 3000 : 900, prompt.STOP ?? null, REQ.body);
         for (const k of Object.keys(usage)) usage[k] += r.usage?.[k] ?? 0;
         usage.calls++;
         return r.text ? PREFILL + r.text : '';
