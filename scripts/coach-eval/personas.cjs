@@ -91,6 +91,12 @@ const P = {
     data: '사용자: 여 29세, 168cm/58kg, 유지 칼로리 1950kcal, 하루 목표 1950kcal (유지 + 0), 단백질 100g\n목표: 유지 · 습관\n환경: 헬스장, 주 3회, 경력 중급, 식사 외식 위주, 알레르기 · 못 먹는 음식 없음\n현재 플랜: 상체 / 하체 / 전신',
     sig: { targetDays: 3, fallbackPhase: 'keep', logs: logs([2, 4, 7, 9, 11]), weights: weights(14, 1, (i) => 58 + (i % 3 === 0 ? 0.8 : -0.3)), project: null, lastCheckinAt: null },
   },
+  P11: {
+    desc: '남 33 · 175/65 · 감량 6개월 중 5개월째(85%) · 계획 범위 안 · 헬스장 주3',
+    data: '사용자: 남 33세, 175cm/65kg, 유지 칼로리 2350kcal, 하루 목표 1950kcal (유지 − 400), 단백질 130g\n목표: 체지방 감량\n환경: 헬스장, 주 3회, 경력 중급, 식사 직접 요리, 알레르기 · 못 먹는 음식 없음\n현재 플랜: A 하체: 스쿼트, 레그 프레스 / B 상체: 벤치프레스, 랫풀다운, 바벨컬\n내 변화 프로젝트: 감량(6개월). 예상 끝 체중 64kg. 단계: 1~6개월 감량.',
+    sig: { targetDays: 3, fallbackPhase: 'cut', logs: logs([1, 3, 5, 8, 10, 12, 15, 17, 19]), weights: weights(20, 2, (i) => 65.4 - i * 0.033),
+      project: project(160, 6, [{ phase: 'cut', from: 1, to: 6 }], 70, -1), lastCheckinAt: iso(ago(10)) },
+  },
 };
 for (const p of Object.values(P)) p.sig = { now: NOW, exNames, ...p.sig };
 module.exports = { P, NOW };

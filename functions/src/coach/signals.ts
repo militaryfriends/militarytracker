@@ -79,6 +79,8 @@ export interface SignalResult {
   signals: Signal[];
   /** 오늘 운동 기록이 있다 */
   todayDone: boolean;
+  /** 진행 중인 프로젝트 — 기간 진행률(0~1)과 엔진 예상 대비 '계획 범위 안' 여부. 응원 문장 고르기에 쓴다 */
+  progress: { pct: number; onPlan: boolean } | null;
 }
 
 const DAY = 86_400_000;
@@ -297,6 +299,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   }
 
   // ── 프로젝트 ──
+  let progress: SignalResult['progress'] = null;
   if (i.project) {
     const p = i.project;
     const days = projDays ?? 0;
@@ -318,6 +321,7 @@ export function computeSignals(i: SignalInput): SignalResult {
           : `엔진 예상 대비: 실제 체중이 ${Math.abs(r1(diff))}kg ${diff > 0 ? '무거움' : '가벼움'} — ${
             behind ? '계획보다 뒤처짐' : far || tooFast ? (diff > 0 ? '계획보다 많이 늘어 있음' : '계획보다 많이 빠져 있음')
               : signals.some((x) => x.key === 'plateau') ? '아직 계획 범위 안이지만 최근은 정체' : '계획 범위 안'}` });
+        progress = { pct: Math.min(1, m / Math.max(1, p.months)), onPlan: !behind && !far && !tooFast };
         if (behind) {
           // 원인 후보도 코드가 하나만 고른다 — 모델에게 맡기면 두세 개를 늘어놓는다
           const cause = dates.length && avg3 < target - 0.5
@@ -353,7 +357,7 @@ export function computeSignals(i: SignalInput): SignalResult {
   }
 
   signals.sort((a, b) => b.priority - a.priority);
-  return { phase, status, signals, todayDone: sinceLast !== null && sinceLast <= 0 };
+  return { phase, status, signals, todayDone: sinceLast !== null && sinceLast <= 0, progress };
 }
 
 /** 이번 달 → 다음 달 예상 변화를 주 단위로 */

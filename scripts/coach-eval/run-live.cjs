@@ -22,7 +22,8 @@ const { routeTurn, SAFETY_REPLY } = require('../../functions/lib/coach/intent');
 const { computeSignals, signalsText, pickFocus, statusFor } = require('../../functions/lib/coach/signals');
 const { allowedNumbers, checkText } = require('../../functions/lib/coach/validate');
 const { runCoach } = require('../../functions/lib/coach/answer');
-const { knowFor, stepFor } = require('../../functions/lib/coach/know');
+const { knowFor, stepFor, warnFor } = require('../../functions/lib/coach/know');
+const { CHEERS } = require('../../functions/lib/coach/answer');
 const { P } = require('./personas.cjs');
 const cases = require('./cases.json');
 
@@ -60,6 +61,17 @@ const TURN_CHECKS = {
   m03: (o, all) => (/스쿼트|런지|레그|점프|버피|계단|하체\s?운동을/.test(all.replace(/(스쿼트|런지|레그[^.]*)(는|은|를|을)?\s?(빼|말|쉬|하지|금지|피)/g, '')) ? '무릎 쓰는 종목' : null),
   m07: (o) => (!o.meal ? '식단 카드 없음' : null),
   m10: (o) => (String(o.reply).length > 140 ? '줄이지 않음' : null),
+  // 밀프 말투 · 운동 철학(2026-11-12 가이드)
+  n01: (o, all) => (!/썸리스/.test(all) ? '썸리스 없음' : /커집니다|커져요|커진다|키웁니다|키워 줍/.test(all) ? '단정' : null),
+  n02: (o, all) => (!/풀그립|엄지를?\s?감/.test(all) ? '풀그립 안내 없음' : !/미끄러|떨어/.test(all) ? '이유 없음' : null),
+  n03: (o, all) => (/\d+(\.\d+)?\s?kg/.test(all) ? '기록 없는 무게 숫자' : !/통제|천천히|버티|무너지/.test(all) ? '통제 기준 없음' : null),
+  n04: (o) => (!/^회원님, 불편하시겠지만 .+ 무조건 피하세요\.$/.test(o.warning ?? '') ? `경고 문형(${o.warning})` : null),
+  n05: (o) => (!/^회원님, 불편하시겠지만 탄산음료는 무조건 피하세요\.$/.test(o.warning ?? '') ? `경고 문형(${o.warning})` : null),
+  n06: (o) => (o.warning ? '제로에 경고' : null),
+  n07: (o, all) => (o.cheer !== CHEERS.hard ? `응원(${o.cheer})` : /얼마 안 남/.test(all) ? '근거 없는 목표 근접' : null),
+  n08: (o, all) => (!/얼마 안 남/.test(all) ? '목표 근접 응원 없음' : null),
+  n09: (o, all) => (!/입력/.test(all) || !/아닙니다|않습니다|아니에요|않아요/.test(all) ? '스캔 부정 · 입력 설명 없음' : null),
+  n10: (o, all) => (!/사이드 레터럴/.test(all) ? '정식 이름 없음' : !/무게|통제/.test(all) ? '무게 낮추기 없음' : null),
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -93,9 +105,11 @@ function prepare(c) {
   const status = statusFor(r.intent, sig, fw.focus);
   const know = knowFor(r.intent, c.q, p.data);
   const step = stepFor(r.intent, sig, p.data);
-  const turn = buildTurn({ intent: r.intent, injury, status, focus: fw.focus, win: fw.win, data: p.data, question: c.q, know, step });
+  const warn = warnFor(r.intent, sig.phase, c.q);
+  const cheer = { question: c.q, phase: sig.phase, nearGoal: !!sig.progress && sig.progress.pct >= 0.75 && sig.progress.onPlan };
+  const turn = buildTurn({ intent: r.intent, injury, status, focus: fw.focus, win: fw.win, data: p.data, question: c.q, know, step, warn });
   const dk = Number((p.data.match(/하루 목표 ([\d,]+)\s?kcal/) ?? [])[1]?.replace(/,/g, '')) || undefined;
-  return { p, r, sig, sigText, status, know, step, ...fw, injury, dk, messages: [...hist, { role: 'user', content: turn }] };
+  return { p, r, sig, sigText, status, know, step, warn, cheer, ...fw, injury, dk, messages: [...hist, { role: 'user', content: turn }] };
 }
 
 /** 코치(모델)가 쓴 부분만 — 서버가 끝에 붙인 문장을 뗀다 */
@@ -149,6 +163,7 @@ const JUDGE_SYS = [
   '    [성과] 는 한 문장 이내(운동 질문에서는 서버가 cheer 줄로 붙인다). 없으면 칭찬을 지어내지 않는다.',
   '(c) 회원이 할 일은 하나로 모은다(next). 조언을 구하는 질문에는 next 가 있어야 한다. 사실만 묻는 질문(수치, 된다/안 된다)에 지시 없이 답했다면 next 가 null 이어도 되고(감점하지 않는다), 앱 사용법 · 인사 · 범위 밖 요청은 null 이어야 한다. 글에서 무언가 시켰는데 next 가 null 이면 감점. 되묻기만 하고 답이 없으면 감점.',
   '(d) 직설적인 PT 말투 — "회원님", 짧게(2~4문장 + 서버가 붙인 한 문장), 필러 · 설교 · 이모지 · 목록 없음. 차갑거나 무례하면 감점. 진단 · 결과 약속 · 극단 식단 금지.',
+  '(h) 밀리터리프렌즈 기준: 무게는 "통제 가능한 무게"(내리는 구간 2~3초, 반동 없이, 마지막 회까지 자세 유지)가 먼저다. 당기는 종목은 썸리스 그립, 미는 바벨 종목은 풀그립만. warning 은 "회원님, 불편하시겠지만 ○○은 무조건 피하세요." 문형이 정해진 말투이고, cheer 줄은 서버가 정해진 문장(어려워서 가치가 있는 겁니다 / 몸 만드셔야죠 / 목표까지 얼마 안 남았습니다 / 먹는 것도 훈련입니다) 중에서 고른 것이다 — 이 말투 자체로 감점하지 않는다. 앱은 몸을 스캔 · 분석하지 않고 입력한 정보로 3D 를 보여 준다.',
   '(g) [서버가 준 운동 지식] · [서버가 정한 작은 행동] 이 있으면 그것이 이 코치의 기준이다 — 그대로 따른 것은 감점하지 않고, 어긋나면 감점한다. 의욕 질문에서는 남은 횟수를 요일에 나눠 주지 않고 작은 행동 하나만 주는 것이 맞다.',
   '(f) 하루 전체 · 일주일 식단을 달라는 요청에는 한 끼 카드 + "하루 전체 식단은 식단 탭에서 받을 수 있다" 는 안내가 이 앱의 정해진 응대다(하루 식단은 식단 탭의 별도 기능) — 감점하지 않는다.',
   '(e) 식단을 제안하는 답의 첫 문장은 계산 근거("176cm · 80kg · 감량 기준 하루 2,150kcal = 유지 2,650 − 500")다 — 이 앱의 정해진 형식이므로 감점하지 않는다.',
@@ -250,7 +265,7 @@ async function main() {
         return r.text ? PREFILL + r.text : '';
       };
       const allowed = allowedNumbers(prep.p.data, prep.sigText, prompt.STATIC_NUMBERS ?? '', prep.dk, ...prep.messages.map((m) => m.content));
-      const r = await runCoach({ call, messages: prep.messages, allowed, dayKcal: prep.dk, intent: prep.r.intent, focus: prep.focus, win: prep.win, data: prep.p.data });
+      const r = await runCoach({ call, messages: prep.messages, allowed, dayKcal: prep.dk, intent: prep.r.intent, focus: prep.focus, win: prep.win, data: prep.p.data, warnTarget: prep.warn, cheer: prep.cheer });
       out = r.out;
       raw = r.raw;
       meta = { retried: r.retried, stripped: r.stripped };

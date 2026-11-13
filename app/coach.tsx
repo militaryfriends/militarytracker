@@ -4,6 +4,7 @@
  * MY 탭 안에 있던 채팅을 분리했다. 페이지 스크롤 안의 채팅은 대화가 길어질수록
  * 로그아웃 버튼을 밀어내고, iOS 에서는 맨 아래 입력창이 키보드 뒤로 숨었다.
  * 여기서는 inverted FlatList + KeyboardAvoidingView 로 메신저처럼 동작한다.
+ * 안드로이드는 edge-to-edge 라 창이 줄지 않아, 키보드 높이만큼 직접 띄운다(useKeyboardInset).
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -19,6 +20,7 @@ import { MealCard, WarningCard } from '../src/components/CoachCards';
 import { useAppStore } from '../src/stores/appStore';
 import { useAuthStore } from '../src/stores/authStore';
 import { useEntitlement } from '../src/hooks/useEntitlement';
+import { useKeyboardInset } from '../src/hooks/useKeyboardInset';
 import { LEVEL_LABEL, PART_LABEL, PART_ORDER, exById } from '../src/data/exercises';
 import { calcBodyStats, FOOD_LABEL, goalLabel } from '../src/utils/body';
 import { setsByPart } from '../src/utils/stats';
@@ -39,6 +41,7 @@ export default function CoachScreen() {
   const router = useRouter();
   const goBack = useSafeBack();
   const insets = useSafeAreaInsets();
+  const kb = useKeyboardInset();
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const profile = useAppStore((s) => s.profile);
   const plan = useAppStore((s) => s.plan);
@@ -167,7 +170,7 @@ export default function CoachScreen() {
       {!canCoach ? (
         <View style={s.lockWrap}><ProLock feature="ai_coach" /></View>
       ) : (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1, paddingBottom: kb }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <FlatList
             data={data}
             // 모드가 바뀌면 줄도 다시 그린다 (renderItem 안에서 색을 읽는다)
@@ -205,7 +208,7 @@ export default function CoachScreen() {
               ))}
             </View>
           ) : null}
-          <View style={[s.inRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={[s.inRow, { paddingBottom: kb ? 8 : Math.max(insets.bottom, 12) }]}>
             <TextInput
               style={[s.input, coachEmpty && s.inputOff]}
               placeholder={coachEmpty ? '오늘 질문을 다 썼어요 · 내일 다시 채워집니다' : '코치에게 질문하기'}
@@ -231,7 +234,8 @@ export default function CoachScreen() {
               {chatBusy ? <ActivityIndicator color={colors.bg} size="small" /> : <Text style={s.sendTxt}>↑</Text>}
             </TouchableOpacity>
           </View>
-          <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>
+          {/* 키보드가 떠 있으면 안내 줄은 숨겨 입력칸을 키보드 바로 위에 둔다 */}
+          {kb ? null : <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>}
         </KeyboardAvoidingView>
       )}
     </Screen>

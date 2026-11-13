@@ -37,7 +37,7 @@ import { routeTurn, SAFETY_REPLY } from './coach/intent';
 import { loadSignals, loadSaid, markSaid, cleanExNames, signalsText } from './coach/context';
 import { pickFocus, statusFor } from './coach/signals';
 import { runCoach } from './coach/answer';
-import { knowFor, stepFor } from './coach/know';
+import { knowFor, stepFor, warnFor } from './coach/know';
 import { systemFor, buildTurn, PREFILL, STOP, PROMPT_VERSION, STATIC_NUMBERS } from './coach/prompt';
 import { allowedNumbers } from './coach/validate';
 
@@ -583,11 +583,12 @@ export const aiCoach = onCall(
 
     // ③ 가변부는 마지막 user 턴 — 고정부(systemFor: 공통 + 질문 종류별 묶음)는 모두에게 같아 캐시된다.
     // 앱이 만든 사용자 데이터는 system 이 아니라 user 턴의 <data> — 클라이언트가 규칙을 덧쓸 수 없다.
+    const warn = warnFor(routed.intent, sig?.phase, question);
     messages[last] = {
       role: 'user',
       content: buildTurn({
         intent: routed.intent, injury: routed.injury, status: statusFor(routed.intent, sig, focus), focus, win, data: context,
-        know: knowFor(routed.intent, question, context), step: stepFor(routed.intent, sig, context),
+        know: knowFor(routed.intent, question, context), step: stepFor(routed.intent, sig, context), warn,
         question: question.replace(/<\/?(question|focus|aside|win|status|data|intent|injury)>/g, ''),
       }),
     };
@@ -610,7 +611,10 @@ export const aiCoach = onCall(
     const { result, quota } = await withQuota(
       acc.uid, 'coach', acc.isAdmin,
       async () => {
-        const r = await runCoach({ call, messages, allowed, dayKcal: dk, intent: routed.intent, focus, win, data: context });
+        const r = await runCoach({
+          call, messages, allowed, dayKcal: dk, intent: routed.intent, focus, win, data: context, warnTarget: warn,
+          cheer: { question, phase: sig?.phase, nearGoal: !!sig?.progress && sig.progress.pct >= 0.75 && sig.progress.onPlan },
+        });
         retried = r.retried;
         stripped = r.stripped;
         return r.out;

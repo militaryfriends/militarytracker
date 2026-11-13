@@ -9,6 +9,7 @@ import type { Intent } from './intent';
 import { firstJson } from './parse';
 import { SAID_ALREADY, type Focus } from './signals';
 import { checkText, stripSentences } from './validate';
+import { warnLine } from './know';
 
 export interface CoachOut {
   reply: string;
@@ -111,6 +112,39 @@ export function dropAllergens(out: CoachOut, data: string, dayKcal?: number): Co
   return { ...out, meal: items.length >= 2 ? normalizeMeal({ t: out.meal.t, items }, dayKcal) : null };
 }
 
+/** 대표 승인 응원 문장 — 모델이 지어내지 않게 코드가 조건을 보고 고른다(밀프 말투 가이드 2026-11-12) */
+export const CHEERS = {
+  hard: '어려워서 가치가 있는 겁니다.',
+  body: '몸 만드셔야죠.',
+  near: '목표까지 얼마 안 남았습니다.',
+  eat: '먹는 것도 훈련입니다.',
+} as const;
+
+export interface CheerCtx {
+  question: string;
+  phase?: string | null;
+  /** 프로젝트 기간 75% 이상 + 엔진 예상 대비 계획 범위 안 */
+  nearGoal?: boolean;
+}
+
+/**
+ * 응원 줄 고르기. 순서: 목표 근접(데이터가 받칠 때만) → 기록 갱신 · 연속 달성(운동 질문) → 승인 문장 → 모델이 쓴 응원.
+ * "목표까지 얼마 안 남았습니다" 는 근거가 없으면 절대 쓰지 않는다.
+ */
+export function pickCheer(out: CoachOut, o: { intent: Intent; win: Focus['win']; cheer?: CheerCtx }): string | null {
+  const q = o.cheer?.question ?? '';
+  const hard = o.intent === 'motivation' || /힘들|힘드|어렵|어려워|지쳤|지쳐|지치|버겁|하기\s?싫/.test(q);
+  if (o.cheer?.nearGoal && (hard || o.intent === 'progress')) return CHEERS.near;
+  if (o.win?.where === 'cheer') return o.win.say;
+  if (o.intent === 'app' || o.intent === 'general') return out.cheer;
+  if (hard) return CHEERS.hard;
+  if (o.intent === 'diet' && out.meal && o.cheer?.phase === 'gain') return CHEERS.eat;
+  if (o.intent === 'diet' && /치팅|폭식|과식|많이\s?먹|다시\s?시작/.test(q)) return CHEERS.body;
+  // 운동 처방을 준 답(모델이 응원 줄을 붙였다는 것이 처방을 줬다는 표시)
+  if (o.intent === 'workout' && out.cheer) return CHEERS.body;
+  return out.cheer;
+}
+
 /**
  * 마무리 — 코드가 정한 것을 답에 얹는다.
  *  · focus(mention): 서버가 쓴 한 문장을 답 끝에. 모델은 이 내용을 쓰지 않도록 안내받는다(prompt <aside>).
@@ -118,17 +152,22 @@ export function dropAllergens(out: CoachOut, data: string, dayKcal?: number): Co
  *  · 앱 사용법 답에는 다음 행동을 붙이지 않는다.
  */
 export function finishCoach(
-  src: CoachOut, o: { intent: Intent; focus: Focus['focus']; win: Focus['win']; data?: string; dayKcal?: number },
+  src: CoachOut, o: {
+    intent: Intent; focus: Focus['focus']; win: Focus['win']; data?: string; dayKcal?: number;
+    cheer?: CheerCtx; warnTarget?: string | null;
+  },
 ): CoachOut {
   const out = o.data ? dropAllergens(src, o.data, o.dayKcal) : src;
-  let { reply, cheer, next } = out;
+  let { reply, next, warning } = out;
+  // 감량 중 탄산 · 야식 · 매일 술을 물으면 승인 경고 문형 — 모델이 안 썼으면 코드가 채운다
+  if (o.warnTarget && !(warning && /무조건 피하세요/.test(warning))) warning = warnLine(o.warnTarget);
   if (o.intent === 'app') next = null;
   // 모델이 이미 같은 말을 했으면 또 붙이지 않는다(<aside> 를 보여 주면 가끔 제 글에도 쓴다)
   if (o.focus?.mode === 'mention' && reply !== FALLBACK_REPLY && !SAID_ALREADY[o.focus.key]?.test(reply)) {
     reply = `${reply.trimEnd()} ${o.focus.say}`;
   }
-  if (o.win?.where === 'cheer') cheer = o.win.say;
-  return { ...out, reply, cheer, next };
+  const cheer = pickCheer(out, o);
+  return { ...out, reply, cheer, next, warning };
 }
 
 /**
@@ -145,6 +184,10 @@ export async function runCoach(o: {
   win: Focus['win'];
   /** 앱이 보낸 회원 정보 — 못 먹는 음식을 카드에서 거르는 데 쓴다 */
   data?: string;
+  /** 응원 문장 고르기 재료 */
+  cheer?: CheerCtx;
+  /** 승인 경고 문형을 쓸 대상(know.warnFor) */
+  warnTarget?: string | null;
 }): Promise<{ out: CoachOut | null; raw: string; retried: boolean; stripped: boolean }> {
   let raw = await o.call(o.messages);
   let out = raw ? parseCoach(raw, o.dayKcal) : null;
