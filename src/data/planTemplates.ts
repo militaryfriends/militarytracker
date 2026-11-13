@@ -56,7 +56,7 @@ const G_BACK: DayTemplate = {
   id: 'back', name: '등', focus: '로우 · 랫풀다운 · 케이블',
   slots: [
     S(['bbrow', 'tbarrow'], ['chestsupportedrow', 'tbarrow']),
-    S(['latpull', 'pullup', 'widelatpull'], ['latpull', 'assistedpullup']),
+    S(['latpull', 'pullup', 'widelatpull'], ['latpull', 'closelatpull']),
     S(['cablerow', 'chestsupportedrow']),
     S(['onearmdbrow', 'dbrow']),
     S(['straightarmpull', 'cablepullover']),
@@ -109,9 +109,9 @@ const G_PUSH = (v: 'A' | 'B'): DayTemplate => ({
 const G_PULL = (v: 'A' | 'B'): DayTemplate => ({
   id: v === 'A' ? 'pull' : 'pullB', name: v === 'A' ? '풀데이' : '풀 B', focus: '등 · 이두',
   slots: v === 'A'
-    ? [S(['latpull', 'pullup'], ['latpull', 'assistedpullup']), S(['bbrow', 'tbarrow'], ['chestsupportedrow']), S(['cablerow', 'chestsupportedrow']),
+    ? [S(['latpull', 'pullup'], ['latpull', 'closelatpull']), S(['bbrow', 'tbarrow'], ['chestsupportedrow']), S(['cablerow', 'chestsupportedrow']),
       S(['facepull', 'reversefly']), S(['bbcurl', 'dbcurl']), S(['hammercurl', 'cablehammer'], undefined, true)]
-    : [S(['deadlift', 'rdl'], ['rdl']), S(['pullup', 'latpull'], ['latpull', 'assistedpullup']), S(['onearmdbrow', 'cablerow']),
+    : [S(['deadlift', 'rdl'], ['rdl']), S(['pullup', 'latpull'], ['latpull', 'closelatpull']), S(['onearmdbrow', 'cablerow']),
       S(['straightarmpull', 'cablepullover']), S(['incdbcurl', 'cablecurl'], ['cablecurl']), S(['facepull', 'reversefly'], undefined, true)],
 });
 const G_LEGDAY = (v: 'A' | 'B'): DayTemplate => ({
@@ -129,7 +129,7 @@ const G_UPPER = (v: 'A' | 'B'): DayTemplate => ({
     ? [S(['bench', 'smithbench'], ['dbbench', 'chestpressmc']), S(['bbrow', 'tbarrow'], ['chestsupportedrow']), S(['dbshoulderpress', 'ohp', 'shoulderpressmc'], ['shoulderpressmc']),
       S(['latpull', 'pullup'], ['latpull']), S(['pushdown', 'ropepushdown']), S(['bbcurl', 'dbcurl'])]
     : [S(['incdbpress', 'inclinebench']), S(['cablerow', 'chestsupportedrow']), S(['latraise', 'cablelatraise']),
-      S(['pullup', 'latpull'], ['latpull', 'assistedpullup']), S(['hammercurl', 'incdbcurl']), S(['ohext', 'ohropeext'])],
+      S(['pullup', 'latpull'], ['latpull', 'closelatpull']), S(['hammercurl', 'incdbcurl']), S(['ohext', 'ohropeext'])],
 });
 const G_LOWER = (v: 'A' | 'B'): DayTemplate => ({
   id: v === 'A' ? 'lower' : 'lowerB', name: v === 'A' ? '하체' : '하체 B', focus: '하체 · 코어',

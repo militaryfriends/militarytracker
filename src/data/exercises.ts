@@ -118,7 +118,6 @@ export const EX: Exercise[] = [
   { id: 'backext',           n: '백익스텐션',            part: 'back', g: '척추기립근', eq: ['bw', 'mc'],  pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'pull' },
   { id: 'shrug',             n: '슈러그',                part: 'back', g: '승모근',    eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'pull' },
   { id: 'bbshrug',           n: '바벨 슈러그',           part: 'back', g: '승모근',    eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-15', rest: 75, lv: 1, ppl: 'pull' },
-  { id: 'assistedpullup',    n: '어시스티드 풀업',       part: 'back', g: '광배',      eq: ['mc', 'band'], pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 90, lv: 1, ppl: 'pull' },
   { id: 'negativepullup',    n: '네거티브 풀업',         part: 'back', g: '광배',      eq: ['bw'],        pl: ['gym', 'home'], s: 3, r: '5-8',   rest: 90, lv: 2, ppl: 'pull' },
   { id: 'landminerow',       n: '랜드마인 로우',         part: 'back', g: '등 두께',   eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 90, lv: 2, ppl: 'pull' },
   { id: 'seatedshrug',       n: '시티드 슈러그',         part: 'back', g: '승모근',    eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'pull' },
@@ -201,12 +200,8 @@ export const EX: Exercise[] = [
   { id: 'cablecurl',         n: '케이블컬',          part: 'biceps', g: '이두 전체', eq: ['cb'],        pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'pull' },
   { id: 'incdbcurl',         n: '인클라인 덤벨컬',   part: 'biceps', g: '이두 장두',  eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
   { id: 'spidercurl',        n: '스파이더컬',        part: 'biceps', g: '이두 단두',  eq: ['db', 'bb'],  pl: ['gym'],         s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
-  { id: 'curl21s',           n: '21s 컬',            part: 'biceps', g: '이두 전체', eq: ['bb'],        pl: ['gym'],         s: 3, r: '21',    rest: 75, lv: 2, ppl: 'pull' },
-  { id: 'dragcurl',          n: '드래그컬',          part: 'biceps', g: '이두 장두',  eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
-  { id: 'zottman',           n: '조트만컬',          part: 'biceps', g: '이두·전완',  eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
   { id: 'cablehammer',       n: '케이블 해머컬',     part: 'biceps', g: '상완근',    eq: ['cb'],        pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'pull' },
   { id: 'reversecurl',       n: '리버스컬',          part: 'biceps', g: '전완',      eq: ['bb', 'db'],  pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'pull' },
-  { id: 'widecurl',          n: '와이드그립컬',      part: 'biceps', g: '이두 단두',  eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 60, lv: 1, ppl: 'pull' },
   { id: 'onearmcablecurl',   n: '원암 케이블컬',     part: 'biceps', g: '이두 피크',  eq: ['cb'],        pl: ['gym'],         s: 3, r: '12-15', rest: 75, lv: 1, ppl: 'pull' },
 
   // ─── 삼두 (15) ────────────────────────────────────────────────────────────
@@ -217,14 +212,12 @@ export const EX: Exercise[] = [
   { id: 'dipstri',           n: '딥스 (삼두)',                part: 'triceps', g: '삼두 전체', eq: ['bw'],        pl: ['gym'],         s: 3, r: '8-12',  rest: 90, lv: 3, ppl: 'push' },
   { id: 'closegripbench',    n: '클로즈그립 벤치프레스',      part: 'triceps', g: '삼두 내측', eq: ['bb'],        pl: ['gym'],         s: 3, r: '8-10',  rest: 90, lv: 2, ppl: 'push' },
   { id: 'kickback',          n: '트라이셉스 킥백',            part: 'triceps', g: '삼두 외측', eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '12-15', rest: 75, lv: 1, ppl: 'push' },
-  { id: 'jmpress',           n: 'JM프레스',                   part: 'triceps', g: '삼두 장두', eq: ['bb'],        pl: ['gym'],         s: 3, r: '8-10',  rest: 90, lv: 3, ppl: 'push' },
   { id: 'benchdip',          n: '벤치딥스',                   part: 'triceps', g: '삼두 전체', eq: ['bw'],        pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'push' },
   { id: 'skullcrusher',      n: '스컬크러셔',                 part: 'triceps', g: '삼두 장두', eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 75, lv: 2, ppl: 'push' },
   { id: 'revpushdown',       n: '리버스그립 푸시다운',        part: 'triceps', g: '삼두 내측', eq: ['cb'],        pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 2, ppl: 'push' },
   { id: 'diamondpushuptri',  n: '다이아몬드 푸시업 (삼두)',   part: 'triceps', g: '삼두 전체', eq: ['bw'],        pl: ['gym', 'home'], s: 3, r: '10-15', rest: 60, lv: 2, ppl: 'push' },
   { id: 'ohropeext',         n: '오버헤드 로프 익스텐션',     part: 'triceps', g: '삼두 장두', eq: ['cb'],        pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'push' },
   { id: 'onearmohext',       n: '원암 오버헤드 익스텐션',     part: 'triceps', g: '삼두 장두', eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '12-15', rest: 75, lv: 1, ppl: 'push' },
-  { id: 'bandedpushdown',    n: '밴디드 푸시다운',            part: 'triceps', g: '삼두 외측', eq: ['band'],      pl: ['gym', 'home'], s: 3, r: '15-20', rest: 75, lv: 1, ppl: 'push' },
 
   // ─── 복근 (30) ────────────────────────────────────────────────────────────
   { id: 'crunch',           n: '크런치',            part: 'abs', g: '상복부',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '15-20', rest: 60, lv: 1, ppl: 'core' },
@@ -241,26 +234,44 @@ export const EX: Exercise[] = [
   { id: 'vup',              n: '브이업',            part: 'abs', g: '복직근',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 2, ppl: 'core' },
   { id: 'cablecrunch',      n: '케이블 크런치',     part: 'abs', g: '상복부',     eq: ['cb'],         pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'core' },
   { id: 'abwheel',          n: '앱휠 롤아웃',       part: 'abs', g: '코어 전체',  eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 75, lv: 3, ppl: 'core' },
-  { id: 'toetouch',         n: '토터치',            part: 'abs', g: '상복부',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '15-20', rest: 60, lv: 1, ppl: 'core' },
   { id: 'seatedknee',       n: '시티드 니턱',       part: 'abs', g: '하복부',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '15-20', rest: 60, lv: 1, ppl: 'core' },
-  { id: 'plankjack',        n: '플랭크잭',          part: 'abs', g: '코어·유산소', eq: ['bw'],        pl: ['gym', 'home'], s: 3, r: '20-30', rest: 60, lv: 2, ppl: 'core' },
   { id: 'heeltouch',        n: '힐터치',            part: 'abs', g: '복사근',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '20-30', rest: 60, lv: 1, ppl: 'core' },
   { id: 'flutterkick',      n: '플러터킥',          part: 'abs', g: '하복부',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '20-30', rest: 60, lv: 1, ppl: 'core' },
-  { id: 'scorpion',         n: '스콜피온',          part: 'abs', g: '복사근·가동성', eq: ['bw'],      pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'core' },
   { id: 'woodchop',         n: '우드찹',            part: 'abs', g: '복사근',     eq: ['db', 'band'], pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'core' },
   { id: 'pallofpress',      n: '팔로프 프레스',     part: 'abs', g: '안티로테이션', eq: ['cb', 'band'], pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'core' },
+  { id: 'cablewoodchop',    n: '케이블 우드찹',     part: 'abs', g: '복사근',     eq: ['cb'],         pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 2, ppl: 'core' },
+];
+
+// ─── 조회 헬퍼 ──────────────────────────────────────────────────────────────
+/**
+ * 앱에서 뺀 종목(2026-11-13 밀프 요청 — 다른 종목으로 바꿨거나 영상이 아직 없는 칸). 고르기 · 플랜 · 코치에는 나오지 않고,
+ * 예전 운동 기록에 이 id 가 남아 있을 때 이름 · 부위를 보여 주는 데만 쓴다(exForLog). 다시 넣으려면 이 줄을 EX 로 옮긴다.
+ * 할로우락 자리는 할로우홀드, 다이아몬드 푸시업(삼두)은 가슴 다이아몬드 푸시업 영상을 같이 쓴다.
+ */
+const RETIRED: Exercise[] = [
+  { id: 'assistedpullup',    n: '어시스티드 풀업',       part: 'back', g: '광배',      eq: ['mc', 'band'], pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 90, lv: 1, ppl: 'pull' },
+  { id: 'curl21s',           n: '21s 컬',            part: 'biceps', g: '이두 전체', eq: ['bb'],        pl: ['gym'],         s: 3, r: '21',    rest: 75, lv: 2, ppl: 'pull' },
+  { id: 'dragcurl',          n: '드래그컬',          part: 'biceps', g: '이두 장두',  eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
+  { id: 'zottman',           n: '조트만컬',          part: 'biceps', g: '이두·전완',  eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
+  { id: 'widecurl',          n: '와이드그립컬',      part: 'biceps', g: '이두 단두',  eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 60, lv: 1, ppl: 'pull' },
+  { id: 'jmpress',           n: 'JM프레스',                   part: 'triceps', g: '삼두 장두', eq: ['bb'],        pl: ['gym'],         s: 3, r: '8-10',  rest: 90, lv: 3, ppl: 'push' },
+  { id: 'bandedpushdown',    n: '밴디드 푸시다운',            part: 'triceps', g: '삼두 외측', eq: ['band'],      pl: ['gym', 'home'], s: 3, r: '15-20', rest: 75, lv: 1, ppl: 'push' },
+  { id: 'toetouch',         n: '토터치',            part: 'abs', g: '상복부',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '15-20', rest: 60, lv: 1, ppl: 'core' },
+  { id: 'plankjack',        n: '플랭크잭',          part: 'abs', g: '코어·유산소', eq: ['bw'],        pl: ['gym', 'home'], s: 3, r: '20-30', rest: 60, lv: 2, ppl: 'core' },
+  { id: 'scorpion',         n: '스콜피온',          part: 'abs', g: '복사근·가동성', eq: ['bw'],      pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'core' },
   { id: 'dragonflag',       n: '드래곤플래그',      part: 'abs', g: '코어 전체',  eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '5-8',   rest: 90, lv: 3, ppl: 'core' },
   { id: 'lsit',             n: 'L싯',               part: 'abs', g: '코어 전체',  eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '15-30초', rest: 75, lv: 3, ppl: 'core' },
   { id: 'windshieldwiper',  n: '윈드쉴드와이퍼',    part: 'abs', g: '복사근',     eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 3, ppl: 'core' },
   { id: 'copenhagen',       n: '코펜하겐 플랭크',   part: 'abs', g: '내전근·복사근', eq: ['bw'],      pl: ['gym', 'home'], s: 3, r: '20-30초', rest: 60, lv: 3, ppl: 'core' },
   { id: 'hollowrock',       n: '할로우락',          part: 'abs', g: '코어 전체',  eq: ['bw'],         pl: ['gym', 'home'], s: 3, r: '15-20', rest: 60, lv: 2, ppl: 'core' },
-  { id: 'cablewoodchop',    n: '케이블 우드찹',     part: 'abs', g: '복사근',     eq: ['cb'],         pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 2, ppl: 'core' },
   { id: 'bandedcrunch',     n: '밴디드 크런치',     part: 'abs', g: '상복부',     eq: ['band'],       pl: ['gym', 'home'], s: 3, r: '15-20', rest: 60, lv: 1, ppl: 'core' },
   { id: 'hangingwiper',     n: '행잉 윈드쉴드와이퍼', part: 'abs', g: '복사근',   eq: ['bw'],         pl: ['gym'],         s: 3, r: '8-10',  rest: 75, lv: 3, ppl: 'core' },
 ];
 
-// ─── 조회 헬퍼 ──────────────────────────────────────────────────────────────
 const EX_MAP: Map<string, Exercise> = new Map(EX.map((e) => [e.id, e]));
+const RETIRED_MAP: Map<string, Exercise> = new Map(RETIRED.map((e) => [e.id, e]));
+/** 운동 기록 표시용 — 지금 목록에 없으면 뺀 종목에서도 찾는다 */
+export const exForLog = (id: string): Exercise | undefined => EX_MAP.get(id) ?? RETIRED_MAP.get(id);
 
 export const exById = (id: string): Exercise | undefined => EX_MAP.get(id);
 

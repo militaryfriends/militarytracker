@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { useAppStore } from '../stores/appStore';
-import { exById, PART_LABEL } from '../data/exercises';
+import { exForLog, PART_LABEL } from '../data/exercises';
 import { fmtDuration, fmtVolume, fmtSetDetail } from '../utils/stats';
 
 /** 운동 완료 직후 오버레이 — 그날의 결과와 기록 갱신을 보여준다 */
@@ -45,7 +45,7 @@ export default function SessionSummary() {
               const ex = summary.exercises.find((x) => x.id === id);
               return (
                 <Text key={id} style={s.prLine}>
-                  {exById(id)?.n ?? id}
+                  {exForLog(id)?.n ?? id}
                   {ex?.best ? <Text style={s.prVal}>  {fmtSetDetail(ex.best)}</Text> : null}
                 </Text>
               );
@@ -55,7 +55,7 @@ export default function SessionSummary() {
 
         <Text style={s.section}>종목별 기록</Text>
         {done.map((x, i) => {
-          const e = exById(x.id);
+          const e = exForLog(x.id);
           const isPr = summary.prIds.includes(x.id);
           return (
             <View key={`${x.id}-${i}`} style={s.exRow}>

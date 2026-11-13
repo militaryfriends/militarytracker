@@ -6,7 +6,7 @@ import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, EmptyState, useSafeBack } from '../../src/components/ui';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { exById, PART_LABEL } from '../../src/data/exercises';
+import { exForLog, PART_LABEL } from '../../src/data/exercises';
 import { WorkoutLog } from '../../src/types';
 import {
   fmtDateKo, fmtDuration, fmtVolume, fmtSetDetail, totalSets, totalVolume,
@@ -120,7 +120,7 @@ export default function HistoryScreen() {
                 <View style={s.detail}>
                   {done.length === 0 && <Text style={s.noDetail}>기록된 세트가 없습니다.</Text>}
                   {done.map((x, i) => {
-                    const e = exById(x.id);
+                    const e = exForLog(x.id);
                     return (
                       <TouchableOpacity activeOpacity={0.7}
                         key={`${x.id}-${i}`}

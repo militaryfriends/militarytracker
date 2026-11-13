@@ -1,4 +1,4 @@
-import { exById, Part, PART_ORDER } from '../data/exercises';
+import { exForLog, Part, PART_ORDER } from '../data/exercises';
 import { Plan, WorkoutLog, PartVolume, SetDetail, UserStats } from '../types';
 import { localDate } from '../services/workoutService';
 
@@ -82,7 +82,7 @@ export function setsByPart(logs: WorkoutLog[], opts: WeekOpts = {}): PartVolume 
   logs.forEach((l) => {
     if (!inWeek(l.date)) return;
     l.exercises.forEach((x) => {
-      const e = exById(x.id);
+      const e = exForLog(x.id);
       if (!e) return;
       acc[e.part] += x.sets;
     });
