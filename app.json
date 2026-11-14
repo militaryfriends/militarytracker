@@ -18,7 +18,7 @@
     "backgroundColor": "#09090A",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.militarytracker.app",
+      "bundleIdentifier": "com.militaryfriends.militarytracker",
       "userInterfaceStyle": "automatic",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

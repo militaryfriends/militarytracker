@@ -154,7 +154,9 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 
 ## 앱 식별자
 
-- iOS 번들 ID `com.militarytracker.app` · **Android 패키지 `com.militaryfriends.militarytracker`** (Play Console 앱에 이미 고정된 이름이라 맞췄다 — 바꾸면 업로드가 거부된다).
+- **iOS 번들 ID · Android 패키지 모두 `com.militaryfriends.militarytracker`** — 스토어 앱(ASC Apple ID 6827046995 · Play Console)에 이미 고정된 이름이라 맞췄다.
+  바꾸면 업로드가 거부된다(iOS 는 2026-11-14 첫 스토어 빌드 전에 `com.militarytracker.app` 에서 바꿈).
+  `eas submit` 설정은 eas.json(iOS ascAppId, Android 내부 테스트 초안).
   RevenueCat Android 앱 · Play 구독 링크(`billingService.ts`)도 이 패키지를 쓴다.
 
 ## 구독 · 결제 · 대기자 (2026-10-26)
