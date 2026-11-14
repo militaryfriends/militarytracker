@@ -8,7 +8,7 @@
  *   Offering     "default" (current) 에 월간 패키지 하나 — 상품 id mt_pro_monthly (₩9,900)
  */
 export const REVENUECAT = {
-  ios: '',
+  ios: 'appl_yxQuCJzryXlufZMGjgNgRDnTgbq',
   android: 'goog_qfcJtwftsMjdCIVOxkemNWYOKnP',
   entitlement: 'pro',
 } as const;
