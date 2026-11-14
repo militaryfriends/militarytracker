@@ -9,6 +9,6 @@
  */
 export const REVENUECAT = {
   ios: '',
-  android: '',
+  android: 'goog_qfcJtwftsMjdCIVOxkemNWYOKnP',
   entitlement: 'pro',
 } as const;
