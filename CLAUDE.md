@@ -152,6 +152,18 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - 1.1.0 이하 빌드에는 expo-updates 가 없어 코드 푸시를 받지 못한다.
 - 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
 
+## 비밀 파일 (Bitwarden)
+
+git 에 없는 비밀 파일은 Bitwarden 금고 폴더 `militarytracker` 에 보안 메모로 둔다(`scripts/bw-sync.mjs`, smiscamp 와 같은 방식).
+대상: `.env` · `functions/.secret.local` · `media/r2.env` · `.secrets/`(Play 서비스 계정 JSON · keys.md) · `~/Keys/Militaryfriends_NQG4FMAHP7/`(ASC 인앱 결제 키 .p8).
+```bash
+export BW_SESSION="$(bw unlock --raw)"
+npm run secrets:status   # 비교
+npm run secrets:push     # 이 기기 → 금고
+npm run secrets:pull     # 금고 → 이 기기
+```
+**Claude 는 비밀 값을 금고 · 콘솔 입력칸에 직접 넣지 않는다** — 이 스크립트를 사람이 돌린다.
+
 ## 앱 식별자
 
 - **iOS 번들 ID · Android 패키지 모두 `com.militaryfriends.militarytracker`** — 스토어 앱(ASC Apple ID 6827046995 · Play Console)에 이미 고정된 이름이라 맞췄다.

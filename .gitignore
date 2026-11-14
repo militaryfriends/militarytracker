@@ -72,3 +72,6 @@ media/r2.env
 .fuse_hidden*
 scripts/avatar-review/web/
 scripts/avatar-review/out/
+
+# 비밀 파일 (Bitwarden: npm run secrets:push / pull)
+/.secrets/
