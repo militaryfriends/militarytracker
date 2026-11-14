@@ -2,8 +2,11 @@
 /**
  * git 에 없는 비밀 파일을 Bitwarden 보안 메모로 올리고 받는다 (smiscamp scripts/bw-sync.mjs 와 같은 방식).
  *
- *   준비(기기마다 한 번): Bitwarden CLI — macOS `brew install bitwarden-cli` → `bw login`
- *   매번:   export BW_SESSION="$(bw unlock --raw)"
+ *   준비(기기마다 한 번): Bitwarden CLI — macOS `brew install bitwarden-cli`
+ *   그다음은 npm 명령만 — 로그인 · 잠금 해제가 필요하면 스크립트가 직접 물어본다.
+ *
+ * - **계정: 밀리터리프렌즈 금고(ACCOUNT)만 쓴다.** CLI 설정 폴더를 계정 전용(~/.config/bw-militaryfriends)으로 두어
+ *   smiscamp 계정 로그인과 섞이지 않는다. 시작할 때 로그인된 이메일이 ACCOUNT 와 다르면 아무것도 하지 않고 멈춘다.
  *
  *   npm run secrets:status   로컬 파일과 금고 비교 (같음 · 다름 · 없음)
  *   npm run secrets:push     이 기기의 파일 → 금고 (값이 바뀐 것만 올림)
@@ -22,6 +25,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FOLDER = 'militarytracker';
+const ACCOUNT = 'militaryfriends.official@gmail.com';
+// 계정 전용 CLI 설정 폴더 — 바깥에서 다른 폴더를 지정했어도 이 스크립트는 이 폴더만 쓴다
+const APPDATA = path.join(os.homedir(), '.config', 'bw-militaryfriends');
+fs.mkdirSync(APPDATA, { recursive: true });
+const ENV = { ...process.env, BITWARDENCLI_APPDATA_DIR: APPDATA };
 const CHUNK = 4000;
 const ENTRIES = [
   '.env',                                   // 로컬 개발용 EXPO_PUBLIC_* 등
@@ -52,7 +60,7 @@ function expand(vaultPaths) {
 }
 
 function bw(args, input) {
-  const r = spawnSync('bw', args, { input, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync('bw', args, { input, encoding: 'utf8', env: ENV, maxBuffer: 64 * 1024 * 1024 });
   if (r.error) throw new Error(`bw 를 실행하지 못했어요 — Bitwarden CLI 가 설치돼 있나요? (${r.error.message})`);
   if (r.status !== 0) throw new Error(`bw ${args[0]} ${args[1] ?? ''} 실패: ${(r.stderr || '').trim().split('\n')[0]}`);
   return r.stdout;
@@ -60,13 +68,32 @@ function bw(args, input) {
 const json = (args, input) => JSON.parse(bw(args, input));
 const enc = (obj) => Buffer.from(JSON.stringify(obj), 'utf8').toString('base64');
 
+// 사람이 비밀번호 · 2단계 코드를 입력하는 명령(화면에 직접 묻는다)
+function interactive(args, capture) {
+  const r = spawnSync('bw', args, { env: ENV, encoding: 'utf8', stdio: ['inherit', capture ? 'pipe' : 'inherit', 'inherit'] });
+  if (r.error) throw new Error(`bw 를 실행하지 못했어요 — Bitwarden CLI 가 설치돼 있나요? (${r.error.message})`);
+  if (r.status !== 0) throw new Error(`bw ${args[0]} 실패`);
+  return (r.stdout || '').trim();
+}
+
 function ensureUnlocked() {
-  const st = json(['status']);
-  if (st.status !== 'unlocked' || !process.env.BW_SESSION) {
-    throw new Error(st.status === 'unauthenticated'
-      ? '먼저 `bw login` 하세요.'
-      : '금고가 잠겨 있어요 — export BW_SESSION="$(bw unlock --raw)" 뒤 다시 실행하세요.');
+  let st = json(['status']);
+  if (st.status === 'unauthenticated') {
+    console.log(`Bitwarden 로그인 — ${ACCOUNT}`);
+    interactive(['login', ACCOUNT]);
+    st = json(['status']);
   }
+  if ((st.userEmail || '').toLowerCase() !== ACCOUNT) {
+    throw new Error(`이 설정 폴더에 다른 계정(${st.userEmail || '알 수 없음'})이 로그인돼 있어요 — 멈춥니다.\n` +
+      `  BITWARDENCLI_APPDATA_DIR="${APPDATA}" bw logout 후 다시 실행하세요.`);
+  }
+  if (st.status !== 'unlocked') {
+    console.log(`금고 잠금 해제 — ${ACCOUNT}`);
+    ENV.BW_SESSION = interactive(['unlock', '--raw'], true);
+    if (!ENV.BW_SESSION) throw new Error('잠금 해제 실패');
+  }
+  if (json(['status']).status !== 'unlocked') throw new Error('금고가 아직 잠겨 있어요');
+  console.log(`계정 확인: ${ACCOUNT}`);
   bw(['sync']);
 }
 

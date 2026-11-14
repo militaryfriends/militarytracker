@@ -156,8 +156,9 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 
 git 에 없는 비밀 파일은 Bitwarden 금고 폴더 `militarytracker` 에 보안 메모로 둔다(`scripts/bw-sync.mjs`, smiscamp 와 같은 방식).
 대상: `.env` · `functions/.secret.local` · `media/r2.env` · `.secrets/`(Play 서비스 계정 JSON · keys.md) · `~/Keys/Militaryfriends_NQG4FMAHP7/`(ASC 인앱 결제 키 .p8).
+**계정은 밀리터리프렌즈(`militaryfriends.official@gmail.com`) 금고만.** 스크립트가 전용 CLI 설정 폴더(`~/.config/bw-militaryfriends`)를 써서
+smiscamp 계정 로그인과 섞이지 않고, 시작할 때 로그인 이메일이 다르면 멈춘다. 로그인 · 잠금 해제는 스크립트가 직접 묻는다.
 ```bash
-export BW_SESSION="$(bw unlock --raw)"
 npm run secrets:status   # 비교
 npm run secrets:push     # 이 기기 → 금고
 npm run secrets:pull     # 금고 → 이 기기
