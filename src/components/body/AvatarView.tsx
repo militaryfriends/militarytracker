@@ -16,7 +16,7 @@ import { parseCell, type Coord, type Sex } from '../../utils/bodyComp';
 import { colors, themed, useThemeMode } from '../../theme';
 import { Silhouette } from './Silhouette';
 import { Avatar3DLive, Avatar3DStill, has3D } from './avatar3d/Avatar3D';
-import { cellCoord } from './avatar3d/morph';
+import { cellCoord, type Shape } from './avatar3d/morph';
 
 export type AvatarBadge = '지금' | '예상' | '목표' | '시작';
 
@@ -31,19 +31,21 @@ const Flat = memo(function Flat({ sex, cell, width, height }: { sex: Sex; cell: 
 });
 
 /** 한 장 (배지 없음) — 3D 가 되면 3D, 아니면 2D */
-const Still = memo(function Still({ sex, cell, coord, width, height }: { sex: Sex; cell: string; coord?: Coord; width: number; height: number }) {
+const Still = memo(function Still({ sex, cell, coord, shape, width, height }: { sex: Sex; cell: string; coord?: Coord; shape?: Shape; width: number; height: number }) {
   const flat = <Flat sex={sex} cell={cell} width={width} height={height} />;
   if (!has3D(sex)) return flat;
-  return <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} width={width} height={height} fallback={flat} />;
+  return <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} width={width} height={height} fallback={flat} />;
 });
 
 export function AvatarView({
-  sex, cell, coord, width, badge, style, fadeFrom, label, live = false, yawGroup, morphMs, intro,
+  sex, cell, coord, shape, width, badge, style, fadeFrom, label, live = false, yawGroup, morphMs, intro,
 }: {
   sex: Sex;
   cell: string;
   /** 엔진 연속 좌표 — 3D 일 때 칸 중심 대신 이 몸을 그린다 */
   coord?: Coord;
+  /** 체형 축(뱃살형 · 하체형 · 어깨 너비 …) — 3D 에서만. 없으면 기본 체형. 숫자 계산에는 쓰이지 않는다 */
+  shape?: Shape;
   /** 3D 뷰어(손으로 돌리기 · 좌표가 바뀌면 몸이 변함). 3D 가 없으면 보통 아바타 */
   live?: boolean;
   yawGroup?: string;
@@ -96,13 +98,13 @@ export function AvatarView({
     >
       {is3dLive ? (
         <View style={[s.layer, { width, height }]}>
-          <Avatar3DLive sex={sex} coord={coord ?? cellCoord(cell)} width={width} height={height}
+          <Avatar3DLive sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} width={width} height={height}
             morphMs={morphMs} yawGroup={yawGroup} intro={intro}
             fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
         </View>
       ) : native3d ? (
         <View style={[s.layer, { width, height }]}>
-          <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} from={fadeFrom && fadeFrom !== cell ? cellCoord(fadeFrom) : undefined}
+          <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} from={fadeFrom && fadeFrom !== cell ? cellCoord(fadeFrom) : undefined}
             width={width} height={height} fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
         </View>
       ) : (
@@ -113,7 +115,7 @@ export function AvatarView({
             </View>
           ) : null}
           <Animated.View style={[s.layer, { width, height }, top]}>
-            <Still sex={sex} cell={cell} coord={coord} width={width} height={height} />
+            <Still sex={sex} cell={cell} coord={coord} shape={shape} width={width} height={height} />
           </Animated.View>
         </>
       )}

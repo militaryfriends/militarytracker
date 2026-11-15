@@ -57,8 +57,46 @@ export function prepareModel(T: THREE, scene: THREE_NS.Object3D, tex: ModelTex =
     mesh.material = isCloth(mesh) ? cloth : body;
     mesh.frustumCulled = false; // 모프로 커진 몸이 잘리지 않게
   });
-  const box = new T.Box3().setFromObject(scene);
+  const box = modelBox(T, scene);
   return { T, scene, height: box.max.y - box.min.y };
+}
+
+/** 모델 크기를 잴 때 넣는 모프 — 처음부터 있던 것만 */
+const SIZE_KEYS: readonly MorphKey[] = ['fat_up', 'fat_down', 'mus_up', 'mus_down', 'soft'];
+
+/**
+ * 모델 상자(화면에 몸을 맞추는 기준). `Box3.setFromObject` 는 glTF 로더가 넣어 둔 상자를 쓰는데, 그 상자는 **모든** 모프 중 가장 큰 변위만큼
+ * 부풀어 있다 — 체형 축(팔이 벌어지는 fat_xl 등)을 모델에 더하면 키가 커진 것처럼 나와 화면의 몸이 작아진다.
+ * 그래서 로더와 같은 계산(GLTFLoader computeBounds: 기본 위치 상자 + 모프 최대 변위)을 예전 모프만으로 한다 — 값이 체형 축 추가 전과 같다.
+ */
+export function modelBox(T: THREE, root: THREE_NS.Object3D): THREE_NS.Box3 {
+  const box = new T.Box3();
+  const b = new T.Box3();
+  const mb = new T.Box3();
+  const grow = new T.Vector3();
+  const v = new T.Vector3();
+  root.updateWorldMatrix(true, true);
+  root.traverse((o) => {
+    const mesh = o as THREE_NS.Mesh;
+    if (!mesh.isMesh) return;
+    const geo = mesh.geometry;
+    b.setFromBufferAttribute(geo.attributes.position as THREE_NS.BufferAttribute);
+    const targets = geo.morphAttributes.position;
+    const dict = mesh.morphTargetDictionary;
+    grow.set(0, 0, 0);
+    if (targets && dict) {
+      for (const k of SIZE_KEYS) {
+        const i = dict[k];
+        if (i === undefined) continue;
+        mb.setFromBufferAttribute(targets[i] as THREE_NS.BufferAttribute);
+        v.set(Math.max(Math.abs(mb.min.x), Math.abs(mb.max.x)), Math.max(Math.abs(mb.min.y), Math.abs(mb.max.y)), Math.max(Math.abs(mb.min.z), Math.abs(mb.max.z)));
+        grow.max(v);
+      }
+    }
+    b.expandByVector(grow);
+    box.union(b.applyMatrix4(mesh.matrixWorld));
+  });
+  return box;
 }
 
 /** 텍스처 공통 설정 — glTF UV(위가 0)라 뒤집지 않는다 */
@@ -137,7 +175,7 @@ export function applyMorph(st: Stage, mo: Morph) {
   }
   // 노멀맵 · AO 는 기본 몸의 결 · 그늘이다 — 살이 붙거나 근육이 줄면 결도 그늘도 묻히게 같이 약하게
   // (AO 를 그대로 두면 복근 · 가슴 아래 그림자가 살 위에 남는다)
-  const ns = Math.min(1, Math.max(0.08, (1 - 0.9 * mo.fat_up - 0.6 * mo.mus_down) * (1 - 0.6 * mo.soft)));
+  const ns = Math.min(1, Math.max(0.08, (1 - 0.9 * mo.fat_up - 0.6 * mo.mus_down - 0.7 * Math.max(0, mo.belly ?? 0)) * (1 - 0.6 * mo.soft)));
   const ao = Math.max(0.35, ns);
   for (const mat of st.bodyMats) {
     mat.normalScale.set(ns, ns);
@@ -161,13 +199,13 @@ export const DEFAULT_YAW = 0.4;
 
 export const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-export const mixMorph = (a: Morph, b: Morph, e: number): Morph => ({
-  fat_up: a.fat_up + (b.fat_up - a.fat_up) * e,
-  fat_down: a.fat_down + (b.fat_down - a.fat_down) * e,
-  mus_up: a.mus_up + (b.mus_up - a.mus_up) * e,
-  mus_down: a.mus_down + (b.mus_down - a.mus_down) * e,
-  soft: a.soft + (b.soft - a.soft) * e,
-});
+export const mixMorph = (a: Morph, b: Morph, e: number): Morph => {
+  const out = {} as Morph;
+  (Object.keys(b) as MorphKey[]).forEach((k) => {
+    out[k] = a[k] + (b[k] - a[k]) * e;
+  });
+  return out;
+};
 
 /** 처음 나타날 때 천천히 한 바퀴 돌며 들어온다(3D 피드백 P4 — 배 · 등 두께를 한 번에 보여 준다) */
 export const INTRO_FROM = -Math.PI * 2;

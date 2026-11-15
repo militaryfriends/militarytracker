@@ -10,7 +10,7 @@ import { getThemeMode } from '../../../theme/tokens';
 import { Asset } from 'expo-asset';
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
-import { MODEL_SEXES, morphFor } from './morph';
+import { MODEL_SEXES, morphFor, type Shape } from './morph';
 import { buildStage, makeDriver, prepareModel, styleRenderer, texSetup, type Loaded, type THREE } from './stage';
 import { ensureTextDecoder } from './textDecoder';
 
@@ -114,7 +114,7 @@ export function loadModel(sex: Sex): Promise<Loaded> {
 }
 
 export interface NativeView {
-  setCoord(c: Coord, ms?: number): void;
+  setCoord(c: Coord, ms?: number, shape?: Shape): void;
   setYaw(y: number): void;
   grab(): void;
   drag(dx: number): void;
@@ -125,7 +125,7 @@ export interface NativeView {
 /** GLView 의 컨텍스트에 몸을 그린다 */
 export async function attach(
   gl: ExpoWebGLRenderingContext,
-  opts: { sex: Sex; coord: Coord; yaw?: number; intro?: boolean; onYaw?: (y: number) => void; breathe?: boolean },
+  opts: { sex: Sex; coord: Coord; shape?: Shape; yaw?: number; intro?: boolean; onYaw?: (y: number) => void; breathe?: boolean },
 ): Promise<NativeView> {
   const m = await loadModel(opts.sex);
   const { T } = m;
@@ -142,7 +142,7 @@ export async function attach(
   r.setSize(w, h, false);
   const st = buildStage(m, w / h);
   let dead = false;
-  const drv = makeDriver(st, morphFor(opts.sex, opts.coord), {
+  const drv = makeDriver(st, morphFor(opts.sex, opts.coord, opts.shape), {
     draw: () => {
       if (dead) return;
       r.render(st.scene, st.camera);
@@ -152,7 +152,7 @@ export async function attach(
   });
   drv.kick();
   return {
-    setCoord: (c, ms = 600) => drv.setMorph(morphFor(opts.sex, c), ms),
+    setCoord: (c, ms = 600, shape) => drv.setMorph(morphFor(opts.sex, c, shape), ms),
     setYaw: (y) => drv.setYaw(y),
     grab: () => drv.grab(),
     drag: (dx) => drv.drag(dx),

@@ -12,6 +12,7 @@ import type { Coord, Sex } from '../../../utils/bodyComp';
 import { attach, loadModel, markBroken, native3D, type NativeView } from './engine.native';
 export { avatar3DError } from './engine.native';
 import { joinYawGroup } from './stage';
+import { shapeKey, type Shape } from './morph';
 import { useThemeMode } from '../../../theme/tokens';
 
 let GLView: typeof GLViewType | null = null;
@@ -46,9 +47,9 @@ class Guard extends Component<{ fallback: ReactNode; children: ReactNode }, { er
 }
 
 function GLBody({
-  sex, coord, from, width, height, morphMs, yawGroup, intro, interactive, fallback,
+  sex, coord, shape, from, width, height, morphMs, yawGroup, intro, interactive, fallback,
 }: {
-  sex: Sex; coord: Coord; from?: Coord; width: number; height: number; morphMs: number;
+  sex: Sex; coord: Coord; shape?: Shape; from?: Coord; width: number; height: number; morphMs: number;
   yawGroup?: string; intro?: boolean; interactive: boolean; fallback: ReactNode;
 }) {
   const w = Math.round(width);
@@ -58,6 +59,9 @@ function GLBody({
   const view = useRef<NativeView | null>(null);
   const coordRef = useRef(coord);
   coordRef.current = coord;
+  const shapeRef = useRef(shape);
+  shapeRef.current = shape;
+  const sKey = shapeKey(shape);
   const alive = useRef(true);
   const group = useRef<ReturnType<typeof joinYawGroup> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
@@ -73,9 +77,9 @@ function GLBody({
   }, []);
 
   useEffect(() => {
-    view.current?.setCoord(coord, morphMs);
+    view.current?.setCoord(coord, morphMs, shapeRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coord.f, coord.m]);
+  }, [coord.f, coord.m, sKey]);
 
   const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
     try {
@@ -84,11 +88,11 @@ function GLBody({
       view.current = null;
       group.current?.leave();
       group.current = joinYawGroup(yawGroup, {}, (y) => view.current?.setYaw(y));
-      const v = await attach(gl, { sex, coord: from ?? coordRef.current, intro, onYaw: group.current.emit, breathe: interactive && !reduce });
+      const v = await attach(gl, { sex, coord: from ?? coordRef.current, shape: shapeRef.current, intro, onYaw: group.current.emit, breathe: interactive && !reduce });
       if (!alive.current) return v.dispose();
       view.current = v;
       // 이전 칸에서 시작하면(프로젝트 카드 선택) 지금 좌표로 변해 간다
-      v.setCoord(coordRef.current, from ? 600 : 0);
+      v.setCoord(coordRef.current, from ? 600 : 0, shapeRef.current);
       setState('ready');
     } catch (e) {
       markBroken(e);
@@ -125,24 +129,24 @@ function GLBody({
   );
 }
 
-export function Avatar3DStill({ sex, coord, from, width, height, fallback }: {
-  sex: Sex; coord: Coord; from?: Coord; width: number; height: number; fallback: ReactNode;
+export function Avatar3DStill({ sex, coord, shape, from, width, height, fallback }: {
+  sex: Sex; coord: Coord; shape?: Shape; from?: Coord; width: number; height: number; fallback: ReactNode;
 }) {
   if (!has3D(sex)) return <>{fallback}</>;
   return (
     <Guard fallback={fallback}>
-      <GLBody sex={sex} coord={coord} from={from} width={width} height={height} morphMs={600} interactive={false} fallback={fallback} />
+      <GLBody sex={sex} coord={coord} shape={shape} from={from} width={width} height={height} morphMs={600} interactive={false} fallback={fallback} />
     </Guard>
   );
 }
 
-export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGroup, intro = false, fallback }: {
-  sex: Sex; coord: Coord; width: number; height: number; morphMs?: number; yawGroup?: string; intro?: boolean; fallback: ReactNode;
+export function Avatar3DLive({ sex, coord, shape, width, height, morphMs = 700, yawGroup, intro = false, fallback }: {
+  sex: Sex; coord: Coord; shape?: Shape; width: number; height: number; morphMs?: number; yawGroup?: string; intro?: boolean; fallback: ReactNode;
 }) {
   if (!has3D(sex)) return <>{fallback}</>;
   return (
     <Guard fallback={fallback}>
-      <GLBody sex={sex} coord={coord} width={width} height={height} morphMs={morphMs} yawGroup={yawGroup}
+      <GLBody sex={sex} coord={coord} shape={shape} width={width} height={height} morphMs={morphMs} yawGroup={yawGroup}
         intro={intro} interactive fallback={fallback} />
     </Guard>
   );

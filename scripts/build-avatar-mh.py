@@ -80,6 +80,32 @@ ARM = {'base': 9.0, 'fat_up': 16.0, 'fat_down': 8.0, 'mus_up': 13.0, 'mus_down':
 ELBOW = 8.0
 CLAVICLE = 4.0
 
+# ── 체형 축(2026-11-15) — 체지방 · 근육 2축으로 못 그리는 몸(뱃살형 · 하체형 · 어깨 넓은 몸 · 고도 비만).
+# 남성 조각 모델의 scripts/avatar-shape-axes.py 와 같은 이름 · 같은 뜻. 앱에서의 쓰임은 morph.ts 의 Shape.
+# 세기는 줄자(볼록 껍질 둘레, 키 height_cm 환산)로 재서 맞춘다 — 빌드 로그에 표로 찍힌다.
+#   belly 배 집중 · lower 하체 집중 · mus_bias 근육 분포(+상체형 / -하체형) · shoulder 어깨 너비 · pelvis 골반 너비 · fat_xl fat_up 너머
+AXES = {
+    'f': {
+        'height_cm': 162.0, 'z_waist': 0.62, 'z_hip': 0.48,
+        'belly': {'cm': 11.0, 'targets': [('stomach/stomach-pregnant-incr', 0.3), ('measure/measure-waist-circ-incr', 0.7), ('torso/torso-scale-depth-incr', 0.3),
+                                          ('stomach/stomach-navel-in', 0.2)]},
+        'lower': {'cm': 8.0, 'targets': [('measure/measure-hips-circ-incr', 0.3), ('buttocks/buttocks-volume-incr', 0.4),
+                                         ('armslegs/{s}-upperleg-fat-incr', 0.6), ('measure/measure-thigh-circ-incr', 0.6)]},
+        'shoulder': {'cm': 1.8, 'targets': [('measure/measure-shoulder-dist-incr', 1.0)]},
+        'pelvis': {'cm': 1.5, 'targets': [('hip/hip-scale-horiz-incr', 1.0)]},
+        'mus_bias': 0.6,
+        # fat_up 1 + fat_xl 1 = 체지방 약 48% (허리 약 116cm — RFM 76 − 20·키/허리)
+        # 배만 공처럼 나오지 않게(fat_up 이 이미 아랫배를 많이 민다) 아랫배 타깃은 덜고 몸통 · 골반 통을 키운다
+        'fat_xl': {'cm': 30.0, 'more': 1.0, 'smooth': 14,
+                   'targets': [('stomach/stomach-pregnant-incr', -0.2), ('measure/measure-waist-circ-incr', 0.9), ('torso/torso-scale-depth-incr', 0.6),
+                               ('torso/torso-scale-horiz-incr', 0.3), ('hip/hip-scale-depth-incr', 0.45), ('hip/hip-scale-horiz-incr', 0.2),
+                               ('buttocks/buttocks-volume-incr', 0.3), ('neck/neck-double-incr', 0.5), ('measure/measure-bust-circ-incr', 0.3),
+                               ('armslegs/{s}-upperarm-fat-incr', 0.5), ('armslegs/{s}-upperleg-fat-incr', 0.2), ('armslegs/{s}-lowerleg-fat-incr', 0.3)]},
+    },
+}
+XKEYS = ('belly', 'lower', 'mus_bias', 'shoulder', 'pelvis', 'fat_xl')
+ARM.update({'belly': 11.0, 'lower': 11.0, 'mus_bias': 9.0, 'shoulder': 9.0, 'pelvis': 10.0, 'fat_xl': 17.0})
+
 
 def log(*a):
     print('[avatar-mh]', *a, flush=True)
@@ -115,6 +141,96 @@ class MH(fm.MH):
         for race in ('african', 'asian', 'caucasian'):
             self._add(V, f'macrodetails/{race}-{g}-young', 1 / 3)
         return V
+
+
+def _hull(P2):
+    p = sorted(set(map(tuple, np.round(P2, 5))))
+    if len(p) < 3:
+        return 0.0
+    cr = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for q in p:
+        while len(lo) >= 2 and cr(lo[-2], lo[-1], q) <= 0:
+            lo.pop()
+        lo.append(q)
+    for q in reversed(p):
+        while len(up) >= 2 and cr(up[-2], up[-1], q) <= 0:
+            up.pop()
+        up.append(q)
+    h = np.array(lo[:-1] + up[:-1])
+    return float(np.linalg.norm(h - np.roll(h, -1, 0), axis=1).sum())
+
+
+def add_axes(mh, S, B, sex):
+    """체형 축 모양을 B 에 더하고 이름 목록을 돌려준다 (AXES 에 그 성별이 없으면 빈 목록 — 기존 4키만)."""
+    AX = AXES.get(sex)
+    if not AX:
+        return []
+    base = B['base']
+    bf = [f for g, f, _ in mh.faces if g == 'body']
+    E = np.array(sorted({(min(a, b), max(a, b)) for f in bf for a, b in zip(f, f[1:] + f[:1])}))
+    bv = np.unique(E)
+    z0 = base[bv, 2].min()
+    H = base[bv, 2].max() - z0
+    CM = H / AX['height_cm']
+    zr = (base[:, 2] - z0) / H
+    step = lambda x, a, b: np.clip((x - a) / (b - a), 0, 1) ** 2 * (3 - 2 * np.clip((x - a) / (b - a), 0, 1))
+    base_mh = mh.shape(*S['base'])
+    shape = lambda targets: fm.to_blender(mh.shape(*S['base'], targets)) - base
+
+    def girth(P, z_ratio):
+        """높이 z_ratio 에서 몸통을 자른 단면의 볼록 껍질 둘레(cm). 레스트 자세라 팔은 |x| 로 걸러진다(z 0.64 까지)."""
+        z = z0 + z_ratio * H
+        a, b = P[E[:, 0]], P[E[:, 1]]
+        c = (a[:, 2] - z) * (b[:, 2] - z) < 0
+        a, b = a[c], b[c]
+        Q = a + (b - a) * ((z - a[:, 2]) / (b[:, 2] - a[:, 2]))[:, None]
+        return _hull(Q[np.abs(Q[:, 0]) < 0.19 * H][:, :2]) / CM
+
+    def joint_x(D, name):
+        g = mh.group(name)
+        return float((base[g] + D[g]).mean(0)[0] - base[g].mean(0)[0]) / CM
+
+    def scale_to(D, measure, cm):
+        k = 1.0
+        for _ in range(4):
+            k *= cm / max(measure(D * k), 1e-6)
+        return D * k
+
+    waist = lambda D: girth(base + D, AX['z_waist']) - girth(base, AX['z_waist'])
+    hip = lambda D: girth(base + D, AX['z_hip']) - girth(base, AX['z_hip'])
+    X = {}
+    X['belly'] = scale_to(shape(AX['belly']['targets']), waist, AX['belly']['cm'])
+    X['lower'] = scale_to(shape(AX['lower']['targets']), hip, AX['lower']['cm'])
+    # 근육 분포: mus_up 을 위아래로 나눈 차이 — 팔(|x| 큼)은 상체
+    upper = np.maximum(step(zr, 0.50, 0.60), step(np.abs(base[:, 0]), 0.22, 0.26))
+    X['mus_bias'] = (B['mus_up'] - base) * (2 * upper - 1)[:, None] * AX['mus_bias']
+    X['shoulder'] = scale_to(shape(AX['shoulder']['targets']), lambda D: joint_x(D, 'joint-l-shoulder'), AX['shoulder']['cm'])
+    # 골반: 타깃이 허리까지 넓히므로 허리 위로는 지운다(뼈대만 넓게, 허리둘레는 belly · 체지방의 몫)
+    pv = shape(AX['pelvis']['targets']) * (1 - step(zr, 0.56, 0.62))[:, None]
+    X['pelvis'] = scale_to(pv, lambda D: joint_x(D, 'joint-l-upper-leg'), AX['pelvis']['cm'])
+    xl = AX['fat_xl']
+    d = (B['fat_up'] - base) * xl['more'] + shape(xl['targets'])
+    deg = np.zeros(len(base))
+    np.add.at(deg, E[:, 0], 1)
+    np.add.at(deg, E[:, 1], 1)
+    for _ in range(xl.get('smooth', 0)):      # 타깃을 범위 밖으로 겹쳐 생기는 접힌 자국을 편다(몸 정점만)
+        acc = np.zeros_like(d)
+        np.add.at(acc, E[:, 0], d[E[:, 1]])
+        np.add.at(acc, E[:, 1], d[E[:, 0]])
+        d[bv] = 0.5 * d[bv] + 0.5 * acc[bv] / deg[bv, None]
+    X['fat_xl'] = scale_to(d, waist, xl['cm'])
+    for k in XKEYS:
+        B[k] = base + X[k]
+    f5 = B['fat_up'] - base
+    rows = [('기본', 0), ('F5', f5), ('belly 1', X['belly']), ('lower 1', X['lower']), ('pelvis 1', X['pelvis']),
+            ('F5 + xl 0.5', f5 + X['fat_xl'] * 0.5), ('F5 + xl 1', f5 + X['fat_xl'])]
+    log(f'체형 축 — 키 {AX["height_cm"]:.0f}cm 환산 (허리 z {AX["z_waist"]} · 엉덩이 z {AX["z_hip"]})')
+    for name, D in rows:
+        P = base + D
+        log(f'  {name:12s} 허리 {girth(P, AX["z_waist"]):6.1f}  엉덩이 {girth(P, AX["z_hip"]):6.1f}')
+    log(f'  shoulder 1: 어깨 관절 {joint_x(X["shoulder"], "joint-l-shoulder"):+.2f}cm · pelvis 1: 다리 관절 {joint_x(X["pelvis"], "joint-l-upper-leg"):+.2f}cm')
+    return list(XKEYS)
 
 
 def mannequin_head(P, edges, z_neck, z_top):
@@ -221,6 +337,7 @@ def main():
     shapes = {'base': mh.shape(*S['base']), **{k: mh.shape(*S[k], ex.get(k, ())) for k in KEYS}}
     B = {k: fm.to_blender(V) for k, V in shapes.items()}
     B['fat_up'] = B['base'] + (B['fat_up'] - B['base']) * S['fat_gain']
+    ALLK = list(KEYS) + add_axes(mh, S, B, a.sex)
     base_mh = shapes['base']
 
     body_f = [(f, t) for g, f, t in mh.faces if g == 'body']
@@ -252,7 +369,7 @@ def main():
     for k in head:
         head[k] = fm.smooth_spots(head[k], E, [head[k][i] for i in tips], 0.035)
     body.data.vertices.foreach_set('co', head['base'].astype(np.float32).ravel())
-    fm.add_shape_keys(body, {k: head[k] for k in KEYS})
+    fm.add_shape_keys(body, {k: head[k] for k in ALLK})
 
     zb = lambda yy: float(fm.to_blender(np.array([[0.0, yy, 0.0]]))[0, 2])
     xb = lambda xx: float(xx * SCALE)
@@ -318,7 +435,7 @@ def main():
     # 모양마다 그 모양의 팔 각도로 굳힌다 (옷은 리그에 붙이지 않는다 — 팔이 닿지 않는다)
     objs = [body] + pieces
     final = {o.name: {} for o in objs}
-    for k in ['base'] + list(KEYS):
+    for k in ['base'] + ALLK:
         with bpy.context.temp_override(active_object=rig, object=rig):
             bpy.ops.object.mode_set(mode='POSE')
             pose_relaxed(rig, J, ARM[k] + S.get('arm_add', 0.0))
@@ -348,7 +465,7 @@ def main():
             p.use_smooth = True
         o = bpy.data.objects.new(name, me)
         bpy.context.scene.collection.objects.link(o)
-        fm.add_shape_keys(o, {k: res[k] for k in KEYS})
+        fm.add_shape_keys(o, {k: res[k] for k in ALLK})
         return o
 
     body = rebuild('body', final['body'], polys['body'], uvs)

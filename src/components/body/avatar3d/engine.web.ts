@@ -8,7 +8,7 @@
 import { getThemeMode } from '../../../theme/tokens';
 import { Asset } from 'expo-asset';
 import type { Coord, Sex } from '../../../utils/bodyComp';
-import { MODEL_SEXES, morphFor } from './morph';
+import { MODEL_SEXES, morphFor, type Shape } from './morph';
 import { DEFAULT_YAW, EXPOSURE, applyMorph, buildStage, frame, makeDriver, prepareModel, styleRenderer, texSetup, type Loaded, type Stage, type THREE } from './stage';
 
 const MODEL_SRC: Partial<Record<Sex, number>> = {
@@ -95,7 +95,7 @@ export function cachedSnapshot(key: string): string | undefined {
 }
 
 /** 좌표의 몸을 yaw(라디안, 기본 3/4 각도)에서 찍은 PNG data URL — 밝은 · 어두운 화면은 노출이 달라 따로 찍는다 */
-export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string, yaw = DEFAULT_YAW): Promise<string> {
+export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string, yaw = DEFAULT_YAW, shape?: Shape): Promise<string> {
   const light = getThemeMode() === 'light';
   const key = `${key0}|${light ? 'L' : 'D'}`;
   const hit = shots.get(key);
@@ -114,7 +114,7 @@ export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string,
     shooter.r.setSize(w, h, false);
     frame(st.camera, st.height, w / h);
     st.pivot.rotation.y = yaw;
-    applyMorph(st, morphFor(sex, c));
+    applyMorph(st, morphFor(sex, c, shape));
     shooter.r.render(st.scene, st.camera);
     const url = shooter.r.domElement.toDataURL('image/png');
     shots.set(key, url);
@@ -128,7 +128,7 @@ export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string,
 // ─── 살아 있는 뷰어 (큰 아바타) ─────────────────────────────────────────────
 
 export interface Viewer {
-  setCoord(c: Coord, ms?: number): void;
+  setCoord(c: Coord, ms?: number, shape?: Shape): void;
   setYaw(y: number): void;
   resize(w: number, h: number): void;
   dispose(): void;
@@ -136,7 +136,7 @@ export interface Viewer {
 
 export async function mountViewer(
   host: HTMLElement,
-  opts: { sex: Sex; coord: Coord; w: number; h: number; yaw?: number; onYaw?: (y: number) => void; intro?: boolean; breathe?: boolean },
+  opts: { sex: Sex; coord: Coord; shape?: Shape; w: number; h: number; yaw?: number; onYaw?: (y: number) => void; intro?: boolean; breathe?: boolean },
 ): Promise<Viewer> {
   const m = await loadModel(opts.sex);
   const { T } = m;
@@ -151,7 +151,7 @@ export async function mountViewer(
   r.setSize(opts.w, opts.h, false);
   const st = buildStage(m, opts.w / opts.h);
 
-  const drv = makeDriver(st, morphFor(opts.sex, opts.coord), {
+  const drv = makeDriver(st, morphFor(opts.sex, opts.coord, opts.shape), {
     draw: () => r.render(st.scene, st.camera), yaw: opts.yaw, intro: opts.intro, onYaw: opts.onYaw, breathe: opts.breathe,
   });
   let dragging = false;
@@ -199,8 +199,8 @@ export async function mountViewer(
   drv.kick();
 
   return {
-    setCoord(c, ms = 600) {
-      drv.setMorph(morphFor(opts.sex, c), ms);
+    setCoord(c, ms = 600, shape) {
+      drv.setMorph(morphFor(opts.sex, c, shape), ms);
     },
     setYaw(y) {
       drv.setYaw(y);
