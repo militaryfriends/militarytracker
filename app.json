@@ -62,12 +62,23 @@
         {
           "color": "#09090A"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "extraProguardRules": "-keep class expo.modules.gl.** { *; }"
+          }
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": false
     },
     "extra": {
+      "nativeRev": 2,
       "router": {},
       "eas": {
         "projectId": "cfaeff49-5bc0-49a6-9a8b-34f6d040b3f4"

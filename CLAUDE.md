@@ -45,8 +45,14 @@ npm run deploy:hosting            # 웹 export + hosting
   로고 자리 · 크기는 `geometry.ts` 의 `SPLASH_FRAME`(= app.json `imageWidth`, 안드로이드 192dp 원 안). 스플래시를 걷는 쪽은 다음 화면이다 —
   로그아웃이면 로그인 화면이 같은 장면을 그린 뒤 걷고 `HANDOFF` 시간표로 인트로를 잇는다, 로그인 상태면 루트의 `BootCurtain` 이
   걷고 로고가 커지며 사라져 홈이 드러난다. **루트에서 `hideAsync` 를 바로 부르지 말 것** — 로고가 사라졌다 다시 나온다(2초 안전장치만 있다).
-- **누르는 것은 `src/ui` 의 `PressableScale`**(0.96 + 스프링 + 진동). 진동은 `haptic.select/tap/set/success/warn/error` 뜻으로만
+- **누르는 것은 `src/ui` 의 `PressableScale`**(0.96 + 스프링 + 진동) — `TouchableOpacity` 는 쓰지 않는다(2026-11-15 전부 옮김).
+  카드 · 줄은 `scaleTo={PRESS_SCALE.card}`, 고르는 칩 · 날짜는 `haptic="select"`. disabled 면 0.4 로 흐려진다 — 꺼진 모양을 따로 그리면 `dimDisabled={false}`.
+  진동은 `haptic.select/tap/set/success/warn/error` 뜻으로만
   부른다(`src/ui/haptics.ts` 표). 스프링 · 시간 값은 `src/ui/motion.ts` 에서 가져다 쓴다.
+- **운동 화면(SessionPlayer)의 시트는 손가락을 따라온다** — 영상 · 손잡이 · 휴식 칸을 세로로 끌면 `pos`(0 영상 펼침 ~ 1 세트 칸 올림)가 움직이고
+  놓으면 스프링으로 붙는다(빠르게 튕기면 그 방향, 멈췄다 놓으면 절반 기준). 영상은 같은 플레이어가 작은 칸으로 줄어든다(다시 만들지 않는다).
+  끄는 자리 안의 버튼은 그대로 눌린다(세로로 움직일 때만 시트가 가져감). 웹은 그 자리에 `touchAction: 'none'` 이 있어야 터치로 끌린다.
+  화면은 아래에서 올라오고, 완료 화면은 숫자가 차오르며 폭죽(`celebrate`), 탭 바는 판이 미끄러진다 — 새 화면도 이 문법(`src/ui/motion.ts`)으로.
 - 장식으로 계속 도는 애니메이션은 `useReducedMotion()` 이면 멈춘다. 휴식 고리처럼 정보인 것은 움직인다.
 - 숫자 글꼴은 `FONT.num`(Barlow Condensed). 본문은 시스템 글꼴.
 - 웹: 정적 HTML 은 다크로 미리 그려진다. 라이트인 사람은 `app/+html.tsx` 스크립트가 화면을 가려 뒀다가 루트 레이아웃이 연다.
@@ -282,6 +288,18 @@ npm run media:r2 -- check              # R2 키 · 공개 주소 · CORS 확인
 - 업로드 후 바뀐 `src/data/mediaManifest.json` 은 커밋한다 (오프라인 스냅샷).
 - R2 키는 `media/r2.env`(gitignored)에만 — 앱 코드 · `EXPO_PUBLIC_*` 에 넣지 않는다. 앱은 공개 주소(`MEDIA_BASE`)로 읽기만 한다.
 - 버킷 CORS(`media/r2-cors.json`)가 없으면 웹이 매니페스트를 못 읽는다. 버킷을 새로 만들면 재적용.
+
+## 안드로이드 릴리스 빌드와 R8 (2026-11-15 — 3D 로 앱이 죽던 원인)
+
+- SDK 58 템플릿(expo 58.0.2x)은 **릴리스 빌드에서 R8(코드 줄이기 · 이름 바꾸기)이 기본으로 켜진다**(`android.enableMinifyInReleaseBuilds=true`).
+  Expo Go · 개발 빌드 · iOS 에서는 안 보이고 스토어 빌드에서만 터지는 문제가 여기서 나온다.
+- **expo-gl 58.0.4 는 R8 과 같이 못 쓴다** — C++ 이 자바 `GLContext.flush()` 를 이름으로 찾는데(`EXGLJniApi.cpp` GetMethodID) 지켜 주는 규칙이 없다.
+  이름이 바뀌면 첫 GLView 가 뜨는 순간 네이티브에서 죽는다(로그인 직후 흰 화면 → 종료, JS 로 못 잡음).
+- 그래서 app.json 의 `expo-build-properties` 로 **R8 을 끄고**(`enableMinifyInReleaseBuilds: false`), 다시 켜도 되게 `-keep class expo.modules.gl.** { *; }` 도 넣어 두었다.
+  R8 을 다시 켜려면 3D · 결제 · 알림을 안드로이드 릴리스 빌드(내부 테스트)에서 직접 확인한 뒤에.
+- 이 설정이 든 빌드는 app.json `extra.nativeRev` 2 를 품고 있다. `engine.native.ts` 는 안드로이드에서 **빌드에 묻힌** nativeRev 가 2 보다 작으면 3D 를 띄우지 않는다
+  (옛 빌드가 코드 푸시를 받아도 죽지 않게). 네이티브 설정을 또 바꾸면 nativeRev 와 `NEED_NATIVE_REV` 를 같이 올린다.
+- 3D 로 두 번 연달아 죽으면 그 기기는 3D 를 끈다(`glGuard`). MY 탭 맨 아래 '3D 표시 꺼짐 · …' 에 마지막 단계(view → context → model → renderer → frame) · 기기 · OS 가 나온다.
 
 ## 주의할 것
 

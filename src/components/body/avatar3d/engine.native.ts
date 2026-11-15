@@ -8,6 +8,8 @@
  */
 import { getThemeMode } from '../../../theme/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requireOptionalNativeModule } from 'expo';
+import { Platform } from 'react-native';
 import { Asset } from 'expo-asset';
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
@@ -55,9 +57,45 @@ async function nativeTexture(T: THREE, mod: number | undefined, color: boolean) 
 
 let broken = false;
 let brokenWhy: string | null = null;
+
+/**
+ * 안드로이드 스토어 빌드와 expo-gl (2026-11-15 원인 확인).
+ * SDK 58 템플릿은 릴리스 빌드에서 R8(코드 줄이기 · 이름 바꾸기)이 기본으로 켜진다. expo-gl 은 네이티브(C++)에서
+ * 자바 `GLContext.flush()` 를 **이름으로** 찾는데(EXGLJniApi.cpp GetMethodID) 지켜 주는 규칙이 없어 이름이 바뀌고,
+ * 첫 GL 컨텍스트를 준비하는 순간 앱이 통째로 죽는다(JS 의 try/catch 로 못 잡는다). iOS · Expo Go · 개발 빌드는 해당 없음.
+ * 고친 것은 빌드 설정이다 — app.json 의 expo-build-properties(R8 끔 + expo.modules.gl 지키기). 그 설정으로 만든 빌드에는
+ * app.json `extra.nativeRev` 2 가 들어 있다(빌드에 묻힌 설정 — 코드 푸시로는 안 바뀐다).
+ * → 안드로이드에서 nativeRev 가 2 보다 작은 빌드는 3D 를 아예 띄우지 않는다(죽지 않고 자리 표시만).
+ * 네이티브 설정을 또 바꿔야 하면 app.json 의 nativeRev 와 여기 NEED_NATIVE_REV 를 같이 올린다.
+ */
+const NEED_NATIVE_REV = 2;
+type NativeConst = { manifest?: unknown; deviceName?: string; systemVersion?: string; executionEnvironment?: string };
+function nativeConst(): NativeConst {
+  try {
+    return (requireOptionalNativeModule('ExponentConstants') as NativeConst | null) ?? {};
+  } catch {
+    return {};
+  }
+}
+/** 빌드에 묻힌 app.json 의 extra.nativeRev (코드 푸시를 받아도 그 빌드의 값 그대로) */
+function nativeRev(): number {
+  try {
+    const raw = nativeConst().manifest;
+    const cfg = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { extra?: { nativeRev?: number } } | null;
+    return Number(cfg?.extra?.nativeRev) || 0;
+  } catch {
+    return 0;
+  }
+}
+const NATIVE_REV = nativeRev();
+if (Platform.OS === 'android' && !__DEV__ && nativeConst().executionEnvironment !== 'storeClient' && NATIVE_REV < NEED_NATIVE_REV) {
+  broken = true;
+  brokenWhy = '이 안드로이드 빌드는 3D 를 그릴 수 없습니다 — 새 빌드로 업데이트하면 켜집니다';
+}
+
 export const native3D = (sex: Sex) => !broken && MODEL_SEXES.includes(sex) && !!MODEL_SRC[sex];
 export function markBroken(e?: unknown) {
-  if (!broken && __DEV__) console.warn('[avatar3d] 3D 를 끄고 2D 로 그립니다', e);
+  if (!broken && __DEV__) console.warn('[avatar3d] 3D 를 끄고 자리 표시로 그립니다', e);
   if (!broken) brokenWhy = e instanceof Error ? e.message : e == null ? 'unknown' : String(e);
   broken = true;
 }
@@ -66,16 +104,25 @@ export const avatar3DError = () => brokenWhy;
 
 /**
  * 3D 때문에 앱이 꺼지는 기기를 스스로 알아챈다 (2026-11-15, 안드로이드 내부 테스트에서 로그인 뒤 튕김).
- * GL 드라이버에서 죽으면 JS 의 try/catch 로는 못 잡는다 — 다음 실행도 같은 화면에서 또 죽어 앱에 못 들어간다.
+ * GL 쪽에서 죽으면 JS 의 try/catch 로는 못 잡는다 — 다음 실행도 같은 화면에서 또 죽어 앱에 못 들어간다.
  *  · 3D 를 처음 띄우기 직전에 '시도 중' 을 적고, 무사히 그리고 2.5초가 지나면 '정상' 으로 바꾼다.
  *  · 다음 실행에 '시도 중' 이 두 번 연달아 남아 있으면 = 두 번 죽었다 → 이 기기에서는 3D 를 끈다(자리 표시만 보인다).
- *  · GUARD_REV 를 올리면(3D 코드를 고쳤을 때) 꺼 둔 기기도 한 번 다시 시도한다.
+ *  · 어디까지 갔다 죽었는지(glStage)도 같이 적어 두어, 꺼진 이유 옆에 마지막 단계 · 기기 이름이 나온다.
+ *  · 3D 코드를 고치면 GUARD_VER 를, 네이티브 빌드가 바뀌면 nativeRev 를 올린다 — 꺼 둔 기기도 한 번 다시 시도한다.
  * 3D 화면은 glGuard() 가 true 를 준 뒤에만 GLView 를 만든다.
  */
 const GUARD_KEY = 'mt-gl-guard';
-const GUARD_REV = '1';
+const STAGE_KEY = 'mt-gl-stage';
+const GUARD_VER = '2';
+const GUARD_REV = `${GUARD_VER}-${NATIVE_REV}`;
 const GUARD_MSG = '이전 실행에서 3D 를 그리다 앱이 종료되어 이 기기에서는 3D 를 껐습니다';
 let guard: Promise<boolean> | null = null;
+let stageDone = false;
+/** 3D 를 띄우는 단계 기록 — view → context → model → renderer → frame. 무사히 끝난 뒤에는 적지 않는다 */
+export async function glStage(stage: string): Promise<void> {
+  if (stageDone) return;
+  try { await AsyncStorage.setItem(STAGE_KEY, stage); } catch { /* 진단용 — 실패해도 그대로 간다 */ }
+}
 export function glGuard(): Promise<boolean> {
   if (!guard) {
     guard = (async () => {
@@ -85,10 +132,13 @@ export function glGuard(): Promise<boolean> {
         const n = same && st === 'trying' ? Number(nStr) || 0 : 0;
         if ((same && st === 'off') || n >= 2) {
           if (st !== 'off') await AsyncStorage.setItem(GUARD_KEY, `off:${GUARD_REV}:${n}`);
-          markBroken(new Error(GUARD_MSG));
+          const at = (await AsyncStorage.getItem(STAGE_KEY).catch(() => null)) ?? '?';
+          const c = nativeConst();
+          markBroken(new Error(`${GUARD_MSG} (단계 ${at} · ${c.deviceName ?? '?'} · OS ${c.systemVersion ?? '?'} · 빌드 ${NATIVE_REV})`));
           return false;
         }
         await AsyncStorage.setItem(GUARD_KEY, `trying:${GUARD_REV}:${n + 1}`);
+        await glStage('view');
         return true;
       } catch {
         return true;
@@ -102,7 +152,10 @@ let guardSettled = false;
 export function glGuardOk() {
   if (guardSettled) return;
   guardSettled = true;
-  setTimeout(() => { AsyncStorage.setItem(GUARD_KEY, `ok:${GUARD_REV}:0`).catch(() => {}); }, 2500);
+  setTimeout(() => {
+    stageDone = true;
+    AsyncStorage.setItem(GUARD_KEY, `ok:${GUARD_REV}:0`).catch(() => {});
+  }, 2500);
 }
 
 /**
@@ -169,8 +222,10 @@ export async function attach(
   gl: ExpoWebGLRenderingContext,
   opts: { sex: Sex; coord: Coord; shape?: Shape; yaw?: number; intro?: boolean; onYaw?: (y: number) => void; breathe?: boolean },
 ): Promise<NativeView> {
+  await glStage('context');
   const m = await loadModel(opts.sex);
   const { T } = m;
+  await glStage('model');
   const w = gl.drawingBufferWidth;
   const h = gl.drawingBufferHeight;
   // three 는 캔버스 객체를 기대한다 — 크기 · 이벤트 자리만 있으면 된다
@@ -183,6 +238,7 @@ export async function attach(
   r.setPixelRatio(1);
   r.setSize(w, h, false);
   const st = buildStage(m, w / h);
+  await glStage('renderer');
   let dead = false;
   const drv = makeDriver(st, morphFor(opts.sex, opts.coord, opts.shape), {
     draw: () => {
@@ -193,6 +249,7 @@ export async function attach(
     yaw: opts.yaw, intro: opts.intro, onYaw: opts.onYaw, breathe: opts.breathe,
   });
   drv.kick();
+  void glStage('frame');
   return {
     setCoord: (c, ms = 600, shape) => drv.setMorph(morphFor(opts.sex, c, shape), ms),
     setYaw: (y) => drv.setYaw(y),
