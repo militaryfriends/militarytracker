@@ -17,6 +17,8 @@ import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar } from '../../src/components/ui';
 import { ProLock } from '../../src/components/ProLock';
 import { MealCard, WarningCard } from '../../src/components/CoachCards';
+import { reportAiReply, REPORT_REASONS } from '../../src/services/aiReport';
+import { showAlert } from '../../src/utils/alert';
 import { CoachThinking } from '../../src/components/CoachThinking';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -27,7 +29,7 @@ import { LEVEL_LABEL, PART_LABEL, PART_ORDER, exById } from '../../src/data/exer
 import { calcBodyStats, FOOD_LABEL, goalLabel } from '../../src/utils/body';
 import { setsByPart } from '../../src/utils/stats';
 import {
-  askCoach, AIUnavailable, SubscriptionRequired, QuotaExceeded, CoachQuota, CoachMessage,
+  askCoach, AIUnavailable, AiConsentDeclined, SubscriptionRequired, QuotaExceeded, CoachQuota, CoachMessage,
 } from '../../src/services/aiService';
 import { PressableScale } from '../../src/ui';
 
@@ -136,6 +138,10 @@ export default function CoachScreen() {
         });
         return;
       }
+      if (e instanceof AiConsentDeclined) {
+        addChat({ role: 'assistant', content: 'AI 코치는 질문과 기록 요약을 AI 서비스(Anthropic)로 보내야 답할 수 있어요. 다시 보내면 동의 안내가 나옵니다.' });
+        return;
+      }
       addChat({
         role: 'assistant',
         content: e instanceof AIUnavailable
@@ -145,6 +151,32 @@ export default function CoachScreen() {
     } finally {
       setChatBusy(false);
     }
+  }
+
+  // AI 답 신고 — 이유를 고르면 저장하고, 신고한 답은 '신고함' 으로 바뀐다
+  const [reported, setReported] = useState<Set<string>>(() => new Set());
+  function report(item: Row, index: number) {
+    const key = `${index}:${item.content.slice(0, 40)}`;
+    const question = data.slice(index + 1).find((r) => r.role === 'user')?.content ?? '';
+    const send = (reason: string) => {
+      reportAiReply(item.content, question, reason)
+        .then(() => {
+          setReported((prev) => new Set(prev).add(key));
+          showAlert('신고했습니다', '검토 후 코치 답변을 고치는 데 반영합니다. 알려 주셔서 고맙습니다.');
+        })
+        .catch(() => showAlert('신고하지 못했습니다', '네트워크를 확인하고 다시 시도해주세요.'));
+    };
+    if (Platform.OS === 'web') {
+      showAlert('이 답변을 신고할까요?', '부적절하거나 위험하거나 사실과 다른 답변을 알려 주세요.', [
+        { text: '취소', style: 'cancel' },
+        { text: '신고', onPress: () => send('웹 신고') },
+      ]);
+      return;
+    }
+    showAlert('이 답변을 신고할까요?', '어떤 문제인지 골라 주세요.', [
+      ...REPORT_REASONS.map((r) => ({ text: r, onPress: () => send(r) })),
+      { text: '취소', style: 'cancel' as const },
+    ]);
   }
 
   // inverted 목록: 최신이 index 0
@@ -181,12 +213,12 @@ export default function CoachScreen() {
           <FlatList
             data={data}
             // 모드가 바뀌면 줄도 다시 그린다 (renderItem 안에서 색을 읽는다)
-            extraData={mode}
+            extraData={`${mode}|${reported.size}`}
             inverted
             keyExtractor={(_, i) => String(data.length - i)}
             contentContainerStyle={s.list}
             keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) =>
+            renderItem={({ item, index }) =>
               item.pending ? (
                 <CoachThinking />
               ) : item.role === 'user' ? (
@@ -203,6 +235,16 @@ export default function CoachScreen() {
                     </View>
                   ) : null}
                   {item.cheer ? <Text style={s.cheer}>{item.cheer}</Text> : null}
+                  {item !== WELCOME && chat.length ? (
+                    reported.has(`${index}:${item.content.slice(0, 40)}`) ? (
+                      <Text style={s.reportTxt}>신고함</Text>
+                    ) : (
+                      <PressableScale haptic={false} hitSlop={8} style={s.reportBtn} onPress={() => report(item, index)}
+                        accessibilityRole="button" accessibilityLabel="이 AI 답변 신고">
+                        <Text style={s.reportTxt}>신고</Text>
+                      </PressableScale>
+                    )
+                  ) : null}
                 </View>
               )
             }
@@ -254,6 +296,8 @@ export default function CoachScreen() {
 }
 
 const s = themed(() => StyleSheet.create({
+  reportBtn: { alignSelf: 'flex-start', paddingVertical: 2 },
+  reportTxt: { fontSize: 12, color: colors.mid, marginTop: 6, marginLeft: 4 },
   quick: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
   chip: {
     borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.panel,

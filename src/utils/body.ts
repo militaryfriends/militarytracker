@@ -85,7 +85,7 @@ export function effectiveWeight(
 // ─── 입력 범위 ──────────────────────────────────────────────────────────────
 /** 온보딩·내 정보·체중 입력이 공유하는 허용 범위. 화면마다 규칙이 달라지면 안 된다. */
 export const PROFILE_RANGE = {
-  age: { min: 10, max: 100, label: '나이', unit: '세' },
+  age: { min: 14, max: 100, label: '나이', unit: '세' },
   height: { min: 100, max: 250, label: '키', unit: 'cm' },
   weight: { min: 25, max: 300, label: '체중', unit: 'kg' },
 } as const;

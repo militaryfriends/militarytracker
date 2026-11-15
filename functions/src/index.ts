@@ -741,6 +741,8 @@ export const bodyProjectStart = onCall(
 // ─── 5. 내 변화 프로젝트 — 체크인 리포트 ────────────────────────────────────
 interface ReportReq {
   checkinId: string;
+  /** AI 데이터 전송 미동의 — 템플릿 리포트만 */
+  noAi?: boolean;
 }
 
 const REPORT_SYSTEM = [
@@ -924,6 +926,8 @@ export const bodyCheckinReport = onCall(
 
     const { pj, report } = await judgeCheckin(uid, checkinId, reportId, now);
     if (!report.fallback) return toCheckinResult(reportId, report);
+    // 회원이 AI 데이터 전송에 동의하지 않았다 — 판정 · 재계산 + 템플릿 리포트만(AI 호출 · 한도 없음)
+    if (req.data?.noAi === true) return toCheckinResult(reportId, report);
 
     const j = report.judged;
     const w = await workoutSummary(uid);

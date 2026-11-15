@@ -302,7 +302,7 @@ export const accountDelete = onCall({ ...opts, timeoutSeconds: 120 }, async (req
   const promos = await deleteByQuery(db.collection('promoRedemptions').where('uid', '==', uid));
   // 내 변화 프로젝트 — 체형 수치가 들어 있는 개인정보라 전부 지운다
   const body = (await Promise.all(
-    ['bodyAnalyses', 'bodyProjects', 'checkins', 'bodyReports']
+    ['bodyAnalyses', 'bodyProjects', 'checkins', 'bodyReports', 'aiReports']
       .map((c) => deleteByQuery(db.collection(c).where('userId', '==', uid)))
   )).reduce((a, b) => a + b, 0);
   await db.collection('promoAttempts').doc(uid).delete();

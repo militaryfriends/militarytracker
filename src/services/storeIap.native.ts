@@ -35,12 +35,24 @@ export async function loadPackages(uid: string): Promise<StorePackage[]> {
   if (!storeIapReady()) return [];
   const p = await ensure(uid);
   const off = await p.getOfferings();
-  return (off.current?.availablePackages ?? []).map((k) => ({
+  const pkgs = off.current?.availablePackages ?? [];
+  // iOS: 무료 체험은 처음 구독하는 사람만 받는다 — 이미 쓴 사람에게 '7일 무료' 를 보여 주면 오해(Apple 3.1.2).
+  // 자격이 '받을 수 있음' 일 때만 체험 문구를 띄운다(모름 · 못 받음이면 바로 결제 문구). Android 는 스토어가 자격 있는 사람에게만 체험 옵션을 준다.
+  let eligible: Record<string, boolean> | null = null;
+  if (Platform.OS === 'ios' && pkgs.length) {
+    try {
+      const m = await p.checkTrialOrIntroductoryPriceEligibility(pkgs.map((k) => k.product.identifier));
+      eligible = Object.fromEntries(Object.entries(m).map(([id, e]) => [id, e.status === p.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE]));
+    } catch {
+      eligible = {};
+    }
+  }
+  return pkgs.map((k) => ({
     id: k.identifier,
     productId: k.product.identifier,
     price: k.product.priceString,
     raw: k,
-    trial: trialOf(k.product),
+    trial: eligible && !eligible[k.product.identifier] ? undefined : trialOf(k.product),
   }));
 }
 

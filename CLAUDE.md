@@ -265,6 +265,15 @@ node scripts/coach-eval/run-live.cjs --tag <이름> --judge   # 실제 모델 �
 - **Anthropic 키 로컬 사본은 `functions/.secret.local`**(`ANTHROPIC_API_KEY=…` 한 줄, gitignore). 평가 · 에뮬레이터가 읽는다.
   서버 비밀값은 그 파일에서 넣는다: `grep ^ANTHROPIC_API_KEY= functions/.secret.local | cut -d= -f2- | npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY --data-file -` → 함수 재배포.
 
+## 스토어 심사 대비 (2026-11-16)
+
+- **AI 데이터 전송 동의**(Apple 5.1.2(i)) — `src/services/aiConsent.ts` `askAiConsent()`. AI 플랜 · 식단 · 코치 · 체크인 리포트가 서버를 부르기 전에
+  처음 한 번 묻고 계정별로 기기에 기억한다(MY › 설정 스위치로 철회). 거절하면 AI 를 안 부른다(플랜 · 식단 기본 구성, 체크인 `noAi` → 템플릿, 코치 안내 문장).
+  **새 AI 호출을 더하면 반드시 이 동의를 먼저 거친다.** 보내는 항목을 바꾸면 동의 문구(`AI_CONSENT_TEXT`)와 개인정보처리방침 3절도 같이.
+- **AI 답변 신고**(Google Play 생성형 AI 정책) — 코치 답 아래 '신고' → `aiReports`(본인 생성만, 관리자만 읽음, 계정 삭제 때 삭제).
+- 최소 나이 14세(`body.ts` FIELD_RANGE, 약관 · 개인정보처리방침과 같게).
+- iOS 무료 체험 문구는 체험 자격이 있을 때만(`storeIap.native.ts` `checkTrialOrIntroductoryPriceEligibility`).
+
 ## AI 코치 식단 카드 · WARNING
 
 - `aiCoach` 는 JSON `{ next, text, meal, warning, cheer }` 를 받아 `{ reply, meal, warning, cheer, next, quota }` 를 돌려준다(카드 계산 `functions/src/coachMeal.ts`).

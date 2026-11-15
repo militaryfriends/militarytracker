@@ -5,6 +5,7 @@
  */
 import { httpsCallable, FunctionsError } from 'firebase/functions';
 import { functions } from './firebase';
+import { askAiConsent } from './aiConsent';
 import { BodyProject, BodyReportBody, CheckinResult, DietPlan, Plan, UserProfile } from '../types';
 import { buildLocalPlan, conformToTemplates, planFromAI, templateSlots } from '../utils/planner';
 import { DANGER, splitTemplates } from '../data/planTemplates';
@@ -35,6 +36,9 @@ export function fallbackDiet(kcal?: number, protein?: number): DietPlan {
   };
 }
 export const FALLBACK_DIET: DietPlan = fallbackDiet();
+
+/** AI 데이터 전송에 동의하지 않음 — 코치는 이 경우 안내 문장을 보여 준다 */
+export class AiConsentDeclined extends Error {}
 
 export class AIUnavailable extends Error {}
 
@@ -153,6 +157,9 @@ export interface PlanResult {
  * 구독 없음(SubscriptionRequired)·한도 초과(QuotaExceeded)는 폴백하지 않고 던진다.
  */
 export async function generatePlan(p: UserProfile, opts?: { projectId?: string }): Promise<PlanResult> {
+  if (!(await askAiConsent())) {
+    return { plan: buildLocalPlan(p), fallback: true, reason: 'AI 데이터 전송에 동의하지 않아 기본 구성으로 만들었습니다.' };
+  }
   try {
     const call = httpsCallable(functions, 'aiPlan', { timeout: CALL_TIMEOUT_MS });
     // projectId 가 있으면 서버가 프로젝트에 저장된 입력 · 단계로 프롬프트를 만든다(프로필 숫자는 안 쓴다)
@@ -191,6 +198,7 @@ export async function generateDiet(
   // 실패 때 보여 줄 예시도 같은 하루 목표로(프로젝트면 호출 측 stats 가 프로젝트 단계 값)
   const target = stats ?? st;
   if (!projectId && !st) return FALLBACK_DIET;
+  if (!(await askAiConsent())) return fallbackDiet(target?.kcal, target?.protein);
   try {
     const call = httpsCallable(functions, 'aiDiet', { timeout: CALL_TIMEOUT_MS });
     const res = await call(
@@ -312,6 +320,7 @@ export async function askCoach(
   /** 최근 운동 종목 id → 이름 — 서버의 기록 갱신 신호 이름표 */
   exNames?: Record<string, string>,
 ): Promise<CoachReply> {
+  if (!(await askAiConsent())) throw new AiConsentDeclined();
   try {
     const call = httpsCallable(functions, 'aiCoach', { timeout: CALL_TIMEOUT_MS });
     const res = await call({ messages: messages.slice(-20).map(toWire), context, dayKcal, exNames });
@@ -360,8 +369,10 @@ export async function startProject(analysisId: string, projectId: string): Promi
 export async function requestCheckinReport(checkinId: string): Promise<CheckinResult> {
   try {
     // 배포 이름 bodyCheckinReport = 명세의 aiReport
+    // AI 전송에 동의하지 않으면 서버가 판정 · 재계산만 하고 템플릿 리포트를 준다(AI 호출 없음)
+    const noAi = !(await askAiConsent());
     const call = httpsCallable(functions, 'bodyCheckinReport', { timeout: REPORT_TIMEOUT_MS });
-    const res = await call({ checkinId });
+    const res = await call(noAi ? { checkinId, noAi: true } : { checkinId });
     const r = normalizeCheckinResult(res.data);
     if (!r) throw new Error('리포트를 받지 못했습니다. 잠시 후 다시 시도해주세요.');
     return r;

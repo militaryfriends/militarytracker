@@ -18,6 +18,7 @@ import { PART_LABEL, PART_ORDER } from '../../src/data/exercises';
 import { saveWeight } from '../../src/services/workoutService';
 import { saveProfile } from '../../src/services/authService';
 import { logoutUser, deleteUserAccount } from '../../src/services/session';
+import { askAiConsent, hasAiConsent, revokeAiConsent } from '../../src/services/aiConsent';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 import { SUB_STATUS_LABEL } from '../../src/utils/subscription';
@@ -426,6 +427,7 @@ export default function MyScreen() {
               accessibilityLabel="누를 때 진동"
             />
           </View>
+          <AiConsentRow />
         </View>
 
         <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>
@@ -450,6 +452,33 @@ function Summary({ value, label, delta }: { value: string; label: string; delta?
       <Text style={s.summaryVal}>{value}</Text>
       <Text style={s.summaryLabel}>{label}</Text>
       {delta ? <Text style={s.summaryDelta}>{delta}</Text> : null}
+    </View>
+  );
+}
+
+/** AI 데이터 전송 동의 — 켜면 동의 안내, 끄면 철회(다음 AI 사용 때 다시 묻는다) */
+function AiConsentRow() {
+  useThemeMode();
+  const [on, setOn] = useState(false);
+  useEffect(() => { hasAiConsent().then(setOn); }, []);
+  return (
+    <View style={s.setRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.setTitle}>AI 기능 데이터 전송 동의</Text>
+        <Text style={s.setSub}>AI 플랜 · 식단 · 코치 · 체크인 리포트에 신체 · 운동 정보와 질문을 Anthropic(미국)으로 보냅니다. 끄면 AI 없이 기본 구성으로 씁니다.</Text>
+      </View>
+      <Switch
+        value={on}
+        onValueChange={(v) => {
+          if (v) askAiConsent().then(setOn);
+          else revokeAiConsent().then(() => setOn(false));
+        }}
+        trackColor={{ false: colors.panel3, true: colors.ink }}
+        thumbColor={on ? colors.bg : '#FFFFFF'}
+        ios_backgroundColor={colors.panel3}
+        {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bg } as object) : null)}
+        accessibilityLabel="AI 기능 데이터 전송 동의"
+      />
     </View>
   );
 }

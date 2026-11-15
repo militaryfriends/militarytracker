@@ -201,6 +201,19 @@ service cloud.firestore {
         && isIso(d.createdAt);
     }
 
+    // ── aiReports ─────────────────────────────────────────────────────────
+    // AI 코치 답변 신고 (Google Play 생성형 AI 정책 — 앱 안 신고). 본인이 만들기만 하고 고치지 못한다.
+    // 관리자만 읽는다. 계정 삭제(accountDelete)가 함께 지운다.
+    match /aiReports/{reportId} {
+      allow create: if ownsIncoming()
+                    && request.resource.data.keys().hasOnly(['userId', 'reply', 'question', 'reason', 'createdAt'])
+                    && request.resource.data.reply is string && request.resource.data.reply.size() <= 4000
+                    && request.resource.data.question is string && request.resource.data.question.size() <= 1000
+                    && request.resource.data.reason is string && request.resource.data.reason.size() <= 40
+                    && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 40;
+      allow read, delete: if isAdmin();
+    }
+
     match /bodyAnalyses/{analysisId} {
       allow read: if ownsExisting() || isAdmin();
       allow create: if (ownsIncoming() && validAnalysis(request.resource.data)) || isAdmin();
