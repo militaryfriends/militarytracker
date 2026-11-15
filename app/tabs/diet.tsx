@@ -145,7 +145,7 @@ export default function DietScreen() {
 
         <Text style={s.sectionLabel}>DAILY TARGET</Text>
         <View style={s.macroRow}>
-          <MacroCard value={`${st.kcal}`} unit="kcal" label="목표 칼로리" />
+          <MacroCard value={st.kcal.toLocaleString()} unit="" label="목표 kcal" />
           <MacroCard value={`${st.protein}`} unit="g" label="단백질" />
           <MacroCard value={`${st.carb}`} unit="g" label="탄수화물" />
           <MacroCard value={`${st.fat}`} unit="g" label="지방" />
@@ -225,7 +225,7 @@ export default function DietScreen() {
         )}
 
         {/* 막다른 길 방지 — 다음 행동 */}
-        <TouchableOpacity activeOpacity={0.7} style={s.linkRow} onPress={() => router.push('/coach')} accessibilityRole="button">
+        <TouchableOpacity activeOpacity={0.7} style={s.linkRow} onPress={() => router.push('/tabs/coach')} accessibilityRole="button">
           <View style={{ flex: 1 }}>
             <Text style={s.linkTitle}>AI 코치에게 물어보기</Text>
             <Text style={s.linkSub}>대체 음식, 외식 메뉴, 보충제 등</Text>
@@ -258,14 +258,14 @@ const s = themed(() => StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8,
   },
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   meta: { fontSize: 10, color: colors.muted, letterSpacing: 1 },
   scroll: { flex: 1 },
-  scrollInner: { paddingHorizontal: 16, paddingBottom: 36 },
+  scrollInner: { paddingHorizontal: 16, paddingBottom: 132 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 },
   emptyTxt: { color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  emptyBtn: { backgroundColor: colors.ink, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 12 },
-  emptyBtnTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
+  emptyBtn: { backgroundColor: colors.red, borderRadius: 26, paddingHorizontal: 22, paddingVertical: 12 },
+  emptyBtnTxt: { color: colors.onRed, fontSize: 14, fontWeight: '700' },
 
   basisCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -298,7 +298,7 @@ const s = themed(() => StyleSheet.create({
 
   macroRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   mbox: {
-    flex: 1, backgroundColor: colors.panel, borderRadius: 16, padding: 14,
+    flex: 1, backgroundColor: colors.panel, borderRadius: 20, padding: 14,
     borderWidth: 1, borderColor: colors.line,
   },
   mboxVal: { fontSize: 19, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
@@ -324,7 +324,7 @@ const s = themed(() => StyleSheet.create({
 
   mealCard: {
     flexDirection: 'row', gap: 14,
-    backgroundColor: colors.panel, borderRadius: 16, padding: 16,
+    backgroundColor: colors.panel, borderRadius: 20, padding: 16,
     borderWidth: 1, borderColor: colors.line, marginBottom: 10,
   },
   mealTimeWrap: {
@@ -343,15 +343,15 @@ const s = themed(() => StyleSheet.create({
   tipTxt: { fontSize: 13, color: colors.mid, lineHeight: 20 },
 
   emptyMeal: {
-    backgroundColor: colors.panel, borderRadius: 16, padding: 28,
+    backgroundColor: colors.panel, borderRadius: 20, padding: 28,
     borderWidth: 1, borderColor: colors.line, alignItems: 'center', marginBottom: 14,
   },
   emptyMealTxt: { color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
-  genBtn: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  genBtn: { backgroundColor: colors.red, borderRadius: 26, paddingVertical: 15, alignItems: 'center' },
   genGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line2 },
   genOff: { opacity: 0.4 },
-  genTxt: { color: colors.bg, fontSize: 15, fontWeight: '700' },
+  genTxt: { color: colors.onRed, fontSize: 15, fontWeight: '700' },
   genTxtGhost: { color: colors.mid },
 
   linkRow: {

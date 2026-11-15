@@ -130,6 +130,6 @@ const s = themed(() => StyleSheet.create({
   accRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16, flexWrap: 'wrap' },
   link: { fontSize: 12.5, color: colors.mid, fontWeight: '700', textDecorationLine: 'underline' },
   foot: { paddingHorizontal: 18, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg },
-  cta: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  ctaTxt: { color: colors.bg, fontSize: 15.5, fontWeight: '800' },
+  cta: { backgroundColor: colors.red, borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
+  ctaTxt: { color: colors.onRed, fontSize: 15.5, fontWeight: '800' },
 }));

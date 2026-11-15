@@ -60,14 +60,14 @@ export function Segmented<T extends string>({
 
 const s = themed(() => StyleSheet.create({
   wrap: {
-    flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: 12, padding: PAD,
+    flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: 24, padding: PAD,
     borderWidth: 1, borderColor: colors.line,
   },
   blob: {
-    position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderRadius: 9,
+    position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderRadius: 20,
     backgroundColor: colors.panel3, borderWidth: 1, borderColor: colors.line2,
   },
-  item: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  item: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   txt: { fontSize: 13.5, fontWeight: '600', color: colors.muted },
   txtOn: { color: colors.ink, fontWeight: '700' },
 }));

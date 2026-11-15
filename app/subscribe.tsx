@@ -351,8 +351,8 @@ const s = themed(() => StyleSheet.create({
     paddingVertical: 14, alignItems: 'center', marginTop: 10,
   },
   trialTxt: { fontSize: 14, fontWeight: '700', color: colors.ink },
-  trialBtnPrimary: { backgroundColor: colors.ink, borderColor: colors.ink },
-  trialTxtPrimary: { color: colors.bg },
+  trialBtnPrimary: { backgroundColor: colors.red, borderColor: colors.red },
+  trialTxtPrimary: { color: colors.onRed },
   comingSoon: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 12, lineHeight: 18 },
 
   codeRow: { flexDirection: 'row', gap: 8 },

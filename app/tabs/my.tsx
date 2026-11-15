@@ -1,5 +1,5 @@
 import { avatar3DError } from '../../src/components/body/avatar3d/Avatar3D';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MyBodyCard } from '../../src/components/body/MyBodyCard';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref } from '../../src/theme';
 import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
@@ -60,6 +60,13 @@ export default function MyScreen() {
     scrollRef.current?.scrollTo({ y: Math.max(0, weightY.current - 12), animated: true });
     setTimeout(() => weightRef.current?.focus(), 350);
   };
+  // 홈 '오늘 할 일 › 체중 기록'(/tabs/my?weigh=1)으로 들어오면 바로 체중 칸으로
+  const { weigh } = useLocalSearchParams<{ weigh?: string }>();
+  useEffect(() => {
+    if (!weigh) return;
+    const t = setTimeout(() => { goWeigh(); router.setParams({ weigh: undefined }); }, 400);
+    return () => clearTimeout(t);
+  }, [weigh]);
   const [saving, setSaving] = useState(false);
 
   const st = calcBodyStats(profile, weights, bodyProject);
@@ -191,8 +198,8 @@ export default function MyScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
-        <Text style={s.title}>MY</Text>
-        <Text style={s.meta}>{user?.role === 'admin' ? 'ADMIN' : 'REPORT · COACH'}</Text>
+        <Text style={s.title} accessibilityRole="header">내 몸</Text>
+        <Text style={s.meta}>{user?.role === 'admin' ? 'ADMIN' : '기록 · 설정'}</Text>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -339,7 +346,7 @@ export default function MyScreen() {
 
         {/* AI 코치 — 전용 화면(/coach). 채팅을 페이지 스크롤 안에 두면 iOS 키보드가 입력창을 가린다 */}
         <Text style={s.sectionLabel}>AI 코치</Text>
-        <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => router.push('/coach')} accessibilityRole="button">
+        <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => router.push('/tabs/coach')} accessibilityRole="button">
           <View style={{ flex: 1 }}>
             <View style={s.subHead}>
               <Text style={s.subTitle}>코치에게 물어보기</Text>
@@ -453,10 +460,10 @@ const s = themed(() => StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8,
   },
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   meta: { fontSize: 10, color: colors.muted, letterSpacing: 1 },
   scroll: { flex: 1 },
-  scrollInner: { paddingHorizontal: 16, paddingBottom: 36 },
+  scrollInner: { paddingHorizontal: 16, paddingBottom: 132 },
 
   summaryRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   menuRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
@@ -479,7 +486,7 @@ const s = themed(() => StyleSheet.create({
     letterSpacing: 2, marginBottom: 10, marginTop: 18,
   },
   card: {
-    backgroundColor: colors.panel, borderRadius: 18, padding: 18,
+    backgroundColor: colors.panel, borderRadius: 22, padding: 18,
     borderWidth: 1, borderColor: colors.line, marginBottom: 4,
   },
   emptyTxt: { color: colors.muted, fontSize: 13, lineHeight: 20 },
@@ -534,15 +541,15 @@ const s = themed(() => StyleSheet.create({
     fontSize: 14, color: colors.ink,
   },
   weightBtn: {
-    backgroundColor: colors.ink, borderRadius: 12,
+    backgroundColor: colors.red, borderRadius: 26,
     paddingHorizontal: 18, paddingVertical: 11, alignItems: 'center',
   },
   weightBtnOff: { opacity: 0.4 },
-  weightBtnTxt: { color: colors.bg, fontSize: 13, fontWeight: '700' },
+  weightBtnTxt: { color: colors.onRed, fontSize: 13, fontWeight: '700' },
 
   subRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.panel, borderRadius: 16, padding: 16,
+    backgroundColor: colors.panel, borderRadius: 20, padding: 16,
     borderWidth: 1, borderColor: colors.line, marginBottom: 12,
   },
   subHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },

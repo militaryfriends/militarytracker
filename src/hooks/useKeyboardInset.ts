@@ -22,3 +22,18 @@ export function useKeyboardInset(): number {
   }, []);
   return h;
 }
+
+/** 키보드가 떠 있는지(모든 플랫폼) — 떠 있는 탭을 숨기고 입력칸 아래 여백을 없애는 데 쓴다 */
+export function useKeyboardOpen(): boolean {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', () => setOpen(true));
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return open;
+}

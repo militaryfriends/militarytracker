@@ -258,8 +258,8 @@ const s = themed(() => StyleSheet.create({
   },
   toolTxt: { fontSize: 12.5, fontWeight: '700', color: colors.ink, flexShrink: 1 },
   lead: { fontSize: 13, fontWeight: '700', color: colors.ink, textAlign: 'center', marginBottom: 8 },
-  cta: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 12, alignItems: 'center' },
-  ctaTxt: { color: colors.bg, fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  cta: { backgroundColor: colors.red, borderRadius: 26, paddingVertical: 15, paddingHorizontal: 12, alignItems: 'center' },
+  ctaTxt: { color: colors.onRed, fontSize: 15, fontWeight: '800', textAlign: 'center' },
   price: { fontSize: 11.5, color: colors.muted, textAlign: 'center', marginTop: 6 },
   // 시작 버튼과 거리를 둔다 — 붙어 있어 시작하려다 거절이 눌렸다(10/31 녹화 0:56)
   decline: { alignItems: 'center', minHeight: 44, justifyContent: 'center', marginTop: 14 },

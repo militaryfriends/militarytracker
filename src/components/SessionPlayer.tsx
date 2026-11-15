@@ -7,6 +7,7 @@ import {
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../theme';
+import { FONT } from '../ui';
 import { showAlert } from '../utils/alert';
 import { useAppStore } from '../stores/appStore';
 import { useAuthStore } from '../stores/authStore';
@@ -276,7 +277,7 @@ export default function SessionPlayer() {
             <>
               <View style={s.restLeft}>
                 <View style={s.ringWrap}>
-                  <ProgressRing size={44} stroke={4} progress={restTotal.current ? rest / restTotal.current : 0} animate={false} />
+                  <ProgressRing size={52} stroke={5} color={colors.red} progress={restTotal.current ? rest / restTotal.current : 0} animate={false} />
                 </View>
                 <View>
                   <Text style={s.restLabel}>다음 {Math.min(completedSets + 1, cur.sets.length)}세트</Text>
@@ -326,10 +327,12 @@ export default function SessionPlayer() {
           <Text style={s.sheetTitle}>세트 기록 · ✓ 길게 눌러 삭제</Text>
           {cur.sets.map((st, si) => {
             const ref = last?.detail[si];
+            // 지금 할 세트(아직 안 한 첫 줄) 하나만 빨강 — 끝낸 줄은 흰 체크
+            const now = si === cur.sets.findIndex((x) => !x.done);
             const isLastRow = si === cur.sets.length - 1;
             return (
-              <View key={si} style={s.setRow}>
-                <Text style={[s.setNum, st.done && s.setNumDone]} maxFontSizeMultiplier={1.3}>{si + 1}</Text>
+              <View key={si} style={[s.setRow, now && s.setRowNow]}>
+                <Text style={[s.setNum, st.done && s.setNumDone, now && s.setNumNow]} maxFontSizeMultiplier={1.3}>{si + 1}</Text>
                 <TextInput
                   ref={(r) => { inputRefs.current[`${si}-w`] = r; }}
                   style={[s.setInput, st.done && s.setInputDone]}
@@ -360,7 +363,7 @@ export default function SessionPlayer() {
                   accessibilityLabel={`${si + 1}세트 횟수`}
                 />
                 <TouchableOpacity activeOpacity={0.7}
-                  style={[s.ck, st.done && s.ckDone]}
+                  style={[s.ck, st.done && s.ckDone, now && s.ckNow]}
                   onPress={() => handleToggle(si)}
                   onLongPress={() => handleRemove(si)}
                   accessibilityRole="checkbox"
@@ -368,7 +371,7 @@ export default function SessionPlayer() {
                   accessibilityLabel={`${si + 1}세트 완료`}
                   accessibilityHint="길게 누르면 세트를 삭제합니다"
                 >
-                  <Text style={[s.ckTxt, st.done && s.ckTxtDone]}>{st.done ? '✓' : '○'}</Text>
+                  <Text style={[s.ckTxt, st.done && s.ckTxtDone, now && s.ckTxtNow]}>{st.done || now ? '✓' : '○'}</Text>
                 </TouchableOpacity>
               </View>
             );
@@ -392,14 +395,15 @@ export default function SessionPlayer() {
           {isLast ? (
             <TouchableOpacity activeOpacity={0.7} style={[s.navBtn, s.navSolid]} onPress={handleFinish} disabled={saving} accessibilityRole="button">
               {saving ? (
-                <ActivityIndicator color={colors.bg} />
+                <ActivityIndicator color={colors.onRed} />
               ) : (
                 <Text style={s.navSolidTxt}>{doneAll ? '운동 완료 ✓' : '저장하고 종료'}</Text>
               )}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity activeOpacity={0.7} style={[s.navBtn, s.navSolid]} onPress={() => moveEx(1)} accessibilityRole="button" accessibilityLabel="다음 종목">
-              <Text style={s.navSolidTxt}>다음 →</Text>
+            // 이 종목의 세트가 남았으면 빨강은 '지금 할 세트' 하나 — 다 끝냈을 때만 '다음'이 빨강이 된다
+            <TouchableOpacity activeOpacity={0.7} style={[s.navBtn, completedSets >= cur.sets.length ? s.navSolid : s.navNext]} onPress={() => moveEx(1)} accessibilityRole="button" accessibilityLabel="다음 종목">
+              <Text style={completedSets >= cur.sets.length ? s.navSolidTxt : s.navNextTxt}>다음 →</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -569,7 +573,7 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line,
     alignItems: 'center',
   },
-  filmCellActive: { borderColor: colors.ink, backgroundColor: colors.panel3 },
+  filmCellActive: { borderColor: colors.red, backgroundColor: colors.redSoft },
   filmCellDone: { opacity: 0.5 },
   filmNum: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 0.5, marginBottom: 4 },
   filmNumActive: { color: colors.ink },
@@ -582,7 +586,7 @@ const s = themed(() => StyleSheet.create({
 
   sheet: {
     backgroundColor: colors.panel, borderTopWidth: 1, borderTopColor: colors.line2,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 16, paddingTop: 8, flex: 1, minHeight: 200,
   },
   grab: {
@@ -594,14 +598,14 @@ const s = themed(() => StyleSheet.create({
 
   restBox: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.panel2, borderRadius: 14,
-    paddingHorizontal: 10, paddingVertical: 8, marginBottom: 12, minHeight: 60, gap: 8,
+    backgroundColor: colors.panel2, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12, minHeight: 68, gap: 8,
   },
   restBoxOn: { backgroundColor: colors.panel3 },
   restLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ringWrap: { width: 44, height: 44 },
+  ringWrap: { width: 52, height: 52 },
   restLabel: { fontSize: 12, color: colors.muted },
-  restTime: { fontSize: 22, fontWeight: '800', color: colors.ink },
+  restTime: { fontFamily: FONT.num, fontSize: 30, lineHeight: 32, color: colors.ink },
   restHint: { fontSize: 11, color: colors.muted, flexShrink: 1, textAlign: 'right' },
   restBtns: { flexDirection: 'row', gap: 5, flexShrink: 1 },
   skipBtn: {
@@ -612,13 +616,17 @@ const s = themed(() => StyleSheet.create({
 
   setsScroll: { flex: 1 },
   setsContainer: { gap: 8, paddingBottom: 12 },
-  setRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, paddingVertical: 2 },
+  setRowNow: { backgroundColor: colors.redSoft },
+  setNumNow: { color: colors.redText, fontWeight: '700' },
+  ckNow: { backgroundColor: colors.red, borderColor: colors.red },
+  ckTxtNow: { color: colors.onRed, fontWeight: '700' },
   setNum: { fontSize: 11, color: colors.muted, width: 18, textAlign: 'right', flexShrink: 0 },
-  setNumDone: { color: colors.good },
+  setNumDone: { color: colors.ink },
   setInput: {
-    flex: 1, backgroundColor: colors.panel2,
+    flex: 1, minWidth: 0, backgroundColor: colors.panel2,
     borderWidth: 1, borderColor: colors.line2,
-    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 10,
+    borderRadius: 14, paddingHorizontal: 8, paddingVertical: 11,
     fontSize: 16, color: colors.ink, textAlign: 'center', fontWeight: '600',
   },
   // 완료한 세트는 흐리게가 아니라 '확정' 으로 보이게 — 값은 여전히 읽혀야 한다
@@ -630,18 +638,20 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.panel3,
     alignItems: 'center', justifyContent: 'center',
   },
-  ckDone: { backgroundColor: colors.good, borderColor: colors.good },
+  ckDone: { backgroundColor: colors.ink, borderColor: colors.ink },
   ckTxt: { fontSize: 16, color: colors.muted },
   ckTxtDone: { color: colors.bg, fontWeight: '700' },
   addSet: { paddingVertical: 10, alignItems: 'center' },
   addSetTxt: { fontSize: 12.5, color: colors.muted, fontWeight: '600' },
 
   navRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  navBtn: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  navBtn: { flex: 1, borderRadius: 27, minHeight: 54, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   navGhost: { borderWidth: 1, borderColor: colors.line2 },
   navGhostTxt: { color: colors.mid, fontSize: 14, fontWeight: '700' },
-  navSolid: { backgroundColor: colors.ink },
-  navSolidTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
+  navSolid: { backgroundColor: colors.red },
+  navNext: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.panel2 },
+  navNextTxt: { color: colors.ink, fontSize: 16, fontWeight: '700' },
+  navSolidTxt: { color: colors.onRed, fontSize: 16, fontWeight: '700' },
   navOff: { opacity: 0.3 },
 }));
 

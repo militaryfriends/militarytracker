@@ -217,8 +217,8 @@ const s = themed(() => StyleSheet.create({
   sub: { fontSize: 12.5, color: colors.muted, marginTop: 3, lineHeight: 18 },
   err: { marginTop: 30, gap: 10 },
   errTxt: { fontSize: 13.5, color: colors.wrong, lineHeight: 20 },
-  retry: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  retryTxt: { color: colors.bg, fontSize: 15, fontWeight: '800' },
+  retry: { backgroundColor: colors.red, borderRadius: 26, paddingVertical: 15, alignItems: 'center' },
+  retryTxt: { color: colors.onRed, fontSize: 15, fontWeight: '800' },
   later: { alignItems: 'center', paddingVertical: 12 },
   laterTxt: { color: colors.mid, fontSize: 13.5, fontWeight: '600' },
 }));

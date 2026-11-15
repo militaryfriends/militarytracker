@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
+import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
 import {
   EX, Exercise, Part, PART_LABEL, PART_ORDER, EQUIP_LABEL, LEVEL_LABEL,
 } from '../../src/data/exercises';
@@ -55,9 +56,10 @@ export default function FormScreen() {
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
-        <Text style={s.title}>자세 체크</Text>
+        <Text style={s.title} accessibilityRole="header">운동</Text>
         <Text style={s.meta}>자세 {FORM_COUNT} · 영상 {videoCount}</Text>
       </View>
+      <WorkoutSwitch value="form" />
 
       <View style={s.searchWrap}>
         <TextInput
@@ -148,7 +150,7 @@ const s = themed(() => StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8,
   },
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   meta: { fontSize: 10, color: colors.muted, letterSpacing: 0.8 },
 
   searchWrap: { paddingHorizontal: 16, paddingBottom: 10, justifyContent: 'center' },
@@ -176,7 +178,7 @@ const s = themed(() => StyleSheet.create({
   pillTxt: { fontSize: 12.5, fontWeight: '600', color: colors.muted },
   pillTxtActive: { color: colors.bg },
 
-  listInner: { paddingHorizontal: 16, paddingBottom: 40 },
+  listInner: { paddingHorizontal: 16, paddingBottom: 132 },
   row: { gap: 10, marginBottom: 16 },
   descTxt: { fontSize: 12.5, color: colors.muted, lineHeight: 19, marginBottom: 14 },
   empty: { color: colors.muted, fontSize: 14, textAlign: 'center', marginTop: 40 },

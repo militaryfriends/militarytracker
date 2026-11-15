@@ -41,6 +41,8 @@ const PAIRS = [
   ['wrong', 'panel', 4.5], ['wrong', 'wrongBg', 4.5],
   ['pr', 'panel', 4.5], ['pr', 'prBg', 4.5],
   ['onMedia', 'mediaBadge', 4.5],
+  // 레드 포인트(B3) — 지금 할 한 가지에만
+  ['onRed', 'red', 4.5], ['redText', 'bg', 4.5], ['redText', 'panel', 4.5], ['redText', 'redSoft', 4.5], ['mid', 'float', 4.5],
 ];
 
 let failed = 0;

@@ -23,7 +23,15 @@ npm run deploy:hosting            # 웹 export + hosting
 - **스타일은 `const s = themed(() => StyleSheet.create({ … }))`.** 모드마다 한 번 만든다.
 - **색을 읽는 컴포넌트는 맨 위에서 `useThemeMode()`** 를 한 번 부른다(모드가 바뀌면 그 자리에서 다시 그려진다 — 화면을
   새로 띄우지 않는다). `renderItem` 안에서 색을 읽는 FlatList · SectionList 는 `extraData` 에 모드를 넣는다.
-- 모노: 강조색 = 글자색(`accent` = `ink`), 그 위 글자 = `onAccent`(= `bg`). 주 버튼은 다크에서 흰 판 · 라이트에서 검은 판.
+- **B3 디자인(2026-11-15, 시안 '내 몸 중심')**: 모노 + **레드 포인트** — 빨강(`red` · `onRed` · `redText` · `redSoft` · `redLine`)은
+  **지금 할 한 가지**에만 쓴다: 주 버튼(`PrimaryBtn` · 시작), 지금 있는 탭, 지금 할 세트, 고른 날, 진행 막대의 채움. 끝낸 것은 흰 체크(`ink`), 경고는 선 + 글자.
+  한 화면에 빨강 덩어리가 둘이 되지 않게 한다(세션의 '다음'은 그 종목 세트를 다 끝냈을 때만 빨강).
+  모양: 알약 버튼(반지름 = 높이의 절반), 카드 모서리 20~28, 아래에서 올라온 시트(`panel` + 위 모서리 28), 큰 숫자는 `FONT.num`.
+  `accent`(= `ink`) · `onAccent` 는 옛 모노 토큰 — 고른 칩 · 끝낸 표시처럼 '빨강이 아닌 강조'에만 남아 있다.
+- **탭은 떠 있는 알약**(`src/components/TabBar.tsx`, 오늘 `home` · 운동 `plan` · 코치 `coach` · 식단 `diet` · 내 몸 `my`). 화면 위에 떠 있어 내용이 밑으로 지나간다 →
+  탭 화면의 스크롤 끝에는 여백(`paddingBottom: 132`, `Body tab`, 아래 고정 버튼은 `useTabSpace()` 위)을 둔다. 운동 중 · 키보드가 떴을 때는 숨는다.
+  '종목과 자세'(`/tabs/form`)는 탭에 없고 운동 탭의 한 갈래(`WorkoutSwitch`) — 탭 바에서는 '운동'이 켜진다. 옛 주소 `/coach` 는 `/tabs/coach` 로 보낸다.
+- 홈(오늘) 맨 위는 내 몸(`body/HomeHero.tsx` — 지금 몸 + 목표 몸까지 %) + '오늘 할 일' 시트. 숫자는 MY(내 몸) 카드와 같은 계산(`useNowBody` · `progressPct`).
 - **사진 · 영상 위 글자와 막은 모드와 상관없다** — `onMedia` · `onMediaSub` · `mediaDim` · `mediaBadge` 토큰을 쓴다(`ink` 금지).
 - 모드 전환은 `toggleTheme()`(홈 토글) · `chooseTheme()`(MY › 화면). 옛 바탕 막이 240ms 동안 걷힌다(ThemeProvider).
   앱 전체를 한 번에 다시 그리므로, 언젠가 토글이 굼떠지면 smiscamp `ThemeLane` 처럼 안 보이는 화면을 뒤로 미룬다.

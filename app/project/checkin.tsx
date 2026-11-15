@@ -223,7 +223,7 @@ export default function CheckinScreen() {
               ) : null}
               {err ? <Text style={s.err} accessibilityRole="alert">{err}</Text> : null}
               <PressableScale style={[s.cta, { marginTop: 16 }]} onPress={submit} disabled={busy} accessibilityLabel="체크인하기">
-                {busy ? <ActivityIndicator color={colors.bg} /> : <Text style={s.ctaTxt}>체크인하기</Text>}
+                {busy ? <ActivityIndicator color={colors.onRed} /> : <Text style={s.ctaTxt}>체크인하기</Text>}
               </PressableScale>
               {busy ? <Text style={s.wait}>예측과 비교하고 리포트를 쓰는 중이에요</Text> : null}
             </View>
@@ -326,8 +326,8 @@ const s = themed(() => StyleSheet.create({
   flex: { flex: 1, fontSize: 13, paddingHorizontal: 10 },
   err: { fontSize: 12.5, color: colors.wrong, marginTop: 10 },
   wait: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 8 },
-  cta: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 15, alignItems: 'center', minHeight: 50, justifyContent: 'center' },
-  ctaTxt: { color: colors.bg, fontSize: 15, fontWeight: '800' },
+  cta: { backgroundColor: colors.red, borderRadius: 26, paddingVertical: 15, alignItems: 'center', minHeight: 50, justifyContent: 'center' },
+  ctaTxt: { color: colors.onRed, fontSize: 15, fontWeight: '800' },
   next: { marginTop: 14, backgroundColor: colors.panel, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.line },
   nextBig: { fontSize: 18, fontWeight: '800', color: colors.ink },
   nextTxt: { fontSize: 12.5, color: colors.muted, marginTop: 6, lineHeight: 18 },

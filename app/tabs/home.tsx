@@ -1,7 +1,8 @@
 import { prescription, rxText } from '../../src/utils/prescription';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ThemeToggle, colors, themed, useThemeMode } from '../../src/theme';
@@ -11,8 +12,9 @@ import { FEED, coverExId } from '../../src/data/feed';
 import { exById } from '../../src/data/exercises';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/utils/stats';
-import { HomeProjectCard } from '../../src/components/body/HomeProjectCard';
-import { ProgressRing } from '../../src/ui/ProgressRing';
+import { HomeHero } from '../../src/components/body/HomeHero';
+import { FONT, PressableScale } from '../../src/ui';
+import { calcBodyStats } from '../../src/utils/body';
 import { localDate } from '../../src/services/workoutService';
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
@@ -23,12 +25,14 @@ export default function HomeScreen() {
   const plan = useAppStore((s) => s.plan);
   const profile = useAppStore((s) => s.profile);
   const logs = useAppStore((s) => s.logs);
+  const weights = useAppStore((s) => s.weights);
+  const project = useAppStore((s) => s.project);
+  const { width } = useWindowDimensions();
   const startSession = useAppStore((s) => s.startSession);
   const hydrating = useAuthStore((s) => s.hydrating);
 
-  const today = new Date().toLocaleDateString('ko-KR', {
-    month: '2-digit', day: '2-digit', weekday: 'short',
-  });
+  // 월 = 0 … 일 = 6 (이번 주 칸과 같은 순서)
+  const todayDow = (new Date().getDay() + 6) % 7;
 
   if (!plan && hydrating) {
     // 로그인 직후 플랜이 오기 전에 "플랜 없음" 을 보이면 루틴을 골라 기존 플랜을 덮어쓰게 된다
@@ -63,7 +67,6 @@ export default function HomeScreen() {
   const weekDone = streak.filter(Boolean).length;
   // 목표 일수는 플랜(루틴)의 데이 수 — 프로필의 주 N일과 프리셋 루틴이 다를 수 있다
   const weekGoal = Math.max(1, plan.days.length);
-  const goalPct = Math.min(100, Math.round((weekDone / weekGoal) * 100));
   const todayStr = localDate(new Date());
   const todaySets = logs.filter((l) => l.date === todayStr).reduce((a, l) => a + l.totalSets, 0);
 
@@ -78,56 +81,69 @@ export default function HomeScreen() {
         : `오늘은 ${day.name}입니다.`;
     })();
 
+  // 오늘 할 일 — 운동 한 줄 + 식단 · 체중 (한 일은 흰 체크, 지금 할 것 하나만 빨강)
+  const lv = (profile?.level ?? 2) as 1 | 2 | 3;
+  const daySets = day.ids.reduce((a, id) => { const e = exById(id); return a + (e ? prescription(e, lv).sets : 0); }, 0);
+  const dayMin = Math.max(10, Math.round((daySets * 2.4) / 5) * 5);
+  const workoutDone = todaySets > 0;
+  const weekAgo = localDate(new Date(Date.now() - 6 * 86_400_000));
+  const lastW = weights.reduce<(typeof weights)[number] | null>((a, w) => (!a || w.date > a.date ? w : a), null);
+  const weighed = !!lastW && lastW.date >= weekAgo;
+  const doneCount = (workoutDone ? 1 : 0) + (weighed ? 1 : 0);
+  const stats = calcBodyStats(profile, weights, project);
+  const weekday = new Date().toLocaleDateString('ko-KR', { weekday: 'long' });
+  const dateLine = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
-        <Text style={s.logo}>MILITARY TRACKER</Text>
-        <View style={s.topRight}>
-          <Text style={s.meta}>{today}</Text>
-          <ThemeToggle />
+        <View style={s.titleBox}>
+          <Text style={s.date}>{dateLine}</Text>
+          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} accessibilityRole="header">
+            {workoutDone ? `${weekday}, 오늘 운동 끝` : `${weekday}, ${day.name}`}
+          </Text>
         </View>
+        <ThemeToggle />
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
-        {/* Hero */}
-        <View style={s.heroCard}>
-          <View style={s.heroTopRow}>
-            <View style={s.heroBadge}>
-              <Text style={s.heroBadgeTxt}>DAY {dayIdx + 1} / {plan.days.length}</Text>
-            </View>
-            {plan.routineId && (
-              <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`/routine/${plan.routineId}`)}>
-                <Text style={s.heroLink}>루틴 보기 ›</Text>
-              </TouchableOpacity>
-            )}
+        <HomeHero avatarW={Math.round(Math.min(168, (Math.min(width, 480) - 40) * 0.44))} />
+
+        {/* 오늘 할 일 */}
+        <View style={s.sheet}>
+          <View style={s.sheetHead}>
+            <Text style={s.sheetTitle} accessibilityRole="header">오늘 할 일</Text>
+            <Text style={s.sheetMeta}><Text style={s.sheetNum}>{doneCount}</Text> / 2 완료</Text>
           </View>
+          <View style={s.mainRow}>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push(`/exercise/${day.ids[0]}`)} accessibilityLabel="첫 종목 자세 보기">
+              <ExerciseMedia exId={day.ids[0]} rounded={13} style={s.mainThumb} dim={0.2} />
+            </TouchableOpacity>
+            <View style={s.mainTxt}>
+              <Text style={s.mainName} numberOfLines={1}>{day.name}</Text>
+              <Text style={s.mainSub} numberOfLines={1}>
+                {workoutDone ? `오늘 ${todaySets}세트 완료` : `${day.ids.length}종목 ${daySets}세트 · 약 ${dayMin}분`}
+              </Text>
+            </View>
+            <PressableScale
+              style={[s.go, workoutDone && s.goDone]}
+              onPress={() => startSession(dayIdx)}
+              accessibilityLabel={`${day.name} 운동 ${workoutDone ? '한 번 더' : '시작'}`}
+            >
+              {workoutDone ? null : <Ionicons name="play" size={15} color={colors.onRed} />}
+              <Text style={[s.goTxt, workoutDone && s.goDoneTxt]}>{workoutDone ? '한 번 더' : '시작'}</Text>
+            </PressableScale>
+          </View>
+          <Text style={s.focus} numberOfLines={1}>DAY {dayIdx + 1} / {plan.days.length} · {day.focus}</Text>
 
-          <Text style={s.heroName}>{day.name}</Text>
-          <Text style={s.heroFocus}>{day.focus}</Text>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.heroThumbs} contentContainerStyle={s.heroThumbsInner}>
-            {day.ids.map((id, i) => (
-              <TouchableOpacity key={`${id}-${i}`} onPress={() => router.push(`/exercise/${id}`)} activeOpacity={0.8}>
-                <ExerciseMedia exId={id} rounded={10} style={s.heroThumb} dim={0.35} />
-                <Text style={s.heroThumbTxt} numberOfLines={1}>{exById(id)?.n ?? ''}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity activeOpacity={0.7}
-            style={s.startBtn}
-            onPress={() => startSession(dayIdx)}
-            accessibilityRole="button"
-            accessibilityLabel={`${day.name} 운동 시작`}
-          >
-            <Text style={s.startBtnTxt}>▶  운동 시작</Text>
-          </TouchableOpacity>
+          <TodayRow done={false} title="오늘 식단" onPress={() => router.push('/tabs/diet')}
+            sub={stats ? `하루 ${stats.kcal.toLocaleString()}kcal · 단백질 ${stats.protein}g` : '끼니별 식단 보기'} />
+          <View style={s.sep} />
+          <TodayRow done={weighed} title="체중 기록" onPress={() => router.push('/tabs/my?weigh=1')}
+            sub={lastW ? `최근 ${lastW.kg}kg · ${lastW.date.slice(5).replace('-', '월 ')}일` : '기록하면 지금 몸이 바로 바뀌어요'} />
         </View>
 
-        {/* 내 변화 프로젝트 — 분석 · 진행 · 체크인 */}
-        <HomeProjectCard />
-
-        {/* Streak — 탭하면 운동 기록으로 */}
+        {/* 이번 주 — 탭하면 운동 기록으로 */}
         <TouchableOpacity
           style={s.card}
           activeOpacity={0.8}
@@ -135,44 +151,27 @@ export default function HomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="이번 주 운동 현황, 운동 기록 보기"
         >
-          <View style={s.cardHead}>
-            <Text style={s.sectionLabel}>THIS WEEK</Text>
-            <Text style={s.cardMeta}>{weekSets}세트 ›</Text>
-          </View>
-
-          {/* 원형 % 고리 + 이번 주 n/n일 + 오늘 세트(광고 UI B "세트 진행 카드") */}
-          <View style={s.ringRow}>
-            <View style={s.ringBox}>
-              <ProgressRing size={64} stroke={6} progress={goalPct / 100} />
-              <View style={s.ringCenter} pointerEvents="none">
-                <Text style={s.ringPct}>{goalPct}%</Text>
-              </View>
+          <View style={s.weekRow}>
+            <View style={s.weekBox}>
+              <Text style={s.weekK}>이번 주</Text>
+              <Text style={s.weekV}>{weekDone} / {weekGoal}일</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.goalTxt}>
-                <Text style={s.goalNum}>{weekDone}</Text>
-                <Text style={s.goalSlash}> / {weekGoal}일</Text>
-                {weekDone >= weekGoal ? <Text style={s.goalDone}>  목표 달성</Text> : null}
-              </Text>
-              <Text style={s.todaySets}>
-                {todaySets > 0 ? `오늘 ${todaySets}세트 완료` : '오늘은 아직 기록이 없어요'}
-                {streakDays > 1 ? ` · ${streakDays}일 연속` : ''}
-              </Text>
+            <View style={s.streakRow}>
+              {DOW.map((d, i) => (
+                <View key={i} style={[s.streakCell, streak[i] && s.streakOn, !streak[i] && i === todayDow && s.streakToday]}>
+                  <Text style={[s.streakDay, streak[i] && s.streakDayOn, !streak[i] && i === todayDow && s.streakDayToday]}>{d}</Text>
+                </View>
+              ))}
             </View>
           </View>
-
-          <View style={s.streakRow}>
-            {DOW.map((d, i) => (
-              <View key={i} style={[s.streakCell, streak[i] && s.streakOn]}>
-                <Text style={[s.streakDay, streak[i] && s.streakDayOn]}>{d}</Text>
-              </View>
-            ))}
-          </View>
+          <Text style={s.weekNote}>
+            {weekSets}세트{streakDays > 1 ? ` · ${streakDays}일 연속` : ''}{weekDone >= weekGoal ? ' · 이번 주 목표 달성' : ''} · 기록 보기 ›
+          </Text>
         </TouchableOpacity>
 
         {/* 오늘의 팁 — 유료 'AI 코치' 와 이름을 겹치지 않는다 */}
         <View style={s.card}>
-          <Text style={s.sectionLabel}>TODAY</Text>
+          <Text style={s.sectionLabel}>오늘의 팁</Text>
           <Text style={s.commentTxt}>{comment}</Text>
         </View>
 
@@ -207,80 +206,94 @@ export default function HomeScreen() {
   );
 }
 
+function TodayRow({ done, title, sub, onPress }: { done: boolean; title: string; sub: string; onPress: () => void }) {
+  useThemeMode();
+  return (
+    <TouchableOpacity activeOpacity={0.7} style={s.todayRow} onPress={onPress} accessibilityRole="button"
+      accessibilityLabel={`${title}, ${sub}${done ? ', 완료' : ''}`}>
+      <View style={[s.tick, done && s.tickOn]}>
+        {done ? <Ionicons name="checkmark" size={15} color={colors.bg} /> : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.todayTitle}>{title}</Text>
+        <Text style={s.todaySub} numberOfLines={1}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={17} color={colors.muted} />
+    </TouchableOpacity>
+  );
+}
+
 const s = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingLeft: 20, paddingRight: 10, paddingTop: 6, paddingBottom: 2,
+    paddingLeft: 20, paddingRight: 10, paddingTop: 8, paddingBottom: 6, gap: 8,
   },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  logo: { fontSize: 13, fontWeight: '800', color: colors.ink, letterSpacing: 2.5 },
-  meta: { fontSize: 10, color: colors.muted, letterSpacing: 1 },
+  titleBox: { flex: 1, minWidth: 0 },
+  date: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5, marginTop: 2 },
   scroll: { flex: 1 },
-  scrollInner: { paddingHorizontal: 16, paddingBottom: 36 },
+  scrollInner: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 132 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
   emptyTxt: { color: colors.muted, fontSize: 14 },
   emptyBtn: {
-    backgroundColor: colors.ink, borderRadius: 12,
-    paddingHorizontal: 22, paddingVertical: 12,
+    backgroundColor: colors.red, borderRadius: 24, minHeight: 48, justifyContent: 'center',
+    paddingHorizontal: 24, paddingVertical: 12,
   },
-  emptyBtnTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
+  emptyBtnTxt: { color: colors.onRed, fontSize: 14.5, fontWeight: '700' },
 
-  heroCard: {
-    backgroundColor: colors.panel2, borderRadius: 20, padding: 20,
+  // 아래에서 올라온 시트 모양
+  sheet: {
+    backgroundColor: colors.panel, borderRadius: 28, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6,
     marginBottom: 12, borderWidth: 1, borderColor: colors.line2,
   },
-  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  heroBadge: {
-    alignSelf: 'flex-start', backgroundColor: colors.panel3,
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+  sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4, marginBottom: 10 },
+  sheetTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  sheetMeta: { fontSize: 13, color: colors.mid },
+  sheetNum: { fontFamily: FONT.num, fontSize: 18, color: colors.ink },
+  mainRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 76, paddingHorizontal: 12, paddingVertical: 12,
+    borderRadius: 20, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line,
   },
-  heroBadgeTxt: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 1.5 },
-  heroLink: { fontSize: 11.5, color: colors.mid, fontWeight: '600' },
-  heroName: { fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5, marginBottom: 4 },
-  heroFocus: { fontSize: 13, color: colors.muted, marginBottom: 14 },
-  heroThumbs: { flexGrow: 0, flexShrink: 0, marginBottom: 16, marginHorizontal: -4 },
-  heroThumbsInner: { gap: 8, paddingHorizontal: 4 },
-  heroThumb: { width: 72, height: 72 },
-  heroThumbTxt: { fontSize: 10, color: colors.muted, marginTop: 5, width: 72, textAlign: 'center' },
-  startBtn: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  startBtnTxt: { color: colors.bg, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  mainThumb: { width: 52, height: 52 },
+  mainTxt: { flex: 1, minWidth: 0 },
+  mainName: { fontSize: 17, fontWeight: '700', color: colors.ink },
+  mainSub: { fontSize: 12, color: colors.mid, marginTop: 2 },
+  go: {
+    height: 48, paddingHorizontal: 18, borderRadius: 24, backgroundColor: colors.red,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+  },
+  goTxt: { fontSize: 15, fontWeight: '700', color: colors.onRed },
+  goDone: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line2 },
+  goDoneTxt: { color: colors.ink },
+  focus: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 2, paddingHorizontal: 4 },
+  todayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 54, paddingLeft: 4, paddingRight: 2 },
+  tick: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.line2, alignItems: 'center', justifyContent: 'center' },
+  tickOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  todayTitle: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  todaySub: { fontSize: 12, color: colors.mid, marginTop: 1 },
+  sep: { height: 1, marginLeft: 40, backgroundColor: colors.line },
 
   card: {
-    backgroundColor: colors.panel, borderRadius: 18, padding: 18,
+    backgroundColor: colors.panel, borderRadius: 22, padding: 16,
     marginBottom: 12, borderWidth: 1, borderColor: colors.line,
   },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardMeta: { fontSize: 10.5, color: colors.mid, marginBottom: 14 },
-  sectionLabel: {
-    fontSize: 10, fontWeight: '800', color: colors.muted,
-    letterSpacing: 2, marginBottom: 14,
-  },
-  goalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 },
-  ringRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
-  ringBox: { width: 64, height: 64 },
-  ringCenter: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
-  ringPct: { fontSize: 14, fontWeight: '800', color: colors.ink },
-  todaySets: { fontSize: 12.5, color: colors.mid, marginTop: 4, fontWeight: '600' },
-  goalTxt: { fontSize: 13, color: colors.muted },
-  goalNum: { fontSize: 20, fontWeight: '800', color: colors.ink },
-  goalSlash: { fontSize: 13, color: colors.muted },
-  goalDone: { fontSize: 11.5, color: colors.good, fontWeight: '700' },
-  goalStreak: { fontSize: 11.5, color: colors.mid, fontWeight: '600' },
-  goalBar: {
-    height: 4, borderRadius: 3, backgroundColor: colors.panel3,
-    overflow: 'hidden', marginBottom: 14,
-  },
-  goalFill: { height: '100%', borderRadius: 3, backgroundColor: colors.ink },
-  streakRow: { flexDirection: 'row', gap: 5 },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, marginBottom: 8 },
+  weekRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  weekBox: { width: 62 },
+  weekK: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  weekV: { fontFamily: FONT.num, fontSize: 20, color: colors.ink, marginTop: 1 },
+  weekNote: { fontSize: 12, color: colors.mid, marginTop: 10 },
+  streakRow: { flex: 1, flexDirection: 'row', gap: 5 },
   streakCell: {
-    flex: 1, aspectRatio: 1, borderRadius: 8,
-    backgroundColor: colors.panel3, borderWidth: 1, borderColor: colors.line,
-    alignItems: 'center', justifyContent: 'center',
+    flex: 1, height: 38, borderRadius: 10,
+    backgroundColor: colors.panel3, alignItems: 'center', justifyContent: 'center',
   },
-  streakOn: { backgroundColor: colors.ink, borderColor: colors.ink },
-  streakDay: { fontSize: 10, color: colors.muted, fontWeight: '600' },
+  streakOn: { backgroundColor: colors.ink },
+  streakToday: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.red },
+  streakDay: { fontSize: 12, color: colors.mid, fontWeight: '600' },
   streakDayOn: { color: colors.bg, fontWeight: '700' },
+  streakDayToday: { color: colors.redText, fontWeight: '700' },
   commentTxt: { fontSize: 14, color: colors.mid, lineHeight: 22 },
 
   secRow: {

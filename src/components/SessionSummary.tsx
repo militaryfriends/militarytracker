@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
+import { FONT } from '../ui';
 import { useAppStore } from '../stores/appStore';
 import { exForLog, PART_LABEL } from '../data/exercises';
 import { fmtDuration, fmtVolume, fmtSetDetail } from '../utils/stats';
@@ -21,8 +22,13 @@ export default function SessionSummary() {
   return (
     <View style={[s.root, { paddingTop: insets.top + 24 }]}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.eyebrow}>운동 완료</Text>
-        <Text style={s.title}>{summary.dayName}</Text>
+        <View style={s.topRow}>
+          <Text style={s.eyebrow}>{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })} · 운동 완료</Text>
+          <TouchableOpacity activeOpacity={0.7} hitSlop={12} onPress={() => setSummary(null)} accessibilityRole="button" accessibilityLabel="닫고 오늘 화면으로">
+            <Text style={s.close}>닫기</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={s.title}>{summary.dayName} 끝.</Text>
 
         {!summary.saved && (
           <View style={s.warn}>
@@ -91,8 +97,13 @@ export default function SessionSummary() {
         >
           <Text style={s.ghostTxt}>{summary.prIds.length ? '개인 기록 보기' : '기록 전체 보기'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.7} style={s.primary} onPress={() => setSummary(null)}>
-          <Text style={s.primaryTxt}>확인</Text>
+        <TouchableOpacity activeOpacity={0.7} style={s.primary} accessibilityRole="button"
+          onPress={() => {
+            setSummary(null);
+            router.push('/tabs/diet');
+          }}
+        >
+          <Text style={s.primaryTxt}>운동 후 식단 보기</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -115,8 +126,10 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.bg, zIndex: 50,
   },
   scroll: { paddingHorizontal: 20, paddingBottom: 24 },
-  eyebrow: { fontSize: 10.5, fontWeight: '800', color: colors.muted, letterSpacing: 2 },
-  title: { fontSize: 30, fontWeight: '800', color: colors.ink, marginTop: 8, letterSpacing: -0.6 },
+  eyebrow: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  title: { fontSize: 42, fontWeight: '800', color: colors.ink, letterSpacing: -1.6, lineHeight: 48, marginTop: 4 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
+  close: { fontSize: 14, fontWeight: '600', color: colors.mid },
 
   warn: {
     backgroundColor: colors.wrongBg, borderRadius: 12, padding: 12,
@@ -129,7 +142,7 @@ const s = themed(() => StyleSheet.create({
     flex: 1, backgroundColor: colors.panel2, borderRadius: 16, padding: 16,
     borderWidth: 1, borderColor: colors.line2,
   },
-  statVal: { fontSize: 20, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
+  statVal: { fontFamily: FONT.num, fontSize: 34, lineHeight: 36, color: colors.ink },
   statUnit: { fontSize: 10, color: colors.muted, marginTop: 5 },
 
   prBox: {
@@ -165,8 +178,8 @@ const s = themed(() => StyleSheet.create({
   },
   ghostTxt: { color: colors.mid, fontSize: 14, fontWeight: '600' },
   primary: {
-    flex: 1, backgroundColor: colors.ink, borderRadius: 14,
+    flex: 1, backgroundColor: colors.red, borderRadius: 26,
     paddingVertical: 15, alignItems: 'center',
   },
-  primaryTxt: { color: colors.bg, fontSize: 15, fontWeight: '700' },
+  primaryTxt: { color: colors.onRed, fontSize: 15, fontWeight: '700' },
 }));

@@ -1,5 +1,5 @@
 import { prescription, repsText } from '../../src/utils/prescription';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -11,17 +11,23 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { exById, EQUIP_LABEL, PART_LABEL } from '../../src/data/exercises';
 import { routineById } from '../../src/data/routines';
+import { nextDayIdx } from '../../src/utils/stats';
 import { savePlan } from '../../src/services/authService';
 import { generatePlan, SubscriptionRequired, QuotaExceeded } from '../../src/services/aiService';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { buildLocalPlan } from '../../src/utils/planner';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
-import { PrimaryBtn, GhostBtn, Notice } from '../../src/components/ui';
+import { GhostBtn, Notice } from '../../src/components/ui';
+import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
+import { useTabSpace } from '../../src/components/TabBar';
+import { FONT, PressableScale } from '../../src/ui';
+import { Ionicons } from '@expo/vector-icons';
 
 const SRC_LABEL: Record<string, string> = { AI: 'AI 구성', LOCAL: '자동 구성', PRESET: '프리셋 루틴' };
 
 export default function PlanScreen() {
   useThemeMode();
+  const tabSpace = useTabSpace();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const hydrating = useAuthStore((s) => s.hydrating);
@@ -31,7 +37,14 @@ export default function PlanScreen() {
   const session = useAppStore((s) => s.session);
   const startSession = useAppStore((s) => s.startSession);
   const setPlan = useAppStore((s) => s.setPlan);
-  const [activeDay, setActiveDay] = useState(0);
+  // 처음 열면 오늘 할 날(다음 차례)이 골라져 있다 — 홈의 '오늘 할 일'과 같은 날
+  const logs = useAppStore((s) => s.logs);
+  const [activeDay, setActiveDay] = useState(() => nextDayIdx(logs, plan));
+  // 플랜이 화면보다 늦게 오면(앱을 막 켰을 때) 그때 오늘 차례로 맞춘다 — 직접 고른 뒤에는 건드리지 않는다
+  const picked = useRef(false);
+  useEffect(() => {
+    if (plan && !picked.current) setActiveDay(nextDayIdx(logs, plan));
+  }, [plan, logs]);
   const [busy, setBusy] = useState<'ai' | 'local' | null>(null);
   // '자동 재구성'(결정형 알고리즘)은 무료다 — 구독 없이도 플랜을 새로 짤 수 있어야 한다
   const { can } = useEntitlement();
@@ -126,39 +139,33 @@ export default function PlanScreen() {
   const dayIdx = Math.min(activeDay, plan.days.length - 1);
   const day = plan.days[dayIdx];
   const routine = plan.routineId ? routineById(plan.routineId) : null;
+  const daySets = day.ids.reduce((a, id) => { const e = exById(id); return a + (e ? prescription(e, lv).sets : 0); }, 0);
+  const dayMin = Math.max(10, Math.round((daySets * 2.4) / 5) * 5);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
-        <Text style={s.title}>운동 플랜</Text>
-        <Text style={s.meta}>{SRC_LABEL[plan.planSrc] ?? plan.planSrc}</Text>
+        <Text style={s.title} accessibilityRole="header">운동</Text>
+        <TouchableOpacity activeOpacity={0.7} hitSlop={8} style={s.topLink}
+          onPress={() => (routine ? router.push(`/routine/${routine.id}`) : router.push('/routine'))}
+          accessibilityRole="button" accessibilityLabel={routine ? `${routine.name} 루틴 보기` : '루틴 둘러보기'}>
+          <Text style={s.topLinkTxt} numberOfLines={1}>{routine ? routine.name : SRC_LABEL[plan.planSrc] ?? '맞춤 구성'} ›</Text>
+        </TouchableOpacity>
       </View>
+      <WorkoutSwitch value="plan" />
 
-      {/* Routine banner */}
-      <TouchableOpacity
-        style={s.routineBar}
-        activeOpacity={0.8}
-        onPress={() => (routine ? router.push(`/routine/${routine.id}`) : router.push('/routine'))}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={s.routineName}>{routine ? routine.name : '맞춤 구성 플랜'}</Text>
-          <Text style={s.routineSub} numberOfLines={1}>{plan.planReason}</Text>
-        </View>
-        <Text style={s.routineLink}>{routine ? '루틴 보기 ›' : '루틴 탐색 ›'}</Text>
-      </TouchableOpacity>
-
-      {/* Day 탭 — 한 줄에 다 보이게(가로 스크롤인 걸 몰라 Day5 를 못 찾던 문제, 10/31 피드백 7-9) */}
+      {/* Day 칸 — 한 줄에 다 보이게(가로 스크롤인 걸 몰라 Day5 를 못 찾던 문제, 10/31 피드백 7-9). 고른 날 하나만 빨강 */}
       <View style={s.pillRow}>
         {plan.days.map((d, i) => (
           <TouchableOpacity activeOpacity={0.7}
             key={`${d.id}-${i}`}
-            style={[s.pill, s.pillFlex, activeDay === i && s.pillActive]}
-            onPress={() => setActiveDay(i)}
+            style={[s.pill, activeDay === i && s.pillActive]}
+            onPress={() => { picked.current = true; setActiveDay(i); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: activeDay === i }}
             accessibilityLabel={`Day ${i + 1}, ${d.name}`}
           >
-            <Text style={[s.pillTxt, activeDay === i && s.pillTxtActive]} numberOfLines={1}>Day {i + 1}</Text>
+            <Text style={[s.pillNum, activeDay === i && s.pillNumActive]}>{i + 1}</Text>
             <Text style={[s.pillSub, activeDay === i && s.pillSubActive]} numberOfLines={1}>{d.name}</Text>
           </TouchableOpacity>
         ))}
@@ -167,12 +174,10 @@ export default function PlanScreen() {
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
         <View style={s.dayHeader}>
           <View style={{ flex: 1 }}>
+            <Text style={s.dayKicker}>DAY {dayIdx + 1} / {plan.days.length}</Text>
             <Text style={s.dayName}>{day.name}</Text>
-            <Text style={s.dayFocus}>{day.focus}</Text>
+            <Text style={s.dayFocus}>{day.focus} · {day.ids.length}종목 {daySets}세트 · 약 {dayMin}분</Text>
           </View>
-          <TouchableOpacity activeOpacity={0.7} style={s.startBtn} onPress={() => startSession(dayIdx)}>
-            <Text style={s.startBtnTxt}>▶  시작</Text>
-          </TouchableOpacity>
         </View>
 
         {day.ids.map((id, i) => {
@@ -188,17 +193,12 @@ export default function PlanScreen() {
             >
               <ExerciseMedia exId={id} rounded={12} style={s.exThumb} dim={0.3} />
               <View style={s.exInfo}>
-                <Text style={s.exOrder}>{String(i + 1).padStart(2, '0')}</Text>
                 <Text style={s.exName}>{e.n}</Text>
                 <Text style={s.exPart}>
                   {PART_LABEL[e.part]} · {e.eq.map((q) => EQUIP_LABEL[q]).join('/')}
                 </Text>
               </View>
-              <View style={s.exSetsWrap}>
-                <Text style={s.exSetsNum}>{rx.sets}</Text>
-                <Text style={s.exSetsSub}>세트</Text>
-                <Text style={s.exRep}>{repsText(rx.reps)}</Text>
-              </View>
+              <Text style={s.exRx}>{rx.sets} × {repsText(rx.reps)}</Text>
             </TouchableOpacity>
           );
         })}
@@ -219,11 +219,18 @@ export default function PlanScreen() {
             style={{ flex: 1 }}
           />
         </View>
-        <PrimaryBtn label="다른 루틴 둘러보기" onPress={() => router.push('/routine')} style={{ marginTop: 10 }} />
+        <GhostBtn label="다른 루틴 둘러보기" onPress={() => router.push('/routine')} style={{ marginTop: 10 }} />
 
         <Notice>일반적인 운동 가이드입니다. 통증이나 질환이 있다면 전문가와 상담하세요.</Notice>
       </ScrollView>
 
+      {/* 지금 할 한 가지 — 떠 있는 탭 바로 위 */}
+      <View style={[s.goWrap, { bottom: tabSpace + 8 }]} pointerEvents="box-none">
+        <PressableScale style={s.go} onPress={() => startSession(dayIdx)} accessibilityLabel={`${day.name} 운동 시작`}>
+          <Ionicons name="play" size={17} color={colors.onRed} />
+          <Text style={s.goTxt}>{day.name} 운동 시작</Text>
+        </PressableScale>
+      </View>
     </SafeAreaView>
   );
 }
@@ -234,61 +241,51 @@ const s = themed(() => StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8,
   },
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   meta: { fontSize: 10, color: colors.muted, letterSpacing: 1 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 },
   emptyTxt: { color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  emptyBtn: { backgroundColor: colors.ink, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 12 },
-  emptyBtnTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
+  emptyBtn: { backgroundColor: colors.red, borderRadius: 26, paddingHorizontal: 22, paddingVertical: 12 },
+  emptyBtnTxt: { color: colors.onRed, fontSize: 14, fontWeight: '700' },
 
-  routineBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginBottom: 12, padding: 14,
-    backgroundColor: colors.panel2, borderRadius: 14,
-    borderWidth: 1, borderColor: colors.line2,
-  },
-  routineName: { fontSize: 14, fontWeight: '700', color: colors.ink },
-  routineSub: { fontSize: 11, color: colors.muted, marginTop: 3 },
-  routineLink: { fontSize: 11.5, color: colors.mid, fontWeight: '600' },
+  topLink: { minHeight: 44, justifyContent: 'center', maxWidth: '60%' },
+  topLinkTxt: { fontSize: 13, fontWeight: '600', color: colors.mid },
 
-  // 가로 스크롤러: ScrollView 기본값이 flexShrink:1 이라 형제에 눌려 잘린다
   pillRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 14 },
-  pillFlex: { flex: 1, minWidth: 0, paddingHorizontal: 4, alignItems: 'center' },
-  pillScroll: { flexGrow: 0, flexShrink: 0 },
-  pillContent: { paddingHorizontal: 16, paddingBottom: 14, gap: 8, flexDirection: 'row' },
   pill: {
-    backgroundColor: colors.panel2, borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderWidth: 1, borderColor: colors.line, alignItems: 'center', minWidth: 80,
+    flex: 1, minWidth: 0, height: 56, borderRadius: 18, paddingHorizontal: 4,
+    backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center',
   },
-  pillActive: { backgroundColor: colors.ink, borderColor: colors.ink },
-  pillTxt: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.5 },
-  pillTxtActive: { color: colors.bg },
-  pillSub: { fontSize: 10.5, color: colors.muted, marginTop: 2 },
-  pillSubActive: { color: colors.onAccentSub },
+  pillActive: { backgroundColor: colors.redSoft, borderColor: colors.red, borderWidth: 1.5 },
+  pillNum: { fontFamily: FONT.num, fontSize: 20, lineHeight: 22, color: colors.muted },
+  pillNumActive: { color: colors.redText },
+  pillSub: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  pillSubActive: { color: colors.ink },
 
   scroll: { flex: 1 },
-  scrollInner: { paddingHorizontal: 16, paddingBottom: 36 },
-  dayHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 },
-  dayName: { fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
-  dayFocus: { fontSize: 12, color: colors.muted, marginTop: 3 },
-  startBtn: { backgroundColor: colors.ink, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 },
-  startBtnTxt: { color: colors.bg, fontSize: 13, fontWeight: '700' },
+  // 아래에 떠 있는 시작 버튼 + 탭만큼 비운다
+  scrollInner: { paddingHorizontal: 16, paddingBottom: 200 },
+  dayHeader: { marginBottom: 10, paddingHorizontal: 4 },
+  dayKicker: { fontFamily: FONT.num, fontSize: 15, color: colors.muted, letterSpacing: 0.3 },
+  dayName: { fontSize: 34, fontWeight: '800', color: colors.ink, letterSpacing: -1.2, lineHeight: 40 },
+  dayFocus: { fontSize: 13, color: colors.mid, marginTop: 4 },
 
   exCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: colors.panel, borderRadius: 16, padding: 12,
-    marginBottom: 10, borderWidth: 1, borderColor: colors.line,
+    flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingHorizontal: 4,
+    borderTopWidth: 1, borderTopColor: colors.line,
   },
-  exThumb: { width: 56, height: 56 },
-  exInfo: { flex: 1 },
-  exOrder: { fontSize: 10, fontWeight: '800', color: colors.muted, letterSpacing: 1 },
-  exName: { fontSize: 15, fontWeight: '600', color: colors.ink, marginTop: 2 },
-  exPart: { fontSize: 11, color: colors.muted, marginTop: 3 },
-  exSetsWrap: { alignItems: 'center', minWidth: 42 },
-  exSetsNum: { fontSize: 20, fontWeight: '800', color: colors.ink, lineHeight: 24 },
-  exSetsSub: { fontSize: 10, color: colors.muted, letterSpacing: 0.5 },
-  exRep: { fontSize: 11, color: colors.mid, marginTop: 2 },
+  exThumb: { width: 44, height: 44 },
+  exInfo: { flex: 1, minWidth: 0 },
+  exName: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  exPart: { fontSize: 12, color: colors.mid, marginTop: 2 },
+  exRx: { fontFamily: FONT.num, fontSize: 19, color: colors.mid },
 
-  regenRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  goWrap: { position: 'absolute', left: 20, right: 20, alignItems: 'center' },
+  go: {
+    width: '100%', maxWidth: 440, height: 54, borderRadius: 27, backgroundColor: colors.red,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  goTxt: { fontSize: 16, fontWeight: '700', color: colors.onRed },
+
+  regenRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
 }));

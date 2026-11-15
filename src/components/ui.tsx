@@ -6,6 +6,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
+import { useTabSpace } from './TabBar';
 
 export function Screen({ children }: { children: ReactNode }) {
   useThemeMode();
@@ -53,14 +54,15 @@ export function TopBar({
   );
 }
 
-export function Body({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+export function Body({ children, style, tab }: { children: ReactNode; style?: StyleProp<ViewStyle>; /** 탭 화면 — 떠 있는 탭만큼 아래를 비운다 */ tab?: boolean }) {
   useThemeMode();
   // 안드로이드 전체 화면(edge-to-edge)에서 맨 아래 안내문이 시스템 내비게이션 바에 가려지지 않게(10/31 피드백 7-6)
   const insets = useSafeAreaInsets();
+  const tabSpace = useTabSpace();
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={[s.scrollInner, { paddingBottom: 40 + insets.bottom }, style]}
+      contentContainerStyle={[s.scrollInner, { paddingBottom: tab ? 24 + tabSpace : 40 + insets.bottom }, style]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
@@ -94,7 +96,7 @@ export function PrimaryBtn({
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
     >
-      {loading ? <ActivityIndicator color={colors.bg} /> : <Text style={s.primaryTxt}>{label}</Text>}
+      {loading ? <ActivityIndicator color={colors.onRed} /> : <Text style={s.primaryTxt}>{label}</Text>}
     </TouchableOpacity>
   );
 }
@@ -147,7 +149,7 @@ const s = themed(() => StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8, gap: 12, minHeight: 56,
   },
-  title: { fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.3, flexShrink: 1 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5, flexShrink: 1 },
   backWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minHeight: 44 },
   back: { fontSize: 20, color: colors.ink, fontWeight: '600' },
   backTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, flexShrink: 1 },
@@ -155,30 +157,31 @@ const s = themed(() => StyleSheet.create({
   scroll: { flex: 1 },
   scrollInner: { paddingHorizontal: 16, paddingBottom: 40 },
   card: {
-    backgroundColor: colors.panel, borderRadius: 18, padding: 18,
+    backgroundColor: colors.panel, borderRadius: 22, padding: 18,
     borderWidth: 1, borderColor: colors.line, marginBottom: 12,
   },
   sectionLabel: {
     fontSize: 10, fontWeight: '800', color: colors.muted,
     letterSpacing: 2, marginBottom: 10, marginTop: 8,
   },
+  // 주 버튼 = 지금 할 한 가지 — 빨강 알약(B3 레드 포인트)
   primary: {
-    backgroundColor: colors.ink, borderRadius: 14,
-    paddingVertical: 15, alignItems: 'center', minHeight: 48,
+    backgroundColor: colors.red, borderRadius: 27,
+    paddingVertical: 16, alignItems: 'center', justifyContent: 'center', minHeight: 54,
   },
-  primaryTxt: { color: colors.bg, fontSize: 15, fontWeight: '700' },
+  primaryTxt: { color: colors.onRed, fontSize: 16, fontWeight: '700' },
   ghost: {
-    borderWidth: 1, borderColor: colors.line2, borderRadius: 14,
-    paddingVertical: 14, alignItems: 'center', minHeight: 48,
+    borderWidth: 1, borderColor: colors.line2, borderRadius: 26,
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center', minHeight: 52,
   },
   ghostTxt: { color: colors.mid, fontSize: 14, fontWeight: '600' },
   off: { opacity: 0.4 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28, gap: 16 },
   emptyTxt: { color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
   emptyBtn: {
-    backgroundColor: colors.ink, borderRadius: 12, paddingHorizontal: 20,
+    backgroundColor: colors.red, borderRadius: 26, paddingHorizontal: 20,
     paddingVertical: 12, minHeight: 44, justifyContent: 'center',
   },
-  emptyBtnTxt: { color: colors.bg, fontSize: 14, fontWeight: '700' },
+  emptyBtnTxt: { color: colors.onRed, fontSize: 14, fontWeight: '700' },
   notice: { fontSize: 11, color: colors.muted, lineHeight: 16, textAlign: 'center', marginTop: 4 },
 }));

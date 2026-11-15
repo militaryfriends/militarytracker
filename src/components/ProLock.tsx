@@ -60,10 +60,10 @@ const s = themed(() => StyleSheet.create({
   title: { fontSize: 14.5, fontWeight: '700', color: colors.ink, flexShrink: 1 },
   desc: { fontSize: 12.5, color: colors.muted, lineHeight: 19, marginTop: 8 },
   btn: {
-    backgroundColor: colors.ink, borderRadius: 12,
+    backgroundColor: colors.red, borderRadius: 26,
     paddingVertical: 12, alignItems: 'center', marginTop: 14,
   },
-  btnTxt: { fontSize: 13.5, fontWeight: '700', color: colors.bg },
+  btnTxt: { fontSize: 13.5, fontWeight: '700', color: colors.onRed },
 }));
 
 export default ProLock;

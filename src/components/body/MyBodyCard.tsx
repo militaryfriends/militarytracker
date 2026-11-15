@@ -203,7 +203,7 @@ function Btn({ title, sub, onPress }: { title: string; sub: string; onPress: () 
 
 const s = themed(() => StyleSheet.create({
   card: {
-    backgroundColor: colors.panel, borderRadius: 18, padding: 16, marginBottom: 14,
+    backgroundColor: colors.panel, borderRadius: 22, padding: 16, marginBottom: 14,
     borderWidth: 1, borderColor: colors.line,
   },
   label: { fontSize: 10, fontWeight: '800', color: colors.muted, letterSpacing: 2 },
@@ -220,7 +220,7 @@ const s = themed(() => StyleSheet.create({
   bar: { height: 8, borderRadius: 4, backgroundColor: colors.panel3, marginTop: 10, overflow: 'hidden' },
   barTick: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: colors.mid },
   barTxt: { fontSize: 11.5, color: colors.muted, marginTop: 5, fontWeight: '600' },
-  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.red },
   btnRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   kgRow: { flexDirection: 'row', marginTop: 12, gap: 8 },
   kgCell: { flex: 1, alignItems: 'center' },
@@ -234,7 +234,7 @@ const s = themed(() => StyleSheet.create({
   },
   btnTitle: { fontSize: 12.5, fontWeight: '800', color: colors.ink },
   btnSub: { fontSize: 11.5, color: colors.muted, marginTop: 2 },
-  cta: { backgroundColor: colors.ink, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
-  ctaTxt: { color: colors.bg, fontSize: 14.5, fontWeight: '800' },
+  cta: { backgroundColor: colors.red, borderRadius: 26, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
+  ctaTxt: { color: colors.onRed, fontSize: 14.5, fontWeight: '800' },
   ctaSub: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 8 },
 }));
