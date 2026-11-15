@@ -8,7 +8,7 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
+  View, Text, TextInput, StyleSheet, FlatList,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -29,6 +29,7 @@ import { setsByPart } from '../../src/utils/stats';
 import {
   askCoach, AIUnavailable, SubscriptionRequired, QuotaExceeded, CoachQuota, CoachMessage,
 } from '../../src/services/aiService';
+import { PressableScale } from '../../src/ui';
 
 /** 처음 화면의 빠른 질문 — 누르면 바로 보낸다 */
 const QUICK = ['내 하루 칼로리 얼마야?', '지금 뭐 먹어야 해?', '운동 후에 뭐 먹을까?', '오늘 운동 뭐 하지?'];
@@ -168,9 +169,9 @@ export default function CoachScreen() {
         title="코치"
         meta={quotaLabel}
         right={chat.length ? (
-          <TouchableOpacity activeOpacity={0.7} onPress={clearChat} hitSlop={10} accessibilityRole="button" accessibilityLabel="대화 지우기">
+          <PressableScale onPress={clearChat} hitSlop={10} accessibilityRole="button" accessibilityLabel="대화 지우기">
             <Text style={s.clearTxt}>지우기</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : undefined}
       />
       {!canCoach ? (
@@ -209,10 +210,10 @@ export default function CoachScreen() {
           {!chat.length && !coachEmpty ? (
             <View style={s.quick}>
               {QUICK.map((q) => (
-                <TouchableOpacity key={q} activeOpacity={0.7} style={s.chip} onPress={() => send(q)}
+                <PressableScale haptic="select" dimDisabled={false} key={q} style={s.chip} onPress={() => send(q)}
                   disabled={chatBusy} accessibilityRole="button" accessibilityLabel={q}>
                   <Text style={s.chipTxt}>{q}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
           ) : null}
@@ -231,7 +232,7 @@ export default function CoachScreen() {
               maxLength={1000}
               accessibilityLabel="코치에게 질문"
             />
-            <TouchableOpacity activeOpacity={0.7}
+            <PressableScale dimDisabled={false}
               style={[s.send, (coachEmpty || !input.trim() || chatBusy) && s.sendOff]}
               onPress={() => send()}
               disabled={coachEmpty || !input.trim() || chatBusy}
@@ -240,7 +241,7 @@ export default function CoachScreen() {
               accessibilityState={{ disabled: coachEmpty || !input.trim() || chatBusy }}
             >
               <Text style={s.sendTxt}>↑</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
           {/* 키보드가 떠 있으면 안내 줄은 숨겨 입력칸을 키보드 바로 위에 둔다 */}
           {kb || kbOpen ? null : <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>}

@@ -7,11 +7,11 @@
  * 고르는 즉시 위의 3D 몸이 바뀐다(저장 전 미리보기). MY 탭 '내 몸' 카드에서 연다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../../src/theme';
-import { Segmented } from '../../src/ui';
+import { Segmented, PressableScale } from '../../src/ui';
 import { Screen, TopBar, PrimaryBtn, EmptyState, useSafeBack } from '../../src/components/ui';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -152,9 +152,9 @@ export default function FitScreen() {
     <Screen>
       <TopBar title="내 몸 맞추기" onBack={handleBack}
         right={anySet ? (
-          <TouchableOpacity onPress={() => setSh({})} hitSlop={10} accessibilityRole="button" accessibilityLabel="전부 보통으로 되돌리기">
+          <PressableScale onPress={() => setSh({})} hitSlop={10} accessibilityRole="button" accessibilityLabel="전부 보통으로 되돌리기">
             <Text style={s.reset}>전부 보통으로</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : undefined} />
       <View style={s.stage}>
         <AvatarView sex={now.sex} cell={now.cell} coord={now.coord} shape={preview} width={avW} badge="지금" live morphMs={260} yawGroup={YAW_GROUP}
@@ -190,10 +190,10 @@ export default function FitScreen() {
         })}
         {lean ? <Text style={s.note}>지금은 살이 적은 몸이라 배 · 하체 칸을 바꿔도 조금만 달라집니다.</Text> : null}
         {waistTip ? (
-          <TouchableOpacity activeOpacity={0.7} style={s.tip} onPress={() => router.push('/profile/edit')} accessibilityRole="button">
+          <PressableScale style={s.tip} onPress={() => router.push('/profile/edit')} accessibilityRole="button">
             <Text style={s.tipTitle}>허리둘레를 넣으면 체지방 추정이 정확해져요</Text>
             <Text style={s.tipSub}>배가 나온 몸은 키 · 체중만으로는 체지방이 낮게 나옵니다. 내 정보에서 허리둘레 입력 ›</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : null}
         <Text style={s.note}>여기서 고른 건 3D 몸의 모양에만 쓰입니다. 체지방률 · 하루 칼로리 · 예상 기간은 바뀌지 않아요.</Text>
       </ScrollView>

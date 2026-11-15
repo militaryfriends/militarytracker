@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, EmptyState, Notice, useSafeBack } from '../../src/components/ui';
@@ -11,6 +11,7 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { prescription, repsText } from '../../src/utils/prescription';
 import { lastRecordOf, personalBest, e1rm, fmtSetDetail } from '../../src/utils/stats';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
 export default function ExerciseDetailScreen() {
   useThemeMode();
@@ -129,10 +130,9 @@ export default function ExerciseDetailScreen() {
               <SectionLabel>같은 부위 다른 종목</SectionLabel>
               <View style={s.relGrid}>
                 {related.map((r) => (
-                  <TouchableOpacity
+                  <PressableScale scaleTo={PRESS_SCALE.card}
                     key={r.id}
                     style={s.relCard}
-                    activeOpacity={0.75}
                     // push 를 반복하면 스택이 무한히 쌓인다 — 같은 화면은 교체한다
                     onPress={() => router.replace(`/exercise/${r.id}`)}
                     accessibilityRole="button"
@@ -140,7 +140,7 @@ export default function ExerciseDetailScreen() {
                   >
                     <ExerciseMedia exId={r.id} rounded={12} style={s.relThumb} dim={0.35} />
                     <Text style={s.relName} numberOfLines={2}>{r.n}</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </View>
             </>

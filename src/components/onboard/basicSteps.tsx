@@ -3,13 +3,14 @@
  * 화면 문구 · 검증은 예전 app/onboard.tsx 와 같다. 단계 번호만 바깥에서 받는다.
  */
 import {
-  ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { colors, themed, useThemeMode } from '../../theme';
 import type { UserProfile } from '../../types';
 import { ProBadge } from '../ProLock';
 import { ROUTINES, routineExCount } from '../../data/routines';
 import { o } from './styles';
+import { PressableScale, PRESS_SCALE } from '../../ui';
 
 export type Update = <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void;
 
@@ -27,14 +28,14 @@ export function StepHead({ num, total, q, desc }: { num: number; total: number; 
 export function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boolean; onPress: () => void }) {
   useThemeMode();
   return (
-    <TouchableOpacity activeOpacity={0.7} style={[o.opt, on && o.optOn]} onPress={onPress}
+    <PressableScale haptic="select" style={[o.opt, on && o.optOn]} onPress={onPress}
       accessibilityRole="radio" accessibilityState={{ selected: on }}>
       <View style={{ flex: 1 }}>
         <Text style={[o.optTxt, on && o.optTxtOn]}>{label}</Text>
         {sub ? <Text style={o.optSub}>{sub}</Text> : null}
       </View>
       <Text style={[o.optDot, on && o.optDotOn]}>{on ? '●' : '○'}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -83,10 +84,10 @@ export function StepEnv({ p, update, num, total }: { p: UserProfile; update: Upd
       <Text style={o.label}>주당 운동 일수</Text>
       <View style={o.chipRow}>
         {([2, 3, 4, 5, 6] as const).map((d) => (
-          <TouchableOpacity activeOpacity={0.7} key={d} style={[o.chip, p.days === d && o.chipOn]} onPress={() => update('days', d)}
+          <PressableScale haptic="select" key={d} style={[o.chip, p.days === d && o.chipOn]} onPress={() => update('days', d)}
             accessibilityRole="radio" accessibilityState={{ selected: p.days === d }}>
             <Text style={[o.chipTxt, p.days === d && o.chipOnTxt]}>주 {d}일</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 
@@ -144,7 +145,7 @@ export function StepRoutine({
       <StepHead num={num} total={total} q="루틴을 선택하세요" desc="선택한 루틴이 내 플랜이 됩니다. 나중에 언제든 바꿀 수 있어요." />
 
       {/* 구독 전엔 잠긴 카드가 화면에서 가장 눈에 띄는 요소가 되지 않도록 고스트 스타일로 낮춘다 */}
-      <TouchableOpacity activeOpacity={0.7}
+      <PressableScale scaleTo={PRESS_SCALE.card} dimDisabled={false}
         style={[canAI ? r.aiCard : r.aiCardLocked, loading === 'ai' && o.btnOff]}
         onPress={onAI}
         disabled={!!loading}
@@ -164,18 +165,18 @@ export function StepRoutine({
             </Text>
           </>
         )}
-      </TouchableOpacity>
+      </PressableScale>
 
       {!recommendedId && (
-        <TouchableOpacity activeOpacity={0.7} style={r.recoLock} onPress={onReco} disabled={!!loading}>
+        <PressableScale dimDisabled={false} style={r.recoLock} onPress={onReco} disabled={!!loading}>
           <Text style={r.recoLockTxt}>내 조건에 맞는 루틴 추천받기</Text>
           <ProBadge />
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       <Text style={o.label}>루틴 라이브러리</Text>
       {list.map((x) => (
-        <TouchableOpacity activeOpacity={0.7}
+        <PressableScale scaleTo={PRESS_SCALE.card} dimDisabled={false}
           key={x.id}
           style={[r.rCard, !!recommendedId && x.id === recommendedId && r.rCardRec, loading === x.id && o.btnOff]}
           onPress={() => onPreset(x.id)}
@@ -196,7 +197,7 @@ export function StepRoutine({
             <Text style={r.rMeta}>{x.place.includes('home') ? '홈트 가능' : '헬스장'}</Text>
           </View>
           {loading === x.id && <ActivityIndicator color={colors.mid} style={{ marginTop: 8 }} />}
-        </TouchableOpacity>
+        </PressableScale>
       ))}
     </View>
   );

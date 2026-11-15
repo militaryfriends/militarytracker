@@ -1,18 +1,39 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
-import { FONT } from '../ui';
+import { CountUpText, DURATION, EASE, FONT, PressableScale, celebrate } from '../ui';
 import { useAppStore } from '../stores/appStore';
 import { exForLog, PART_LABEL } from '../data/exercises';
 import { fmtDuration, fmtVolume, fmtSetDetail } from '../utils/stats';
 
 /** 운동 완료 직후 오버레이 — 그날의 결과와 기록 갱신을 보여준다 */
 export default function SessionSummary() {
+  const summary = useAppStore((st) => st.summary);
+  // 내용은 요약이 생길 때 새로 올라온다(등장 모션 · 숫자 올라오기 · 폭죽이 그때 한 번)
+  return summary ? <SummaryBody /> : null;
+}
+
+function SummaryBody() {
   useThemeMode();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width: winW } = useWindowDimensions();
   const { summary, setSummary } = useAppStore();
+  // 등장: 바탕이 먼저 덮이고, 내용이 아래에서 살짝 올라온다. 저장됐으면 제목 근처에서 폭죽(+ success 진동)
+  const bg = useSharedValue(0);
+  const rise = useSharedValue(0);
+  useEffect(() => {
+    bg.value = withTiming(1, { duration: DURATION.fast });
+    rise.value = withDelay(80, withTiming(1, { duration: DURATION.slow, easing: EASE.out }));
+    const t = setTimeout(() => { if (summary?.saved) celebrate({ x: winW / 2, y: insets.top + 110 }); }, 260);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const bgAnim = useAnimatedStyle(() => ({ opacity: bg.value }));
+  const riseAnim = useAnimatedStyle(() => ({ opacity: rise.value, transform: [{ translateY: (1 - rise.value) * 28 }] }));
 
   if (!summary) return null;
 
@@ -20,13 +41,14 @@ export default function SessionSummary() {
   const skipped = summary.exercises.length - done.length;
 
   return (
-    <View style={[s.root, { paddingTop: insets.top + 24 }]}>
+    <Animated.View style={[s.root, { paddingTop: insets.top + 24 }, bgAnim]}>
+      <Animated.View style={[{ flex: 1 }, riseAnim]}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.topRow}>
           <Text style={s.eyebrow}>{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })} · 운동 완료</Text>
-          <TouchableOpacity activeOpacity={0.7} hitSlop={12} onPress={() => setSummary(null)} accessibilityRole="button" accessibilityLabel="닫고 오늘 화면으로">
+          <PressableScale hitSlop={12} onPress={() => setSummary(null)} accessibilityRole="button" accessibilityLabel="닫고 오늘 화면으로">
             <Text style={s.close}>닫기</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
         <Text style={s.title}>{summary.dayName} 끝.</Text>
 
@@ -39,9 +61,9 @@ export default function SessionSummary() {
         )}
 
         <View style={s.statRow}>
-          <Stat value={`${summary.totalSets}`} unit="세트" />
-          <Stat value={fmtVolume(summary.totalVolume)} unit="총 볼륨" />
-          <Stat value={fmtDuration(summary.durationSec)} unit="소요 시간" />
+          <Stat value={summary.totalSets} format={String} unit="세트" />
+          <Stat value={summary.totalVolume} format={fmtVolume} unit="총 볼륨" />
+          <Stat value={summary.durationSec} format={fmtDuration} unit="소요 시간" />
         </View>
 
         {summary.prIds.length > 0 && (
@@ -88,7 +110,7 @@ export default function SessionSummary() {
       </ScrollView>
 
       <View style={[s.foot, { paddingBottom: insets.bottom + 20 }]}>
-        <TouchableOpacity activeOpacity={0.7}
+        <PressableScale
           style={s.ghost}
           onPress={() => {
             setSummary(null);
@@ -96,25 +118,26 @@ export default function SessionSummary() {
           }}
         >
           <Text style={s.ghostTxt}>{summary.prIds.length ? '개인 기록 보기' : '기록 전체 보기'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.7} style={s.primary} accessibilityRole="button"
+        </PressableScale>
+        <PressableScale style={s.primary} accessibilityRole="button"
           onPress={() => {
             setSummary(null);
             router.push('/tabs/diet');
           }}
         >
           <Text style={s.primaryTxt}>운동 후 식단 보기</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
-function Stat({ value, unit }: { value: string; unit: string }) {
+function Stat({ value, format, unit }: { value: number; format: (v: number) => string; unit: string }) {
   useThemeMode();
   return (
     <View style={s.stat}>
-      <Text style={s.statVal}>{value}</Text>
+      <CountUpText value={value} format={format} style={s.statVal} />
       <Text style={s.statUnit}>{unit}</Text>
     </View>
   );

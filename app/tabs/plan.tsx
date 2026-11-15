@@ -1,7 +1,7 @@
 import { prescription, repsText } from '../../src/utils/prescription';
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,7 +20,7 @@ import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { GhostBtn, Notice } from '../../src/components/ui';
 import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
 import { useTabSpace } from '../../src/components/TabBar';
-import { FONT, PressableScale } from '../../src/ui';
+import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 const SRC_LABEL: Record<string, string> = { AI: 'AI 구성', LOCAL: '자동 구성', PRESET: '프리셋 루틴' };
@@ -128,9 +128,9 @@ export default function PlanScreen() {
       <SafeAreaView style={s.root} edges={['top']}>
         <View style={s.empty}>
           <Text style={s.emptyTxt}>플랜이 없습니다.{'\n'}루틴을 선택해 시작하세요.</Text>
-          <TouchableOpacity activeOpacity={0.7} style={s.emptyBtn} onPress={() => router.push('/routine')}>
+          <PressableScale style={s.emptyBtn} onPress={() => router.push('/routine')}>
             <Text style={s.emptyBtnTxt}>루틴 라이브러리</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </SafeAreaView>
     );
@@ -146,18 +146,18 @@ export default function PlanScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
         <Text style={s.title} accessibilityRole="header">운동</Text>
-        <TouchableOpacity activeOpacity={0.7} hitSlop={8} style={s.topLink}
+        <PressableScale hitSlop={8} style={s.topLink}
           onPress={() => (routine ? router.push(`/routine/${routine.id}`) : router.push('/routine'))}
           accessibilityRole="button" accessibilityLabel={routine ? `${routine.name} 루틴 보기` : '루틴 둘러보기'}>
           <Text style={s.topLinkTxt} numberOfLines={1}>{routine ? routine.name : SRC_LABEL[plan.planSrc] ?? '맞춤 구성'} ›</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
       <WorkoutSwitch value="plan" />
 
       {/* Day 칸 — 한 줄에 다 보이게(가로 스크롤인 걸 몰라 Day5 를 못 찾던 문제, 10/31 피드백 7-9). 고른 날 하나만 빨강 */}
       <View style={s.pillRow}>
         {plan.days.map((d, i) => (
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale
             key={`${d.id}-${i}`}
             style={[s.pill, activeDay === i && s.pillActive]}
             onPress={() => { picked.current = true; setActiveDay(i); }}
@@ -167,7 +167,7 @@ export default function PlanScreen() {
           >
             <Text style={[s.pillNum, activeDay === i && s.pillNumActive]}>{i + 1}</Text>
             <Text style={[s.pillSub, activeDay === i && s.pillSubActive]} numberOfLines={1}>{d.name}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 
@@ -185,10 +185,9 @@ export default function PlanScreen() {
           if (!e) return null;
           const rx = prescription(e, lv);
           return (
-            <TouchableOpacity
+            <PressableScale scaleTo={PRESS_SCALE.card}
               key={`${id}-${i}`}
               style={s.exCard}
-              activeOpacity={0.75}
               onPress={() => router.push(`/exercise/${id}`)}
             >
               <ExerciseMedia exId={id} rounded={12} style={s.exThumb} dim={0.3} />
@@ -199,7 +198,7 @@ export default function PlanScreen() {
                 </Text>
               </View>
               <Text style={s.exRx}>{rx.sets} × {repsText(rx.reps)}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
 

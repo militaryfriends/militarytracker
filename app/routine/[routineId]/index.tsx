@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../../src/theme';
 import { showAlert } from '../../../src/utils/alert';
@@ -11,6 +11,7 @@ import { planFromRoutine } from '../../../src/utils/planner';
 import { savePlan } from '../../../src/services/authService';
 import { useAppStore } from '../../../src/stores/appStore';
 import { useAuthStore } from '../../../src/stores/authStore';
+import { PressableScale, PRESS_SCALE } from '../../../src/ui';
 
 export default function RoutineDetailScreen() {
   useThemeMode();
@@ -71,10 +72,9 @@ export default function RoutineDetailScreen() {
         {routine.days.map((d, i) => {
           const list = exByIds(d.exIds);
           return (
-            <TouchableOpacity
+            <PressableScale haptic="select" scaleTo={PRESS_SCALE.card}
               key={d.id}
               style={s.dayCard}
-              activeOpacity={0.75}
               onPress={() => router.push(`/routine/${routine.id}/${d.id}`)}
             >
               <View style={s.dayHead}>
@@ -96,7 +96,7 @@ export default function RoutineDetailScreen() {
                   </View>
                 )}
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
 

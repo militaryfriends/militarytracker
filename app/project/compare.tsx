@@ -4,7 +4,7 @@
  * 목표 몸 비교는 다음 화면 카드 4장이 맡는다(여기서 목표 몸을 하나로 못 박지 않는다).
  */
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -92,9 +92,9 @@ export default function CompareScreen() {
         <View style={s.accRow}>
           <AccuracyMeter accuracy={a.comp.accuracy} compact />
           {a.comp.accuracy === 'basic' ? (
-            <TouchableOpacity onPress={addWaist} hitSlop={8} accessibilityRole="button">
+            <PressableScale onPress={addWaist} hitSlop={8} accessibilityRole="button">
               <Text style={s.link}>허리둘레를 넣으면 더 정확해져요</Text>
-            </TouchableOpacity>
+            </PressableScale>
           ) : null}
         </View>
       </ScrollView>

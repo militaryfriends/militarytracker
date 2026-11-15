@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Font from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { startSession, signedOut, endSession, resumeSession } from '../src/servi
 import { useAuthStore } from '../src/stores/authStore';
 import { useMediaStore } from '../src/stores/mediaStore';
 import { ThemeProvider, colors, restoreThemePref, useThemeMode } from '../src/theme';
-import { ConfettiLayer, FONT_ASSETS, restoreHaptics } from '../src/ui';
+import { ConfettiLayer, FONT_ASSETS, restoreHaptics, PressableScale } from '../src/ui';
 import MobileFrame from '../src/components/MobileFrame';
 import { BootCurtain } from '../src/components/brand/BootCurtain';
 import { hideSplash, holdSplash } from '../src/components/brand/splash';
@@ -25,9 +25,9 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
       <Text style={eb.title}>화면을 여는 중 문제가 생겼습니다</Text>
       <Text style={eb.sub}>아래 내용을 캡처해 보내 주시면 바로 확인하겠습니다.</Text>
       <Text style={eb.msg} selectable>{String(error?.message ?? error)}</Text>
-      <TouchableOpacity activeOpacity={0.8} style={eb.btn} onPress={() => void retry()} accessibilityRole="button">
+      <PressableScale style={eb.btn} onPress={() => void retry()} accessibilityRole="button">
         <Text style={eb.btnTxt}>다시 시도</Text>
-      </TouchableOpacity>
+      </PressableScale>
     </View>
   );
 }

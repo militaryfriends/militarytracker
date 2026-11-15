@@ -11,7 +11,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View,
+  KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +27,7 @@ import { StepDays, StepFocus, StepLevel, StepNumber, StepPlace, StepSex } from '
 import { StepBody, type BodyErrors } from './StepBody';
 import { o } from './styles';
 import { preload3D } from '../body/avatar3d/Avatar3D';
+import { PressableScale } from '../../ui';
 
 const BODY_PATH: StepKey[] = ['sex', 'age', 'height', 'weight', 'body', 'level', 'place', 'days', 'food', 'focus'];
 /** 계산 · 결과까지 합친 전체 단계 수(진행 막대 · STEP n / 12) */
@@ -178,12 +179,12 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
 
         <View style={[o.foot, { paddingBottom: Math.max(insets.bottom, 18) }]}>
           {idx > 0 || mode !== 'first' ? (
-            <TouchableOpacity activeOpacity={0.7} style={o.backBtn} accessibilityRole="button"
+            <PressableScale style={o.backBtn} accessibilityRole="button"
               onPress={() => (idx > 0 ? go(-1) : router.back())}>
               <Text style={o.backTxt}>{idx > 0 ? '이전' : '닫기'}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           ) : null}
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale dimDisabled={false}
             style={[o.nextBtn, !canNext && o.btnOff]}
             disabled={!canNext}
             onPress={next}
@@ -191,7 +192,7 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
             accessibilityState={{ disabled: !canNext }}
           >
             <Text style={o.nextTxt}>{isLastInput ? '내 몸 계산하기' : key === 'body' && !d.waist.trim() && !d.inbody.on ? '건너뛰기' : '다음'}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

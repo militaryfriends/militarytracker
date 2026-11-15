@@ -3,14 +3,16 @@
  * 화면 위에 떠 있어 내용이 그 밑으로 지나간다 → 탭 화면의 스크롤 끝에는 useTabSpace() 만큼 여백을 둔다.
  * '종목과 자세'(form)는 탭에 없고 운동 탭 안의 한 갈래다 — 그 화면에서도 '운동'이 켜진다.
  * 빨강은 지금 있는 탭 하나에만(레드 포인트 규칙).
+ * 모션: 켜진 탭 뒤의 판이 스프링으로 미끄러져 옮겨 가고(SPRING.snap), 새로 켜진 아이콘이 한 번 튄다. 누르면 살짝 눌린다.
  */
-import type { ComponentProps } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { Tabs } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
-import { haptic } from '../ui';
+import { haptic, PressableScale, PRESS_SCALE, SPRING } from '../ui';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
@@ -27,6 +29,25 @@ const ALIAS: Record<string, string> = { form: 'plan' };
 
 const BAR_H = 62;
 const GAP = 10;
+const PAD = 6; // 바 안쪽 여백 (+ 테두리 1)
+const ITEM_GAP = 2;
+
+/** 탭 아이콘 — 켜지는 순간 한 번 튄다 */
+function TabIcon({ on, name }: { on: boolean; name: IoniconName }) {
+  const k = useSharedValue(1);
+  const was = useRef(on);
+  useEffect(() => {
+    if (on && !was.current) k.value = withSequence(withTiming(0.82, { duration: 70 }), withSpring(1, SPRING.bounce));
+    was.current = on;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [on]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: k.value }] }));
+  return (
+    <Animated.View style={anim}>
+      <Ionicons name={name} size={21} color={on ? colors.redText : colors.mid} />
+    </Animated.View>
+  );
+}
 
 /** 떠 있는 탭이 가리는 높이 — 탭 화면의 스크롤 끝 여백 · 아래 고정 버튼의 bottom 에 쓴다 */
 export function useTabSpace(): number {
@@ -37,19 +58,37 @@ export function useTabSpace(): number {
 export function FloatingTabBar({ state, navigateToTab, hidden }: TabBarProps & { hidden?: boolean }) {
   useThemeMode();
   const insets = useSafeAreaInsets();
-  if (hidden) return null;
   const cur = state.routes[state.index]?.name ?? 'home';
   const active = ALIAS[cur] ?? cur;
+  const idx = Math.max(0, ITEMS.findIndex((it) => it.route === active));
+  // 켜진 탭 뒤의 판 — 바 너비를 재서 칸 하나의 폭 · 자리를 구한다
+  const [barW, setBarW] = useState(0);
+  const slot = barW > 0 ? (barW - (PAD + 1) * 2 - ITEM_GAP * (ITEMS.length - 1)) / ITEMS.length : 0;
+  const x = useSharedValue(0);
+  const placed = useRef(false);
+  useEffect(() => {
+    if (slot <= 0) return;
+    const to = idx * (slot + ITEM_GAP);
+    // 처음 자리를 잡을 때는 바로, 그 뒤로는 미끄러져
+    x.value = placed.current ? withSpring(to, SPRING.snap) : to;
+    placed.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, slot]);
+  const blob = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  if (hidden) return null;
   return (
     <View pointerEvents="box-none" style={[s.wrap, { bottom: Math.max(insets.bottom, 12) }]}>
-      <View style={s.bar} accessibilityRole="tablist">
+      <View style={s.bar} accessibilityRole="tablist" onLayout={(e) => setBarW(e.nativeEvent.layout.width)}>
+        {slot > 0 ? <Animated.View pointerEvents="none" style={[s.blob, { width: slot }, blob]} /> : null}
         {ITEMS.map((it) => {
           const on = it.route === active;
           const route = state.routes.find((r) => r.name === it.route);
           return (
-            <Pressable
+            <PressableScale
               key={it.route}
-              style={[s.item, on && s.itemOn]}
+              haptic={false}
+              scaleTo={PRESS_SCALE.small}
+              style={s.item}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               accessibilityLabel={it.label}
@@ -62,9 +101,9 @@ export function FloatingTabBar({ state, navigateToTab, hidden }: TabBarProps & {
                 }
               }}
             >
-              <Ionicons name={on ? it.on : it.off} size={21} color={on ? colors.redText : colors.mid} />
+              <TabIcon on={on} name={on ? it.on : it.off} />
               <Text style={[s.label, on && s.labelOn]} allowFontScaling={false}>{it.label}</Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
@@ -75,7 +114,7 @@ export function FloatingTabBar({ state, navigateToTab, hidden }: TabBarProps & {
 const s = themed(() => StyleSheet.create({
   wrap: { position: 'absolute', left: 14, right: 14, alignItems: 'center' },
   bar: {
-    width: '100%', maxWidth: 452, height: BAR_H, padding: 6, flexDirection: 'row', gap: 2,
+    width: '100%', maxWidth: 452, height: BAR_H, padding: PAD, flexDirection: 'row', gap: ITEM_GAP,
     borderRadius: BAR_H / 2, backgroundColor: colors.float, borderWidth: 1, borderColor: colors.line2,
     ...Platform.select({
       web: { boxShadow: `0 12px 32px ${colors.shadow}` } as object,
@@ -83,7 +122,7 @@ const s = themed(() => StyleSheet.create({
     }),
   },
   item: { flex: 1, borderRadius: 25, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  itemOn: { backgroundColor: colors.redSoft },
+  blob: { position: 'absolute', left: PAD, top: PAD, bottom: PAD, borderRadius: 25, backgroundColor: colors.redSoft },
   label: { fontSize: 10.5, fontWeight: '600', color: colors.mid },
   labelOn: { color: colors.redText, fontWeight: '700' },
 }));

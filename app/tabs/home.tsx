@@ -1,6 +1,6 @@
 import { prescription, rxText } from '../../src/utils/prescription';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, useWindowDimensions,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ import { exById } from '../../src/data/exercises';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/utils/stats';
 import { HomeHero } from '../../src/components/body/HomeHero';
-import { FONT, PressableScale } from '../../src/ui';
+import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { calcBodyStats } from '../../src/utils/body';
 import { localDate } from '../../src/services/workoutService';
 
@@ -50,9 +50,9 @@ export default function HomeScreen() {
       <SafeAreaView style={s.root} edges={['top']}>
         <View style={s.empty}>
           <Text style={s.emptyTxt}>아직 플랜이 없습니다.</Text>
-          <TouchableOpacity activeOpacity={0.7} style={s.emptyBtn} onPress={() => router.push('/routine')}>
+          <PressableScale style={s.emptyBtn} onPress={() => router.push('/routine')}>
             <Text style={s.emptyBtnTxt}>루틴 선택하기</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </SafeAreaView>
     );
@@ -116,9 +116,9 @@ export default function HomeScreen() {
             <Text style={s.sheetMeta}><Text style={s.sheetNum}>{doneCount}</Text> / 2 완료</Text>
           </View>
           <View style={s.mainRow}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push(`/exercise/${day.ids[0]}`)} accessibilityLabel="첫 종목 자세 보기">
+            <PressableScale onPress={() => router.push(`/exercise/${day.ids[0]}`)} accessibilityLabel="첫 종목 자세 보기">
               <ExerciseMedia exId={day.ids[0]} rounded={13} style={s.mainThumb} dim={0.2} />
-            </TouchableOpacity>
+            </PressableScale>
             <View style={s.mainTxt}>
               <Text style={s.mainName} numberOfLines={1}>{day.name}</Text>
               <Text style={s.mainSub} numberOfLines={1}>
@@ -144,9 +144,8 @@ export default function HomeScreen() {
         </View>
 
         {/* 이번 주 — 탭하면 운동 기록으로 */}
-        <TouchableOpacity
+        <PressableScale scaleTo={PRESS_SCALE.card}
           style={s.card}
-          activeOpacity={0.8}
           onPress={() => router.push('/history')}
           accessibilityRole="button"
           accessibilityLabel="이번 주 운동 현황, 운동 기록 보기"
@@ -167,7 +166,7 @@ export default function HomeScreen() {
           <Text style={s.weekNote}>
             {weekSets}세트{streakDays > 1 ? ` · ${streakDays}일 연속` : ''}{weekDone >= weekGoal ? ' · 이번 주 목표 달성' : ''} · 기록 보기 ›
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* 오늘의 팁 — 유료 'AI 코치' 와 이름을 겹치지 않는다 */}
         <View style={s.card}>
@@ -182,10 +181,9 @@ export default function HomeScreen() {
         </View>
         <View style={s.grid}>
           {FEED.map((f) => (
-            <TouchableOpacity
+            <PressableScale scaleTo={PRESS_SCALE.card}
               key={f.id}
               style={s.gridCard}
-              activeOpacity={0.75}
               onPress={() => router.push(`/library/${f.id}`)}
             >
               <View style={s.gridThumb}>
@@ -197,7 +195,7 @@ export default function HomeScreen() {
               </View>
               <Text style={s.gridName} numberOfLines={2}>{f.n}</Text>
               <Text style={s.gridPart}>{f.part}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
       </ScrollView>
@@ -209,7 +207,7 @@ export default function HomeScreen() {
 function TodayRow({ done, title, sub, onPress }: { done: boolean; title: string; sub: string; onPress: () => void }) {
   useThemeMode();
   return (
-    <TouchableOpacity activeOpacity={0.7} style={s.todayRow} onPress={onPress} accessibilityRole="button"
+    <PressableScale scaleTo={PRESS_SCALE.card} style={s.todayRow} onPress={onPress} accessibilityRole="button"
       accessibilityLabel={`${title}, ${sub}${done ? ', 완료' : ''}`}>
       <View style={[s.tick, done && s.tickOn]}>
         {done ? <Ionicons name="checkmark" size={15} color={colors.bg} /> : null}
@@ -219,7 +217,7 @@ function TodayRow({ done, title, sub, onPress }: { done: boolean; title: string;
         <Text style={s.todaySub} numberOfLines={1}>{sub}</Text>
       </View>
       <Ionicons name="chevron-forward" size={17} color={colors.muted} />
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

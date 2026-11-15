@@ -1,12 +1,13 @@
 import { ReactNode } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ActivityIndicator,
   ScrollView, StyleProp, ViewStyle, TextStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { useTabSpace } from './TabBar';
+import { PressableScale } from '../ui';
 
 export function Screen({ children }: { children: ReactNode }) {
   useThemeMode();
@@ -36,7 +37,7 @@ export function TopBar({
   return (
     <View style={s.topbar}>
       {onBack ? (
-        <TouchableOpacity activeOpacity={0.7}
+        <PressableScale
           onPress={onBack}
           hitSlop={12}
           style={s.backWrap}
@@ -45,7 +46,7 @@ export function TopBar({
         >
           <Text style={s.back}>←</Text>
           <Text style={s.backTitle} numberOfLines={1} maxFontSizeMultiplier={1.4}>{title}</Text>
-        </TouchableOpacity>
+        </PressableScale>
       ) : (
         <Text style={s.title} accessibilityRole="header" maxFontSizeMultiplier={1.4}>{title}</Text>
       )}
@@ -87,17 +88,16 @@ export function PrimaryBtn({
   useThemeMode();
   const off = loading || disabled;
   return (
-    <TouchableOpacity
+    <PressableScale dimDisabled={false}
       style={[s.primary, off && s.off, style]}
       onPress={onPress}
       disabled={off}
-      activeOpacity={0.8}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
     >
       {loading ? <ActivityIndicator color={colors.onRed} /> : <Text style={s.primaryTxt}>{label}</Text>}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -107,17 +107,16 @@ export function GhostBtn({
   useThemeMode();
   const off = loading || disabled;
   return (
-    <TouchableOpacity
+    <PressableScale dimDisabled={false}
       style={[s.ghost, off && s.off, style]}
       onPress={onPress}
       disabled={off}
-      activeOpacity={0.8}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
     >
       {loading ? <ActivityIndicator color={colors.mid} /> : <Text style={s.ghostTxt}>{label}</Text>}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -130,9 +129,9 @@ export function EmptyState({
     <View style={s.empty}>
       <Text style={s.emptyTxt}>{text}</Text>
       {cta && onCta ? (
-        <TouchableOpacity style={s.emptyBtn} onPress={onCta} activeOpacity={0.8} accessibilityRole="button">
+        <PressableScale style={s.emptyBtn} onPress={onCta} accessibilityRole="button">
           <Text style={s.emptyBtnTxt}>{cta}</Text>
-        </TouchableOpacity>
+        </PressableScale>
       ) : null}
     </View>
   );

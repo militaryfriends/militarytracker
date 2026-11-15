@@ -4,10 +4,10 @@
  * 허리는 권장(건너뛸 수 있다), 인바디는 토글(기본 꺼짐).
  */
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../../theme';
-import { SPRING, haptic } from '../../ui';
+import { SPRING, haptic, PressableScale } from '../../ui';
 import { ACCURACY_LABEL, type Accuracy } from '../../utils/bodyComp';
 import { parseNum } from '../../utils/body';
 import type { InbodyDraft } from '../../stores/onboardDraft';
@@ -87,9 +87,9 @@ export function StepBody({
 
       <View style={s.labelRow}>
         <Text style={o.label}>허리둘레 (cm) · 권장</Text>
-        <TouchableOpacity onPress={() => setGuide(true)} hitSlop={10} accessibilityRole="button">
+        <PressableScale onPress={() => setGuide(true)} hitSlop={10} accessibilityRole="button">
           <Text style={s.link}>재는 법</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
       <TextInput
         style={[o.input, errors.waist && o.inputErr]}
@@ -147,18 +147,18 @@ export function StepBody({
           <View style={s.inchRow}>
             <TextInput style={[o.input, { flex: 1 }]} placeholder="예: 32" placeholderTextColor={colors.muted}
               keyboardType="decimal-pad" value={inch} onChangeText={setInch} accessibilityLabel="바지 허리 사이즈 (인치)" />
-            <TouchableOpacity
+            <PressableScale dimDisabled={false}
               style={[s.inchBtn, !(inchCm > 0) && o.btnOff]}
               disabled={!(inchCm > 0)}
               onPress={() => { onWaist(String(Math.round(inchCm * 10) / 10)); setGuide(false); setInch(''); }}
               accessibilityRole="button"
             >
               <Text style={s.inchBtnTxt}>{inchCm > 0 ? `${Math.round(inchCm * 10) / 10}cm 넣기` : 'cm 로 바꾸기'}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
-          <TouchableOpacity style={o.textBtn} onPress={() => setGuide(false)} accessibilityRole="button">
+          <PressableScale style={o.textBtn} onPress={() => setGuide(false)} accessibilityRole="button">
             <Text style={[o.textBtnTxt, { textDecorationLine: 'none' }]}>닫기</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </Modal>
     </View>

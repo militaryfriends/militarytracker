@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, EmptyState, useSafeBack } from '../../src/components/ui';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { EX, Part, PART_LABEL, PART_ORDER } from '../../src/data/exercises';
 import { personalBest, e1rm, setScore, fmtDateKo, fmtSetDetail } from '../../src/utils/stats';
 import { WorkoutLog, SetDetail, UserStats } from '../../src/types';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
 interface RecordRow {
   id: string;
@@ -85,7 +86,7 @@ export default function RecordsScreen() {
 
       <View style={s.pillWrap}>
         {(['전체' as const, ...parts]).map((item) => (
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale
             key={String(item)}
             style={[s.pill, part === item && s.pillOn]}
             onPress={() => setPart(item)}
@@ -93,7 +94,7 @@ export default function RecordsScreen() {
             <Text style={[s.pillTxt, part === item && s.pillTxtOn]}>
               {item === '전체' ? '전체' : PART_LABEL[item]}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 
@@ -111,9 +112,8 @@ export default function RecordsScreen() {
           </Text>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <PressableScale scaleTo={PRESS_SCALE.card}
             style={s.row}
-            activeOpacity={0.75}
             onPress={() => router.push(`/exercise/${item.id}`)}
           >
             <View style={{ flex: 1 }}>
@@ -127,7 +127,7 @@ export default function RecordsScreen() {
               <Text style={s.best}>{item.best.w > 0 ? `${item.best.w}kg × ${item.best.r}` : fmtSetDetail(item.best)}</Text>
               <Text style={s.est}>{item.best.w > 0 ? `추정 1RM ${item.est1rm}kg` : '맨몸 · 최고 기록'}</Text>
             </View>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       />
     </Screen>

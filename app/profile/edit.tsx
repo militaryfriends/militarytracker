@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform,
+  View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
@@ -12,6 +12,7 @@ import { saveProfile } from '../../src/services/authService';
 import { calcBodyStats, effectiveWeight, validateProfile } from '../../src/utils/body';
 import { UserProfile } from '../../src/types';
 import { STRATEGIES, STRATEGY, legacyGoalOf, strategyOfGoal } from '../../src/utils/projection';
+import { PressableScale } from '../../src/ui';
 
 export default function ProfileEditScreen() {
   useThemeMode();
@@ -136,20 +137,20 @@ export default function ProfileEditScreen() {
           <Text style={s.label}>주당 운동 일수</Text>
           <View style={s.chipRow}>
             {([2, 3, 4, 5, 6] as const).map((d) => (
-              <TouchableOpacity activeOpacity={0.7} key={d} style={[s.chip, p.days === d && s.chipOn]} onPress={() => update('days', d)}>
+              <PressableScale haptic="select" key={d} style={[s.chip, p.days === d && s.chipOn]} onPress={() => update('days', d)}>
                 <Text style={[s.chipTxt, p.days === d && s.chipOnTxt]}>주 {d}일</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
           <Text style={s.label}>운동 경력</Text>
           <View style={s.chipRow}>
             {([1, 2, 3] as const).map((lv) => (
-              <TouchableOpacity activeOpacity={0.7} key={lv} style={[s.chip, p.level === lv && s.chipOn]} onPress={() => update('level', lv)}>
+              <PressableScale haptic="select" key={lv} style={[s.chip, p.level === lv && s.chipOn]} onPress={() => update('level', lv)}>
                 <Text style={[s.chipTxt, p.level === lv && s.chipOnTxt]}>
                   {{ 1: '입문', 2: '중급', 3: '상급' }[lv]}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
@@ -159,9 +160,9 @@ export default function ProfileEditScreen() {
               ['convenience', '편의점'], ['self', '자취 요리'],
               ['family', '집밥'], ['out', '외식'],
             ] as const).map(([k, label]) => (
-              <TouchableOpacity activeOpacity={0.7} key={k} style={[s.chip, p.food === k && s.chipOn]} onPress={() => update('food', k)}>
+              <PressableScale haptic="select" key={k} style={[s.chip, p.food === k && s.chipOn]} onPress={() => update('food', k)}>
                 <Text style={[s.chipTxt, p.food === k && s.chipOnTxt]}>{label}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
@@ -214,13 +215,13 @@ function Field({
 function Opt({ label, sub, on, onPress }: { label: string; sub?: string; on: boolean; onPress: () => void }) {
   useThemeMode();
   return (
-    <TouchableOpacity activeOpacity={0.7} style={[s.opt, on && s.optOn]} onPress={onPress}>
+    <PressableScale haptic="select" style={[s.opt, on && s.optOn]} onPress={onPress}>
       <View style={{ flex: 1 }}>
         <Text style={[s.optTxt, on && s.optTxtOn]}>{label}</Text>
         {sub ? <Text style={s.optSub}>{sub}</Text> : null}
       </View>
       <Text style={[s.optDot, on && s.optDotOn]}>{on ? '●' : '○'}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

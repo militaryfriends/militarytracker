@@ -1,7 +1,7 @@
 import { analyzeBody } from '../src/utils/bodyAnalysis';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Linking,
+  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors, themed, useThemeMode } from '../src/theme';
@@ -22,6 +22,7 @@ import { SUB_STATUS_LABEL } from '../src/utils/subscription';
 import type { Subscription } from '../src/types';
 import { useAppStore } from '../src/stores/appStore';
 import { ProjectCard } from '../src/components/body/ProjectCard';
+import { PressableScale, PRESS_SCALE } from '../src/ui';
 
 /** '코치' → '코치는', '플랜' → '플랜은' — 받침 유무로 조사를 고른다 */
 function eun(word: string): string {
@@ -144,9 +145,9 @@ export default function SubscribeScreen() {
               <Text style={s.activeSub}>결제가 실패했습니다. 스토어의 결제 수단을 확인해 주세요 — 확인되는 동안은 그대로 사용합니다.</Text>
             )}
             {manageUrl ? (
-              <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL(manageUrl)} hitSlop={8} accessibilityRole="link">
+              <PressableScale onPress={() => Linking.openURL(manageUrl)} hitSlop={8} accessibilityRole="link">
                 <Text style={s.manageTxt}>구독 관리 · 해지</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ) : null}
           </View>
         ) : (
@@ -181,10 +182,9 @@ export default function SubscribeScreen() {
             {products.map((p) => {
               const on = picked === p.id;
               return (
-                <TouchableOpacity
+                <PressableScale scaleTo={PRESS_SCALE.card}
                   key={p.id}
                   style={[s.plan, on && s.planOn]}
-                  activeOpacity={0.8}
                   onPress={() => setPicked(p.id)}
                 >
                   <View style={{ flex: 1 }}>
@@ -197,7 +197,7 @@ export default function SubscribeScreen() {
                   <Text style={[s.planPrice, on && s.planPriceOn]}>
                     {p.price}<Text style={s.planPeriod}>{p.period}</Text>
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
 
@@ -217,7 +217,7 @@ export default function SubscribeScreen() {
         )}
 
         {!pro && trialAvailable && (
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale dimDisabled={false}
             style={[s.trialBtn, !storeReady && s.trialBtnPrimary]}
             disabled={!!busy}
             onPress={() => run('trial', startTrial, `${TRIAL_DAYS}일 무료 체험이 시작되었습니다.`)}
@@ -226,7 +226,7 @@ export default function SubscribeScreen() {
             {busy === 'trial'
               ? <ActivityIndicator color={storeReady ? colors.ink : colors.bg} />
               : <Text style={[s.trialTxt, !storeReady && s.trialTxtPrimary]}>{chosen ? `${TRIAL_DAYS}일 무료로 프로젝트 시작하기` : `${TRIAL_DAYS}일 무료로 먼저 써보기`}</Text>}
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         {!pro && !storeReady && (
@@ -252,7 +252,7 @@ export default function SubscribeScreen() {
                 autoCorrect={false}
                 accessibilityLabel="프로모션 코드 또는 휴대폰 번호"
               />
-              <TouchableOpacity activeOpacity={0.7}
+              <PressableScale dimDisabled={false}
                 style={[s.codeBtn, !code.trim() && s.codeBtnOff]}
                 disabled={!!busy || !code.trim()}
                 onPress={() => run('promo', () => redeemPromo(code), '프리미엄이 적용되었습니다.')}
@@ -262,20 +262,20 @@ export default function SubscribeScreen() {
                 {busy === 'promo'
                   ? <ActivityIndicator color={colors.bg} />
                   : <Text style={s.codeBtnTxt}>등록</Text>}
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </>
         )}
 
         {storeReady && (
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale dimDisabled={false}
             style={s.restoreBtn}
             disabled={!!busy}
             onPress={() => run('restore', restore, '구독 정보를 불러왔습니다.', '복원할 구독이 없거나 연결에 실패했습니다.')}
             accessibilityRole="button"
           >
             <Text style={s.restoreTxt}>구매 복원</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         <Text style={s.notice}>
@@ -284,13 +284,13 @@ export default function SubscribeScreen() {
             : '구독은 기간 만료 24시간 전까지 해지하지 않으면 자동으로 갱신됩니다. 해지는 기기의 구독 관리 화면에서 언제든 할 수 있습니다.'}
         </Text>
         <View style={s.legalRow}>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL(LEGAL.terms)} hitSlop={10} accessibilityRole="link">
+          <PressableScale onPress={() => Linking.openURL(LEGAL.terms)} hitSlop={10} accessibilityRole="link">
             <Text style={s.legalLink}>이용약관</Text>
-          </TouchableOpacity>
+          </PressableScale>
           <Text style={s.legalDot}>·</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL(LEGAL.privacy)} hitSlop={10} accessibilityRole="link">
+          <PressableScale onPress={() => Linking.openURL(LEGAL.privacy)} hitSlop={10} accessibilityRole="link">
             <Text style={s.legalLink}>개인정보처리방침</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </Body>
     </Screen>

@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, useSafeBack } from '../../src/components/ui';
@@ -6,6 +6,7 @@ import { ROUTINES, recommendRoutine, routineExCount } from '../../src/data/routi
 import { useAppStore } from '../../src/stores/appStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
 export default function RoutineListScreen() {
   useThemeMode();
@@ -29,20 +30,19 @@ export default function RoutineListScreen() {
         </Text>
 
         {!canReco && (
-          <TouchableOpacity activeOpacity={0.7} style={s.recoLock} onPress={() => router.push('/subscribe?f=routine_reco')}>
+          <PressableScale style={s.recoLock} onPress={() => router.push('/subscribe?f=routine_reco')}>
             <Text style={s.recoLockTxt}>내 조건에 맞는 루틴 추천받기</Text>
             <ProBadge />
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         <SectionLabel>전체 루틴 {ROUTINES.length}개</SectionLabel>
         {ROUTINES.map((r) => {
           const isCurrent = plan?.routineId === r.id;
           return (
-            <TouchableOpacity
+            <PressableScale scaleTo={PRESS_SCALE.card}
               key={r.id}
               style={[s.card, isCurrent && s.cardCurrent]}
-              activeOpacity={0.75}
               onPress={() => router.push(`/routine/${r.id}`)}
             >
               <View style={s.head}>
@@ -70,7 +70,7 @@ export default function RoutineListScreen() {
                 ))}
                 <View style={s.tag}><Text style={s.tagTxt}>{routineExCount(r)}종목</Text></View>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </Body>

@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { Feature, FEATURE_LABEL, FEATURE_DESC } from '../config/entitlements';
+import { PressableScale } from '../ui';
 
 /** 목록·헤더 옆에 붙이는 작은 PRO 표식 */
 export function ProBadge({ style }: { style?: StyleProp<ViewStyle> }) {
@@ -36,9 +37,9 @@ export function ProLock({
         <ProBadge />
       </View>
       <Text style={s.desc}>{desc ?? FEATURE_DESC[feature]}</Text>
-      <TouchableOpacity activeOpacity={0.7} style={s.btn} onPress={() => router.push(`/subscribe?f=${feature}`)}>
+      <PressableScale style={s.btn} onPress={() => router.push(`/subscribe?f=${feature}`)}>
         <Text style={s.btnTxt}>{cta}</Text>
-      </TouchableOpacity>
+      </PressableScale>
     </View>
   );
 }

@@ -1,13 +1,16 @@
 import { prescription, repsText, rxText } from '../utils/prescription';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList,
+  View, Text, TextInput, StyleSheet, ScrollView, FlatList,
   Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Keyboard, PanResponder,
 } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolation, cancelAnimation, interpolate, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming,
+} from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../theme';
-import { FONT } from '../ui';
+import { FONT, PressableScale, PRESS_SCALE, SPRING, haptic } from '../ui';
 import { showAlert } from '../utils/alert';
 import { useAppStore } from '../stores/appStore';
 import { useAuthStore } from '../stores/authStore';
@@ -26,6 +29,46 @@ function buzz() {
   }
   const nav = (globalThis as { navigator?: { vibrate?: (p: number[]) => void } }).navigator;
   try { nav?.vibrate?.([220, 120, 220]); } catch { /* unsupported */ }
+}
+
+/** 접었을 때 영상 줄의 높이 · 작은 영상 칸 */
+const COMPACT_H = 72;
+const THUMB = 56;
+
+/**
+ * 영상은 화면 폭 1:1 이 기본 — 다만 아래에 지난 기록 + 세트 2줄은 늘 보이게 남은 높이로 줄인다.
+ * 476 = 머리줄 68 + 종목 탭 76 + 휴식칸 · 이전/다음 · 여백 156 + 지난 기록 · 세트 2줄 168 + 여유 8. 키패드가 뜨면 작게.
+ */
+function mediaSizeFor(winW: number, winH: number, insetV: number, kb: boolean) {
+  const roomH = winH - insetV - 476;
+  return kb
+    ? Math.round(Math.min(winW - 32, winH * 0.16))
+    : Math.round(Math.max(180, Math.min(winW - 32, 480, roomH)));
+}
+
+/** 세트 완료 ✓ — 누르면 눌렸다 튕기고, 완료되는 순간 톡 튀어나온다 */
+function SetCheck({ done, now, label, onPress, onLongPress }: {
+  done: boolean; now: boolean; label: string; onPress: () => void; onLongPress: () => void;
+}) {
+  useThemeMode();
+  const pop = useSharedValue(1);
+  const was = useRef(done);
+  useEffect(() => {
+    if (done && !was.current) pop.value = withSequence(withTiming(0.72, { duration: 70 }), withSpring(1, SPRING.pop));
+    was.current = done;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  return (
+    <PressableScale haptic={false} scaleTo={PRESS_SCALE.small}
+      onPress={onPress} onLongPress={onLongPress}
+      accessibilityRole="checkbox" accessibilityState={{ checked: done }}
+      accessibilityLabel={label} accessibilityHint="길게 누르면 세트를 삭제합니다">
+      <Animated.View style={[s.ck, done && s.ckDone, now && s.ckNow, anim]}>
+        <Text style={[s.ckTxt, done && s.ckTxtDone, now && s.ckTxtNow]}>{done || now ? '✓' : '○'}</Text>
+      </Animated.View>
+    </PressableScale>
+  );
 }
 
 export default function SessionPlayer() {
@@ -69,25 +112,102 @@ export default function SessionPlayer() {
 
   // 원형 휴식 타이머의 전체 길이 — 휴식이 시작될 때(+15초로 늘리면 그만큼) 잡는다
   const restTotal = useRef(0);
-  // 시트 올리기 — 손잡이를 위로 끌거나 누르면 영상이 한 줄로 접히고 세트 칸이 넓어진다(아래로 끌면 다시 펼침).
-  // 웹(마우스 끌기)에서도 같은 손잡이로 된다.
+  /**
+   * 시트 올리기 — 손가락을 따라 움직이고, 놓으면 가까운 자리(영상 펼침 0 · 세트 칸 올림 1)로 스프링처럼 붙는다.
+   *  · 끌 수 있는 자리: 영상, 손잡이, 휴식 칸(시트 윗부분 전체). 손잡이는 눌러도 오르내린다.
+   *  · 빠르게 튕기면 그 방향으로, 천천히 놓으면 절반을 넘었는지로 정한다. 끝을 넘겨 끌면 고무줄처럼 덜 따라온다.
+   *  · 영상은 접히는 동안 계속 재생되며 왼쪽 위 작은 칸으로 줄어든다(같은 플레이어 — 다시 받지 않는다).
+   * 웹(마우스 · 터치)도 같은 코드.
+   */
+  const pos = useSharedValue(0);
+  const posJs = useRef(0); // JS 쪽 사본 — 끌기 시작 위치 · 놓을 때 판단
+  const dragFrom = useRef(0);
+  const movedAt = useRef(0);
+  const travel = useRef(1); // 다 올렸을 때 시트 윗변이 움직이는 거리(px)
   const [up, setUp] = useState(false);
-  const grabPan = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderRelease: (_e, g) => {
-      if (g.dy < -18) setUp(true);
-      else if (g.dy > 18) setUp(false);
-      else if (Math.abs(g.dy) < 6 && Math.abs(g.dx) < 6) setUp((v) => !v);
-    },
-  }), []);
+  const upRef = useRef(false);
+  const settle = useRef((to: 0 | 1, velocity = 0) => {
+    posJs.current = to;
+    pos.value = withSpring(to, { ...SPRING.snap, velocity });
+    if (upRef.current !== (to === 1)) {
+      upRef.current = to === 1;
+      haptic.select();
+      setUp(to === 1);
+    }
+  }).current;
+  const sheetPan = useMemo(() => {
+    const vertical = (g: { dx: number; dy: number }) => Math.abs(g.dy) > 5 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2;
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => vertical(g),
+      // 휴식 칸의 버튼 · 영상 위에서 시작해도 세로로 끌면 시트가 가져간다(누르기는 그대로 버튼에게)
+      onMoveShouldSetPanResponderCapture: (_e, g) => vertical(g),
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        cancelAnimation(pos);
+        dragFrom.current = Math.max(0, Math.min(1, posJs.current));
+      },
+      onPanResponderMove: (_e, g) => {
+        const raw = dragFrom.current - g.dy / travel.current;
+        const v = raw < 0 ? raw * 0.22 : raw > 1 ? 1 + (raw - 1) * 0.22 : raw;
+        posJs.current = v;
+        pos.value = v;
+        movedAt.current = Date.now();
+      },
+      onPanResponderRelease: (_e, g) => {
+        // 멈췄다 놓으면 자리로, 튕기듯 놓으면(끈 방향과 같은 쪽일 때만) 속도로 정한다
+        const vy = Date.now() - movedAt.current > 90 ? 0 : g.vy;
+        const to = vy < -0.35 && g.dy < 0 ? 1 : vy > 0.35 && g.dy > 0 ? 0 : posJs.current > 0.5 ? 1 : 0;
+        settle(to, (-vy * 1000) / travel.current);
+      },
+      onPanResponderTerminate: () => settle(posJs.current > 0.5 ? 1 : 0),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 운동을 시작하면 화면이 아래에서 올라온다
+  const enter = useSharedValue(0);
+  useEffect(() => {
+    enter.value = withSpring(1, SPRING.snap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const rootAnim = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - enter.value) * winH }] }));
+
+  // 영상 칸의 크기 — 아래 본문과 같은 계산(훅은 조건문 위에 있어야 해서 여기서 미리)
+  const mediaSize = mediaSizeFor(winW, winH, insets.top + insets.bottom, kb);
+  travel.current = Math.max(1, mediaSize - COMPACT_H);
+  const thumbK = THUMB / mediaSize;
+  const boxAnim = useAnimatedStyle(() => ({
+    // 끝을 조금 넘겨도(고무줄) 높이는 따라가게 — 영상 · 글자는 0~1 안에서만 움직인다
+    height: mediaSize + (COMPACT_H - mediaSize) * pos.value,
+  }), [mediaSize]);
+  const vidAnim = useAnimatedStyle(() => {
+    const t = Math.max(0, Math.min(1, pos.value));
+    return {
+      borderRadius: interpolate(t, [0, 1], [20, 12 / thumbK]),
+      transform: [
+        { translateX: (16 + THUMB / 2 - winW / 2) * t },
+        { translateY: (8 + THUMB / 2 - mediaSize / 2) * t },
+        { scale: 1 + (thumbK - 1) * t },
+      ],
+    };
+  }, [mediaSize, winW, thumbK]);
+  const metaAnim = useAnimatedStyle(() => ({ opacity: interpolate(pos.value, [0, 0.35], [1, 0], Extrapolation.CLAMP) }));
+  const compactAnim = useAnimatedStyle(() => ({
+    opacity: interpolate(pos.value, [0.55, 1], [0, 1], Extrapolation.CLAMP),
+    transform: [{ translateY: interpolate(pos.value, [0.55, 1], [8, 0], Extrapolation.CLAMP) }],
+  }));
+  const grabAnim = useAnimatedStyle(() => ({
+    // 손잡이 막대 — 끄는 동안 살짝 넓어진다
+    transform: [{ scaleX: interpolate(Math.abs(pos.value - Math.round(pos.value)), [0, 0.5], [1, 1.35], Extrapolation.CLAMP) }],
+  }));
+
   if (rest > 0 && (!wasResting.current || rest > restTotal.current)) restTotal.current = rest;
 
   // 휴식이 끝나는 순간 알린다
   useEffect(() => {
     if (rest > 0) {
       wasResting.current = true;
+      if (rest <= 3) haptic.select(); // 마지막 3초
       return;
     }
     if (wasResting.current) {
@@ -108,12 +228,6 @@ export default function SessionPlayer() {
   const anyRecorded = session.data.some((x) => x.sets.some((t) => t.done));
   const last = lastSetsOf(logs, cur.id);
   const usedKey = session.data.map((x) => x.id).join(',');
-  // 영상은 화면 폭 1:1 이 기본 — 다만 아래에 지난 기록 + 세트 2줄은 늘 보이게 남은 높이로 줄인다.
-  // 476 = 머리줄 68 + 종목 탭 76 + 휴식칸 · 이전/다음 · 여백 156 + 지난 기록 · 세트 2줄 168 + 여유 8. 키패드가 뜨면 작게.
-  const roomH = winH - insets.top - insets.bottom - 476;
-  const mediaSize = kb
-    ? Math.round(Math.min(winW - 32, winH * 0.16))
-    : Math.round(Math.max(180, Math.min(winW - 32, 480, roomH)));
   const rx = e ? prescription(e, lv) : null;
 
   /**
@@ -129,9 +243,13 @@ export default function SessionPlayer() {
       if (!w && ref && ref.w > 0) { w = String(ref.w); setVal(si, 'w', w); }
       if (!r && ref && ref.r > 0) { r = String(ref.r); setVal(si, 'r', r); }
       if (!w && !r) {
+        haptic.error();
         showAlert('세트 입력', '무게 또는 횟수를 입력한 뒤 완료할 수 있습니다.');
         return;
       }
+      haptic.set();
+    } else {
+      haptic.tap();
     }
     toggleSet(si);
   }
@@ -197,10 +315,10 @@ export default function SessionPlayer() {
   }
 
   return (
-    <View style={s.root}>
+    <Animated.View style={[s.root, rootAnim]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity activeOpacity={0.7}
+        <PressableScale
           style={s.closeBtn}
           onPress={handleClose}
           disabled={saving}
@@ -209,7 +327,7 @@ export default function SessionPlayer() {
           accessibilityLabel={anyRecorded ? '운동 종료하고 저장' : '운동 취소'}
         >
           <Text style={s.closeTxt}>✕</Text>
-        </TouchableOpacity>
+        </PressableScale>
         <View style={s.headerCenter}>
           <Text style={s.headerDay} maxFontSizeMultiplier={1.3}>{session.dayName}</Text>
           <Text style={s.headerProgress} maxFontSizeMultiplier={1.3}>
@@ -217,49 +335,46 @@ export default function SessionPlayer() {
           </Text>
         </View>
         {/* 마지막 종목이 아니어도 언제든 끝낼 수 있게 — 예전엔 ✕ 가 유일한 완료 경로였다 */}
-        <TouchableOpacity activeOpacity={0.7}
-          style={[s.finishBtn, !anyRecorded && s.navOff]}
+        <PressableScale
+          style={s.finishBtn}
           onPress={handleFinish}
-          disabled={saving || !anyRecorded}
+          disabled={!anyRecorded}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="운동 완료하고 저장"
         >
           {saving ? <ActivityIndicator color={colors.ink} size="small" /> : <Text style={s.finishTxt}>완료</Text>}
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
-      {/* 영상은 1:1 로 위에 고정, 자동 재생 — 아래 세트 기록만 스크롤된다(10/31 피드백 4절). 종목 탭을 누르면 영상이 바뀐다 */}
-      {up && !kb ? (
-        <View style={s.compact}>
-          <ExerciseMedia key={cur.id} exId={cur.id} rounded={12} dim={0.15} style={s.compactThumb} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.compactName} numberOfLines={1}>{e?.n ?? ''}</Text>
-            <Text style={s.compactSub} numberOfLines={1}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)}` : ''}</Text>
-          </View>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => setUp(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="영상 다시 펼치기" style={s.compactBtn}>
-            <Text style={s.compactBtnTxt}>영상 보기</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-      <View style={s.mediaArea}>
-        <View style={{ width: mediaSize, height: mediaSize, alignSelf: 'center' }}>
+      {/* 영상은 1:1 로 위에 고정, 자동 재생 — 아래 세트 기록만 스크롤된다(10/31 피드백 4절). 종목 탭을 누르면 영상이 바뀐다.
+          시트를 올리면 같은 영상이 왼쪽 작은 칸으로 줄고, 옆에 종목 이름 한 줄이 나온다 */}
+      <Animated.View style={[s.mediaArea, boxAnim]} {...sheetPan.panHandlers}>
+        <Animated.View style={[s.mediaVid, { left: (winW - mediaSize) / 2, width: mediaSize, height: mediaSize }, vidAnim]}>
           <ExerciseMedia key={cur.id} exId={cur.id} autoPlay rounded={20} dim={0.15} style={{ width: mediaSize, height: mediaSize }} />
           {/* 종목 이름 · 처방은 영상 아래쪽에 겹쳐 — 세트 칸에 자리를 더 준다 */}
           {!kb ? (
-            <View style={s.mediaMeta} pointerEvents="box-none">
+            <Animated.View style={[s.mediaMeta, metaAnim]} pointerEvents={up ? 'none' : 'box-none'}>
               <View style={{ flex: 1 }} pointerEvents="none">
                 <Text style={s.exName} numberOfLines={1}>{e?.n ?? ''}</Text>
                 <Text style={s.exPart} numberOfLines={1}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)} · 세트마다 ${rx.rir}회 여유` : ''}</Text>
               </View>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setPicker('swap')} hitSlop={10} accessibilityRole="button" accessibilityLabel="종목 교체" style={s.swapBtn}>
+              <PressableScale onPress={() => setPicker('swap')} hitSlop={10} accessibilityLabel="종목 교체" style={s.swapBtn}>
                 <Text style={s.swapLink}>종목 교체</Text>
-              </TouchableOpacity>
-            </View>
+              </PressableScale>
+            </Animated.View>
           ) : null}
-        </View>
-      </View>
-      )}
+        </Animated.View>
+        <Animated.View style={[s.compact, compactAnim]} pointerEvents={up ? 'auto' : 'none'}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.compactName} numberOfLines={1}>{e?.n ?? ''}</Text>
+            <Text style={s.compactSub} numberOfLines={1}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)}` : ''}</Text>
+          </View>
+          <PressableScale onPress={() => settle(0)} hitSlop={10} accessibilityLabel="영상 다시 펼치기" style={s.compactBtn}>
+            <Text style={s.compactBtnTxt}>영상 보기</Text>
+          </PressableScale>
+        </Animated.View>
+      </Animated.View>
 
       <ScrollView
         horizontal
@@ -272,7 +387,7 @@ export default function SessionPlayer() {
           const done = ex.sets.every((t) => t.done);
           const active = i === session.exIdx;
           return (
-            <TouchableOpacity activeOpacity={0.7}
+            <PressableScale haptic="select"
               key={`${ex.id}-${i}`}
               style={[s.filmCell, active && s.filmCellActive, done && !active && s.filmCellDone]}
               onPress={() => goToEx(i)}
@@ -285,20 +400,22 @@ export default function SessionPlayer() {
                 {info?.n ?? ''}
               </Text>
               {done && <Text style={s.filmCheck}>✓</Text>}
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
-        <TouchableOpacity activeOpacity={0.7} style={[s.filmCell, s.filmAdd]} onPress={() => setPicker('add')} accessibilityRole="button" accessibilityLabel="종목 추가">
+        <PressableScale style={[s.filmCell, s.filmAdd]} onPress={() => setPicker('add')} accessibilityRole="button" accessibilityLabel="종목 추가">
           <Text style={s.filmAddTxt}>＋</Text>
           <Text style={s.filmAddLabel}>종목 추가</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
 
       <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        <View {...grabPan.panHandlers} style={s.grabZone} accessibilityRole="button"
-          accessibilityLabel={up ? '세트 칸 내리기 — 영상 펼치기' : '세트 칸 올리기 — 영상 접기'}>
-          <View style={s.grab} />
-        </View>
+        {/* 끄는 자리 — 손잡이 + 휴식 칸. 세로로 끌면 시트가 따라오고, 손잡이는 눌러도 오르내린다 */}
+        <View {...sheetPan.panHandlers} style={s.dragZone}>
+          <PressableScale haptic={false} scaleTo={1} style={s.grabZone} onPress={() => settle(up ? 0 : 1)}
+            accessibilityLabel={up ? '세트 칸 내리기 — 영상 펼치기' : '세트 칸 올리기 — 영상 접기'}>
+            <Animated.View style={[s.grab, grabAnim]} />
+          </PressableScale>
 
         {/* 휴식 슬롯은 항상 같은 높이로 자리를 잡는다 — 마운트/언마운트되면 방금 누른 ✓ 가 손가락 아래서 밀린다 */}
         <View style={[s.restBox, rest > 0 && s.restBoxOn]}>
@@ -314,15 +431,15 @@ export default function SessionPlayer() {
                 </View>
               </View>
               <View style={s.restBtns}>
-                <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={() => (rest > 15 ? startRest(rest - 15) : stopRest())} accessibilityRole="button" accessibilityLabel="휴식 15초 줄이기">
+                <PressableScale style={s.skipBtn} onPress={() => (rest > 15 ? startRest(rest - 15) : stopRest())} accessibilityRole="button" accessibilityLabel="휴식 15초 줄이기">
                   <Text style={s.skipTxt}>−15초</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={() => startRest(rest + 15)} accessibilityRole="button" accessibilityLabel="휴식 15초 늘리기">
+                </PressableScale>
+                <PressableScale style={s.skipBtn} onPress={() => startRest(rest + 15)} accessibilityRole="button" accessibilityLabel="휴식 15초 늘리기">
                   <Text style={s.skipTxt}>+15초</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.7} style={s.skipBtn} onPress={stopRest} accessibilityRole="button" accessibilityLabel="휴식 건너뛰기">
+                </PressableScale>
+                <PressableScale style={s.skipBtn} onPress={stopRest} accessibilityRole="button" accessibilityLabel="휴식 건너뛰기">
                   <Text style={s.skipTxt}>건너뛰기</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </>
           ) : (
@@ -334,6 +451,7 @@ export default function SessionPlayer() {
               <Text style={s.restHint}>세트를 완료하면 {rx?.rest ?? 75}초 휴식이 시작됩니다</Text>
             </>
           )}
+        </View>
         </View>
 
         <ScrollView
@@ -391,28 +509,18 @@ export default function SessionPlayer() {
                   onSubmitEditing={() => { if (!isLastRow) focusNext(si, 'r'); }}
                   accessibilityLabel={`${si + 1}세트 횟수`}
                 />
-                <TouchableOpacity activeOpacity={0.7}
-                  style={[s.ck, st.done && s.ckDone, now && s.ckNow]}
-                  onPress={() => handleToggle(si)}
-                  onLongPress={() => handleRemove(si)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: st.done }}
-                  accessibilityLabel={`${si + 1}세트 완료`}
-                  accessibilityHint="길게 누르면 세트를 삭제합니다"
-                >
-                  <Text style={[s.ckTxt, st.done && s.ckTxtDone, now && s.ckTxtNow]}>{st.done || now ? '✓' : '○'}</Text>
-                </TouchableOpacity>
+                <SetCheck done={st.done} now={now} label={`${si + 1}세트 완료`} onPress={() => handleToggle(si)} onLongPress={() => handleRemove(si)} />
               </View>
             );
           })}
-          <TouchableOpacity activeOpacity={0.7} style={s.addSet} onPress={addSet} accessibilityRole="button">
+          <PressableScale style={s.addSet} onPress={addSet} accessibilityRole="button">
             <Text style={s.addSetTxt}>+ 세트 추가</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </ScrollView>
 
         <View style={s.navRow}>
-          <TouchableOpacity activeOpacity={0.7}
-            style={[s.navBtn, s.navGhost, session.exIdx === 0 && s.navOff]}
+          <PressableScale
+            style={[s.navBtn, s.navGhost]}
             disabled={session.exIdx === 0}
             onPress={() => moveEx(-1)}
             accessibilityRole="button"
@@ -420,20 +528,20 @@ export default function SessionPlayer() {
             accessibilityState={{ disabled: session.exIdx === 0 }}
           >
             <Text style={s.navGhostTxt}>← 이전</Text>
-          </TouchableOpacity>
+          </PressableScale>
           {isLast ? (
-            <TouchableOpacity activeOpacity={0.7} style={[s.navBtn, s.navSolid]} onPress={handleFinish} disabled={saving} accessibilityRole="button">
+            <PressableScale style={[s.navBtn, s.navSolid]} onPress={handleFinish}>
               {saving ? (
                 <ActivityIndicator color={colors.onRed} />
               ) : (
                 <Text style={s.navSolidTxt}>{doneAll ? '운동 완료 ✓' : '저장하고 종료'}</Text>
               )}
-            </TouchableOpacity>
+            </PressableScale>
           ) : (
             // 이 종목의 세트가 남았으면 빨강은 '지금 할 세트' 하나 — 다 끝냈을 때만 '다음'이 빨강이 된다
-            <TouchableOpacity activeOpacity={0.7} style={[s.navBtn, completedSets >= cur.sets.length ? s.navSolid : s.navNext]} onPress={() => moveEx(1)} accessibilityRole="button" accessibilityLabel="다음 종목">
+            <PressableScale style={[s.navBtn, completedSets >= cur.sets.length ? s.navSolid : s.navNext]} onPress={() => moveEx(1)} accessibilityRole="button" accessibilityLabel="다음 종목">
               <Text style={completedSets >= cur.sets.length ? s.navSolidTxt : s.navNextTxt}>다음 →</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
       </View>
@@ -453,7 +561,7 @@ export default function SessionPlayer() {
           }}
         />
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -494,9 +602,9 @@ function ExercisePicker({
             {mode === 'swap' && cur ? `${cur.n} → 다른 종목으로` : '세션 맨 뒤에 추가됩니다'}
           </Text>
         </View>
-        <TouchableOpacity activeOpacity={0.7} style={p.close} onPress={onClose}>
+        <PressableScale style={p.close} onPress={onClose}>
           <Text style={p.closeTxt}>✕</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       <TextInput
@@ -510,14 +618,14 @@ function ExercisePicker({
 
       {cur && (
         <View style={p.filterRow}>
-          <TouchableOpacity activeOpacity={0.7} style={[p.chip, sameOnly && p.chipOn]} onPress={() => setSameOnly(true)}>
+          <PressableScale haptic="select" style={[p.chip, sameOnly && p.chipOn]} onPress={() => setSameOnly(true)}>
             <Text style={[p.chipTxt, sameOnly && p.chipTxtOn]}>
               같은 부위 ({PART_LABEL[cur.part]})
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7} style={[p.chip, !sameOnly && p.chipOn]} onPress={() => setSameOnly(false)}>
+          </PressableScale>
+          <PressableScale haptic="select" style={[p.chip, !sameOnly && p.chipOn]} onPress={() => setSameOnly(false)}>
             <Text style={[p.chipTxt, !sameOnly && p.chipTxtOn]}>전체</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
 
@@ -540,14 +648,14 @@ function ExercisePicker({
 function PickerRow({ ex, onPick }: { ex: Exercise; onPick: () => void }) {
   useThemeMode();
   return (
-    <TouchableOpacity style={p.row} activeOpacity={0.75} onPress={onPick}>
+    <PressableScale style={p.row} scaleTo={PRESS_SCALE.card} onPress={onPick}>
       <ExerciseMedia exId={ex.id} rounded={10} style={p.thumb} dim={0.3} />
       <View style={{ flex: 1 }}>
         <Text style={p.name}>{ex.n}</Text>
         <Text style={p.meta}>{PART_LABEL[ex.part]} · {ex.g} · {repsText(ex.r)}</Text>
       </View>
       <Text style={p.pick}>선택</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -575,7 +683,11 @@ const s = themed(() => StyleSheet.create({
   },
   finishTxt: { fontSize: 13, fontWeight: '700', color: colors.ink },
 
-  mediaArea: { paddingHorizontal: 16, flexShrink: 0 },
+  mediaArea: {
+    flexShrink: 0, overflow: 'hidden',
+    ...Platform.select({ web: { touchAction: 'none', userSelect: 'none' } as object, default: {} }),
+  },
+  mediaVid: { position: 'absolute', top: 0, overflow: 'hidden' },
   mediaMeta: {
     position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'flex-end', gap: 10,
     paddingHorizontal: 14, paddingTop: 28, paddingBottom: 12, borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
@@ -618,14 +730,14 @@ const s = themed(() => StyleSheet.create({
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 16, paddingTop: 8, flex: 1, minHeight: 200,
   },
-  // 손잡이 — 보이는 막대는 작지만 끌 수 있는 자리는 시트 폭 전체 · 높이 32
-  grabZone: {
-    height: 32, marginTop: -8, marginHorizontal: -16, alignItems: 'center', justifyContent: 'center',
+  // 끄는 자리 — 손잡이 + 휴식 칸(시트 폭 전체). 보이는 막대는 작다
+  dragZone: {
+    marginTop: -8, marginHorizontal: -16, paddingHorizontal: 16,
     ...Platform.select({ web: { cursor: 'grab', userSelect: 'none', touchAction: 'none' } as object, default: {} }),
   },
+  grabZone: { height: 32, alignItems: 'center', justifyContent: 'center' },
   grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line2 },
-  compact: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
-  compactThumb: { width: 56, height: 56 },
+  compact: { position: 'absolute', left: 16 + THUMB + 12, right: 16, top: 8, height: THUMB, flexDirection: 'row', alignItems: 'center', gap: 12 },
   compactName: { fontSize: 18, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   compactSub: { fontSize: 12.5, color: colors.mid, marginTop: 2 },
   compactBtn: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, borderColor: colors.line2, justifyContent: 'center' },
@@ -689,7 +801,6 @@ const s = themed(() => StyleSheet.create({
   navNext: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.panel2 },
   navNextTxt: { color: colors.ink, fontSize: 16, fontWeight: '700' },
   navSolidTxt: { color: colors.onRed, fontSize: 16, fontWeight: '700' },
-  navOff: { opacity: 0.3 },
 }));
 
 const p = themed(() => StyleSheet.create({

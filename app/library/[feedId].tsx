@@ -1,10 +1,11 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, EmptyState, useSafeBack } from '../../src/components/ui';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { coverExId, feedById } from '../../src/data/feed';
 import { exByIds, PART_LABEL } from '../../src/data/exercises';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
 export default function LibraryDetailScreen() {
   useThemeMode();
@@ -51,10 +52,9 @@ export default function LibraryDetailScreen() {
             <>
               <SectionLabel>연관 종목 {list.length}개</SectionLabel>
               {list.map((e) => (
-                <TouchableOpacity
+                <PressableScale scaleTo={PRESS_SCALE.card}
                   key={e.id}
                   style={s.exRow}
-                  activeOpacity={0.75}
                   onPress={() => router.push(`/exercise/${e.id}`)}
                 >
                   <ExerciseMedia exId={e.id} rounded={10} style={s.exThumb} dim={0.3} />
@@ -63,7 +63,7 @@ export default function LibraryDetailScreen() {
                     <Text style={s.exMeta}>{PART_LABEL[e.part]} · {e.g}</Text>
                   </View>
                   <Text style={s.chev}>›</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </>
           )}

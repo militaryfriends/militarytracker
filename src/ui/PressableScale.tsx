@@ -2,6 +2,7 @@
  * 누르면 살짝 눌렸다가 스프링처럼 튕기는 버튼 (+ 톡 진동). TouchableOpacity 대신 쓴다.
  * 일반 Pressable 처럼 쓴다. scaleTo: 눌렸을 때 크기 (PRESS_SCALE.card 0.98 · button 0.96 · small 0.94)
  * haptic: 누를 때 진동 뜻 (haptics.ts) — false 면 없음. 기본 'tap'.
+ * disabled 면 흐려진다(0.4) — 화면이 꺼진 모양을 따로 그리면 dimDisabled={false}.
  */
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
@@ -16,11 +17,12 @@ type Props = Omit<PressableProps, 'style' | 'children'> & {
   style?: StyleProp<ViewStyle>;
   scaleTo?: number;
   haptic?: HapticKind | false;
+  dimDisabled?: boolean;
   children?: ReactNode;
 };
 
 export function PressableScale({
-  style, scaleTo = PRESS_SCALE.button, haptic = 'tap', onPressIn, onPressOut, onPress, disabled, children, ...rest
+  style, scaleTo = PRESS_SCALE.button, haptic = 'tap', dimDisabled = true, onPressIn, onPressOut, onPress, disabled, children, ...rest
 }: Props) {
   useThemeMode();
   const s = useSharedValue(1);
@@ -42,7 +44,7 @@ export function PressableScale({
         if (haptic) buzz[haptic]();
         onPress?.(e);
       }}
-      style={[style, anim, disabled ? { opacity: 0.4 } : null]}
+      style={[style, anim, disabled && dimDisabled ? { opacity: 0.4 } : null]}
     >
       {children}
     </APressable>

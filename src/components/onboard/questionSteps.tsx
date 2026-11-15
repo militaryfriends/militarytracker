@@ -3,12 +3,13 @@
  * 숫자 칸은 화면에 들어오면 바로 키패드가 뜨고(autoFocus), 키패드의 '완료'가 '다음'을 누른다 — 키패드가 다음 버튼을 가려도 막히지 않게.
  */
 import { useEffect, useRef } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { colors, useThemeMode } from '../../theme';
 import type { FocusPart, UserProfile } from '../../types';
 import { Opt, StepHead, type Update } from './basicSteps';
 import { o } from './styles';
+import { PressableScale } from '../../ui';
 
 export function StepSex({ p, update, num, total }: { p: UserProfile; update: Update; num: number; total: number }) {
   useThemeMode();
@@ -89,10 +90,10 @@ export function StepDays({ p, update, num, total }: { p: UserProfile; update: Up
       <StepHead num={num} total={total} q={'일주일에 며칠\n운동할 수 있나요?'} desc="무리 없이 지킬 수 있는 날짜로 골라 주세요." />
       <View style={o.chipRow}>
         {([2, 3, 4, 5, 6] as const).map((d) => (
-          <TouchableOpacity activeOpacity={0.7} key={d} style={[o.chip, { minWidth: 72, alignItems: 'center' }, p.days === d && o.chipOn]} onPress={() => update('days', d)}
+          <PressableScale haptic="select" key={d} style={[o.chip, { minWidth: 72, alignItems: 'center' }, p.days === d && o.chipOn]} onPress={() => update('days', d)}
             accessibilityRole="radio" accessibilityState={{ selected: p.days === d }}>
             <Text style={[o.chipTxt, p.days === d && o.chipOnTxt]}>주 {d}일</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
     </View>
@@ -118,10 +119,10 @@ export function StepFocus({ p, update, num, total }: { p: UserProfile; update: U
       <StepHead num={num} total={total} q={'특히 신경 쓰이는\n부위가 있나요?'} desc="선택 사항이에요. 루틴에 그 부위 보조 종목을 하나씩 더해요." />
       <View style={o.chipRow}>
         {FOCUS.map((f) => (
-          <TouchableOpacity activeOpacity={0.7} key={f.k} style={[o.chip, on.has(f.k) && o.chipOn]} onPress={() => toggle(f.k)}
+          <PressableScale haptic="select" key={f.k} style={[o.chip, on.has(f.k) && o.chipOn]} onPress={() => toggle(f.k)}
             accessibilityRole="checkbox" accessibilityState={{ checked: on.has(f.k) }}>
             <Text style={[o.chipTxt, on.has(f.k) && o.chipOnTxt]}>{f.label}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
     </View>

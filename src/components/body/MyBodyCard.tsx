@@ -6,7 +6,7 @@
  * "지금" 몸은 마지막 체크인(또는 계산) 뒤의 체중 기록으로 바뀐다(홈 카드와 같은 규칙).
  */
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale, Segmented } from '../../ui';
@@ -130,9 +130,9 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
         </View>
         {/* 체크인은 4주마다라 그 사이엔 주 1회 체중이 "지금" 몸을 움직이는 유일한 장면이다(10/31 피드백 8절 2) */}
         {weighDue && !stopped ? (
-          <TouchableOpacity activeOpacity={0.7} onPress={onWeigh} style={s.nudge} accessibilityRole="button">
+          <PressableScale onPress={onWeigh} style={s.nudge} accessibilityRole="button">
             <Text style={s.nudgeTxt}>이번 주 체중을 기록하면 "지금" 몸과 진행 막대가 바로 바뀌어요 ›</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : null}
         <View style={s.btnRow}>
           <Btn title="진행률 보기" sub={`${bodyPct}% · 그래프`} onPress={() => router.push('/project/checkin')} />
@@ -183,10 +183,10 @@ function FitLink() {
   return (
     <View style={s.fitRow}>
       <Text style={s.hint}>좌우로 밀어 돌려 보세요</Text>
-      <TouchableOpacity activeOpacity={0.7} hitSlop={10} onPress={() => router.push('/project/fit')} accessibilityRole="button"
+      <PressableScale hitSlop={10} onPress={() => router.push('/project/fit')} accessibilityRole="button"
         accessibilityLabel={fitted ? '내 몸 다시 맞추기' : '내 몸과 다르면 맞추기'}>
         <Text style={s.fitTxt}>{fitted ? '내 몸 다시 맞추기 ›' : '내 몸과 다른가요? 맞추기 ›'}</Text>
-      </TouchableOpacity>
+      </PressableScale>
     </View>
   );
 }
@@ -194,10 +194,10 @@ function FitLink() {
 function Btn({ title, sub, onPress }: { title: string; sub: string; onPress: () => void }) {
   useThemeMode();
   return (
-    <TouchableOpacity activeOpacity={0.7} style={s.btn} onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}, ${sub}`}>
+    <PressableScale style={s.btn} onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}, ${sub}`}>
       <Text style={s.btnTitle}>{title}</Text>
       <Text style={s.btnSub}>{sub}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

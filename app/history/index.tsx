@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, StyleSheet, SectionList, LayoutAnimation } from 'react-native';
+import { View, Text, StyleSheet, SectionList, LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, EmptyState, useSafeBack } from '../../src/components/ui';
@@ -11,6 +11,7 @@ import { WorkoutLog } from '../../src/types';
 import {
   fmtDateKo, fmtDuration, fmtVolume, fmtSetDetail, totalSets, totalVolume,
 } from '../../src/utils/stats';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
 export default function HistoryScreen() {
   const mode = useThemeMode();
@@ -59,9 +60,9 @@ export default function HistoryScreen() {
         title="운동 기록"
         onBack={goBack}
         right={
-          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/history/records')} hitSlop={8}>
+          <PressableScale onPress={() => router.push('/history/records')} hitSlop={8}>
             <Text style={s.prLink}>개인 기록 ›</Text>
-          </TouchableOpacity>
+          </PressableScale>
         }
       />
 
@@ -87,9 +88,8 @@ export default function HistoryScreen() {
           const open = openId === id;
           const done = item.exercises.filter((x) => x.sets > 0);
           return (
-            <TouchableOpacity
+            <PressableScale scaleTo={PRESS_SCALE.card}
               style={[s.card, open && s.cardOpen]}
-              activeOpacity={0.8}
               onPress={() => {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setOpenId(open ? null : id);
@@ -122,7 +122,7 @@ export default function HistoryScreen() {
                   {done.map((x, i) => {
                     const e = exForLog(x.id);
                     return (
-                      <TouchableOpacity activeOpacity={0.7}
+                      <PressableScale scaleTo={PRESS_SCALE.card}
                         key={`${x.id}-${i}`}
                         style={s.exRow}
                         onPress={() => router.push(`/exercise/${x.id}`)}
@@ -138,12 +138,12 @@ export default function HistoryScreen() {
                             ? x.detail.map(fmtSetDetail).join('  ')
                             : `${x.sets}세트`}
                         </Text>
-                      </TouchableOpacity>
+                      </PressableScale>
                     );
                   })}
                 </View>
               )}
-            </TouchableOpacity>
+            </PressableScale>
           );
         }}
       />

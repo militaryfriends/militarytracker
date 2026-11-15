@@ -7,12 +7,12 @@
  * 거절해도 분석은 저장되고 홈의 "내 변화 프로젝트" 카드에서 이 화면으로 다시 온다.
  */
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, themed, useThemeMode } from '../../src/theme';
-import { PressableScale } from '../../src/ui';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAppStore } from '../../src/stores/appStore';
 import { useOnboardDraft } from '../../src/stores/onboardDraft';
@@ -141,9 +141,9 @@ export default function ProjectsScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <ScrollView contentContainerStyle={s.inner} showsVerticalScrollIndicator={false}>
         {user?.onboardingDone ? (
-          <TouchableOpacity onPress={goBack} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel="뒤로">
+          <PressableScale onPress={goBack} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel="뒤로">
             <Text style={s.backTxt}>←</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : null}
         <Text style={s.title} accessibilityRole="header">목표 몸 4가지</Text>
         <Text style={s.sub}>지금 몸에서 실제로 갈 수 있는 몸이에요. 결제 전에도 숫자는 전부 보여 드려요</Text>
@@ -204,9 +204,9 @@ export default function ProjectsScreen() {
         ) : null}
         <Text style={s.notice}>목표 몸은 입력값과 보수적인 변화 속도로 계산한 예상이에요. 결과는 개인마다 다르고, 운동 · 식단 실천에 따라 달라져요.</Text>
 
-        <TouchableOpacity onPress={() => router.push(redo ? '/project/compare?redo=1' : '/project/compare')} style={s.again} accessibilityRole="button">
+        <PressableScale onPress={() => router.push(redo ? '/project/compare?redo=1' : '/project/compare')} style={s.again} accessibilityRole="button">
           <Text style={s.againTxt}>지금 내 몸 다시 보기</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
 
       <View style={[s.foot, { paddingBottom: Math.max(insets.bottom, 14) }]}>
@@ -224,9 +224,9 @@ export default function ProjectsScreen() {
               <Text style={s.ctaTxt}>{pro ? `${selName} 프로젝트 바로 시작하기` : `${selName}으로 시작하기`}</Text>
             </PressableScale>
             <Text style={s.price}>{priceLine}</Text>
-            <TouchableOpacity onPress={askDecline} disabled={busy} style={s.decline} accessibilityRole="button">
+            <PressableScale scaleTo={PRESS_SCALE.card} dimDisabled={false} onPress={askDecline} disabled={busy} style={s.decline} accessibilityRole="button">
               <Text style={s.declineTxt}>아니에요, 괜찮아요 운동 자세만 볼래요</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </>
         )}
       </View>

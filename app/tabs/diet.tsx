@@ -1,10 +1,10 @@
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
-import { FONT } from '../../src/ui';
+import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -96,9 +96,9 @@ export default function DietScreen() {
           <Text style={s.emptyTxt}>
             신체 정보가 필요합니다.{'\n'}내 정보를 입력하면 목표 칼로리를 계산합니다.
           </Text>
-          <TouchableOpacity activeOpacity={0.7} style={s.emptyBtn} onPress={() => router.push('/profile/edit')}>
+          <PressableScale style={s.emptyBtn} onPress={() => router.push('/profile/edit')}>
             <Text style={s.emptyBtnTxt}>내 정보 입력</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </SafeAreaView>
     );
@@ -113,7 +113,7 @@ export default function DietScreen() {
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
         {/* 계산 근거 — 숫자의 출처와 수정 경로 */}
-        <TouchableOpacity style={s.basisCard} activeOpacity={0.8} onPress={() => router.push('/profile/edit')}>
+        <PressableScale scaleTo={PRESS_SCALE.card} style={s.basisCard} onPress={() => router.push('/profile/edit')}>
           <View style={{ flex: 1 }}>
             <Text style={s.basisLabel}>계산 기준</Text>
             <Text style={s.basisMain}>
@@ -128,7 +128,7 @@ export default function DietScreen() {
             </Text>
           </View>
           <Text style={s.basisChev}>›</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* 기준 체중과 추세가 벌어졌을 때만 */}
         {eff?.shouldUpdate && (
@@ -137,9 +137,9 @@ export default function DietScreen() {
               최근 추세 <Text style={s.driftHi}>{eff.trend}kg</Text> 로 기준({eff.baseline}kg)과
               {' '}{Math.abs(eff.drift)}kg 차이가 납니다.
             </Text>
-            <TouchableOpacity activeOpacity={0.7} style={s.driftBtn} onPress={applyTrendWeight}>
+            <PressableScale style={s.driftBtn} onPress={applyTrendWeight}>
               <Text style={s.driftBtnTxt}>기준 체중 갱신</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         )}
 
@@ -209,7 +209,7 @@ export default function DietScreen() {
         )}
 
         {(canDiet || diet) && (
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale dimDisabled={false}
             style={[s.genBtn, diet && !stale && s.genGhost, dietLoading && s.genOff]}
             onPress={genDiet}
             disabled={dietLoading}
@@ -221,17 +221,17 @@ export default function DietScreen() {
                 {diet ? '다시 구성' : '식단 생성'}
               </Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
         )}
 
         {/* 막다른 길 방지 — 다음 행동 */}
-        <TouchableOpacity activeOpacity={0.7} style={s.linkRow} onPress={() => router.push('/tabs/coach')} accessibilityRole="button">
+        <PressableScale scaleTo={PRESS_SCALE.card} style={s.linkRow} onPress={() => router.push('/tabs/coach')} accessibilityRole="button">
           <View style={{ flex: 1 }}>
             <Text style={s.linkTitle}>AI 코치에게 물어보기</Text>
             <Text style={s.linkSub}>대체 음식, 외식 메뉴, 보충제 등</Text>
           </View>
           <Text style={s.basisChev}>›</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         <Text style={s.notice}>일반적 영양 가이드이며 의학적 조언이 아닙니다.</Text>
       </ScrollView>

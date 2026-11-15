@@ -1,5 +1,5 @@
 import { prescription, repsText } from '../../../src/utils/prescription';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState, Notice, useSafeBack } from '../../../src/components/ui';
@@ -8,6 +8,7 @@ import { routineById, routineDay, routineExercises } from '../../../src/data/rou
 import { EQUIP_LABEL, LEVEL_LABEL, PART_LABEL } from '../../../src/data/exercises';
 import { useAppStore } from '../../../src/stores/appStore';
 import { showAlert } from '../../../src/utils/alert';
+import { PressableScale, PRESS_SCALE } from '../../../src/ui';
 
 export default function RoutineDayScreen() {
   useThemeMode();
@@ -73,10 +74,9 @@ export default function RoutineDayScreen() {
 
         <SectionLabel>운동 종목</SectionLabel>
         {list.map((e, i) => (
-          <TouchableOpacity
+          <PressableScale scaleTo={PRESS_SCALE.card}
             key={e.id}
             style={s.exCard}
-            activeOpacity={0.75}
             onPress={() => router.push(`/exercise/${e.id}`)}
           >
             <ExerciseMedia exId={e.id} rounded={12} style={s.exThumb} dim={0.3} />
@@ -98,7 +98,7 @@ export default function RoutineDayScreen() {
               <Text style={s.exSetsSub}>세트</Text>
               <Text style={s.exRep}>{repsText(e.r)}</Text>
             </View>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
 
         <Notice>일반적인 운동 가이드입니다. 통증이나 질환이 있다면 전문가와 상담하세요.</Notice>

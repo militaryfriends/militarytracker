@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
+  View, Text, TextInput, StyleSheet, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import {
 import { formByExId, FORM_COUNT } from '../../src/data/formCheck';
 import { useMediaItems, useMediaEntry, useVideoCount } from '../../src/stores/mediaStore';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
+import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
 type Filter = Part | '전체' | '영상';
 
@@ -73,15 +74,15 @@ export default function FormScreen() {
           accessibilityLabel="종목 검색"
         />
         {q.length > 0 && (
-          <TouchableOpacity activeOpacity={0.7} style={s.clear} onPress={() => setQ('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="검색어 지우기">
+          <PressableScale style={s.clear} onPress={() => setQ('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="검색어 지우기">
             <Text style={s.clearTxt}>✕</Text>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       </View>
 
       <View style={s.pillWrap}>
         {FILTERS.map((f) => (
-          <TouchableOpacity activeOpacity={0.7}
+          <PressableScale
             key={String(f.key)}
             style={[s.pill, filter === f.key && s.pillActive]}
             onPress={() => setFilter(f.key)}
@@ -90,7 +91,7 @@ export default function FormScreen() {
             accessibilityLabel={f.label}
           >
             <Text style={[s.pillTxt, filter === f.key && s.pillTxtActive]}>{f.label}</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 
@@ -121,7 +122,7 @@ const Card = memo(function Card({ ex, onPress }: { ex: Exercise; onPress: (id: s
   const video = !!useMediaEntry(ex.id)?.video;
 
   return (
-    <TouchableOpacity style={s.card} activeOpacity={0.75} onPress={() => onPress(ex.id)}>
+    <PressableScale scaleTo={PRESS_SCALE.card} style={s.card} onPress={() => onPress(ex.id)}>
       {/* 그리드에서는 포스터만 — 영상 플레이어를 180개 만들지 않는다 */}
       <ExerciseMedia exId={ex.id} rounded={16} style={s.thumb} dim={0.4} />
 
@@ -140,7 +141,7 @@ const Card = memo(function Card({ ex, onPress }: { ex: Exercise; onPress: (id: s
       <Text style={s.meta2} numberOfLines={1}>
         {ex.eq.map((q) => EQUIP_LABEL[q]).join('/')} · {LEVEL_LABEL[ex.lv]}
       </Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 });
 

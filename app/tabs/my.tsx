@@ -2,7 +2,7 @@ import { avatar3DError } from '../../src/components/body/avatar3d/Avatar3D';
 import { useEffect, useRef, useState } from 'react';
 import { MyBodyCard } from '../../src/components/body/MyBodyCard';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, StyleSheet,
   TextInput, KeyboardAvoidingView, Platform, Switch,
   Linking,
 } from 'react-native';
@@ -10,7 +10,7 @@ import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref } from '../../src/theme';
-import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled } from '../../src/ui';
+import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -215,20 +215,20 @@ export default function MyScreen() {
 
         {/* 빠른 진입 */}
         <View style={s.menuRow}>
-          <TouchableOpacity activeOpacity={0.7} style={s.menuBtn} onPress={() => router.push('/history')} accessibilityRole="button">
+          <PressableScale style={s.menuBtn} onPress={() => router.push('/history')} accessibilityRole="button">
             <Text style={s.menuTitle}>운동 기록</Text>
             <Text style={s.menuSub}>{Math.max(user?.stats?.totalLogs ?? 0, logs.length)}회 누적{pendingCount ? ` · 대기 ${pendingCount}` : ''}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7} style={s.menuBtn} onPress={() => router.push('/history/records')}>
+          </PressableScale>
+          <PressableScale style={s.menuBtn} onPress={() => router.push('/history/records')}>
             <Text style={s.menuTitle}>개인 기록</Text>
             <Text style={s.menuSub}>종목별 최고 중량</Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7} style={s.menuBtn} onPress={() => router.push('/profile/edit')}>
+          </PressableScale>
+          <PressableScale style={s.menuBtn} onPress={() => router.push('/profile/edit')}>
             <Text style={s.menuTitle}>내 정보</Text>
             <Text style={s.menuSub}>
               {profile ? `${profile.height}cm · ${profile.weight}kg` : '설정 필요'}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* Volume chart */}
@@ -296,9 +296,9 @@ export default function MyScreen() {
                 {eff.drift !== 0 ? `  (${eff.drift > 0 ? '+' : ''}${eff.drift})` : ''}
               </Text>
               {eff.shouldUpdate && (
-                <TouchableOpacity activeOpacity={0.7} style={s.trendBtn} onPress={applyTrendWeight}>
+                <PressableScale style={s.trendBtn} onPress={applyTrendWeight}>
                   <Text style={s.trendBtnTxt}>기준 갱신</Text>
-                </TouchableOpacity>
+                </PressableScale>
               )}
             </View>
           )}
@@ -315,7 +315,7 @@ export default function MyScreen() {
               returnKeyType="done"
               accessibilityLabel="오늘 체중"
             />
-            <TouchableOpacity activeOpacity={0.7}
+            <PressableScale dimDisabled={false}
               style={[s.weightBtn, (!weightInput.trim() || saving) && s.weightBtnOff]}
               onPress={handleSaveWeight}
               disabled={!weightInput.trim() || saving}
@@ -323,13 +323,13 @@ export default function MyScreen() {
               accessibilityState={{ disabled: !weightInput.trim() || saving }}
             >
               <Text style={s.weightBtnTxt}>기록</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
 
         {/* 구독 */}
         <Text style={s.sectionLabel}>구독</Text>
-        <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => router.push('/subscribe')}>
+        <PressableScale scaleTo={PRESS_SCALE.card} style={s.subRow} onPress={() => router.push('/subscribe')}>
           <View style={{ flex: 1 }}>
             <View style={s.subHead}>
               <Text style={s.subTitle}>{pro ? PRO_NAME : '무료 플랜'}</Text>
@@ -342,11 +342,11 @@ export default function MyScreen() {
             </Text>
           </View>
           <Text style={s.subChev}>›</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* AI 코치 — 전용 화면(/coach). 채팅을 페이지 스크롤 안에 두면 iOS 키보드가 입력창을 가린다 */}
         <Text style={s.sectionLabel}>AI 코치</Text>
-        <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => router.push('/tabs/coach')} accessibilityRole="button">
+        <PressableScale scaleTo={PRESS_SCALE.card} style={s.subRow} onPress={() => router.push('/tabs/coach')} accessibilityRole="button">
           <View style={{ flex: 1 }}>
             <View style={s.subHead}>
               <Text style={s.subTitle}>코치에게 물어보기</Text>
@@ -357,40 +357,40 @@ export default function MyScreen() {
             </Text>
           </View>
           <Text style={s.subChev}>›</Text>
-        </TouchableOpacity>
+        </PressableScale>
         {manageUrl ? (
-          <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => Linking.openURL(manageUrl)}
+          <PressableScale scaleTo={PRESS_SCALE.card} style={s.subRow} onPress={() => Linking.openURL(manageUrl)}
             accessibilityRole="link" accessibilityLabel="구독 관리 · 해지">
             <View style={{ flex: 1 }}>
               <Text style={s.subTitle}>구독 관리 · 해지</Text>
               <Text style={s.subSub}>{sub.source === 'ios' ? 'App Store' : 'Google Play'} 구독 화면에서 해지 · 결제 수단을 바꿉니다</Text>
             </View>
             <Text style={s.subChev}>›</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ) : null}
 
         {/* 온보딩 — 가입 때 흐름(원하는 체형 → 분석 → 프로젝트)을 다시 */}
         <Text style={s.sectionLabel}>온보딩</Text>
-        <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={restartOnboarding} accessibilityRole="button"
+        <PressableScale scaleTo={PRESS_SCALE.card} style={s.subRow} onPress={restartOnboarding} accessibilityRole="button"
           accessibilityLabel="온보딩 처음부터 다시 하기">
           <View style={{ flex: 1 }}>
             <Text style={s.subTitle}>온보딩 처음부터 다시 하기</Text>
             <Text style={s.subSub}>성별 · 키부터 몸 계산 · 프로젝트까지 다시 해요</Text>
           </View>
           <Text style={s.subChev}>›</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         {user?.role === 'admin' ? (
           <>
             <Text style={s.sectionLabel}>관리자</Text>
-            <TouchableOpacity style={s.subRow} activeOpacity={0.8} onPress={() => router.push('/profile/waitlist')}
+            <PressableScale scaleTo={PRESS_SCALE.card} style={s.subRow} onPress={() => router.push('/profile/waitlist')}
               accessibilityRole="button" accessibilityLabel="대기자 명단 등록">
               <View style={{ flex: 1 }}>
                 <Text style={s.subTitle}>대기자 명단 등록</Text>
                 <Text style={s.subSub}>Tally CSV → 3개월 · 1개월 프리미엄 자동 지급</Text>
               </View>
               <Text style={s.subChev}>›</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </>
         ) : null}
 
@@ -431,12 +431,12 @@ export default function MyScreen() {
         <Text style={s.notice}>통증·부상·질환 관련 판단은 의료 전문가와 상의하세요.</Text>
         {avatar3DError() ? <Text style={s.notice} selectable>3D 표시 꺼짐 · {avatar3DError()}</Text> : null}
 
-        <TouchableOpacity activeOpacity={0.7} style={s.logoutBtn} onPress={handleLogout} accessibilityRole="button">
+        <PressableScale style={s.logoutBtn} onPress={handleLogout} accessibilityRole="button">
           <Text style={s.logoutTxt}>로그아웃</Text>
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.7} style={s.deleteBtn} onPress={confirmDelete} accessibilityRole="button">
+        </PressableScale>
+        <PressableScale style={s.deleteBtn} onPress={confirmDelete} accessibilityRole="button">
           <Text style={s.deleteTxt}>계정 삭제</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
