@@ -207,7 +207,7 @@ export default function AnalysisScreen() {
         {showBody && body ? (
           <View style={s.hero} accessibilityLabel={body.shown ? body.line : '몸을 계산하는 중'}>
             <View style={{ opacity: body.shown ? 1 : 0.28 }}>
-              <AvatarView sex={body.sex} cell={body.cell} coord={body.coord} width={Math.round(avH / 1.5)} live morphMs={260} />
+              <AvatarView sex={body.sex} cell={body.cell} coord={body.coord} own width={Math.round(avH / 1.5)} live morphMs={260} />
             </View>
             <Text style={s.heroTxt}>{body.shown ? body.line : ' '}</Text>
           </View>

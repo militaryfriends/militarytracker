@@ -84,7 +84,7 @@ export function ChangePreview({
   return (
     <View style={s.card}>
       <View style={s.row}>
-        <AvatarView sex={sex} cell={pt.cell} coord={pt.coord} width={avW} live morphMs={220}
+        <AvatarView sex={sex} cell={pt.cell} coord={pt.coord} own bfPct={pt.bfPct} width={avW} live morphMs={220}
           badge={month === 0 ? '지금' : '예상'}
           label={`${month === 0 ? '지금' : `${month}개월 뒤 예상`} 몸, ${kg(pt.weightKg)}kg, 체지방 ${pct1(pt.bfPct)}%`} />
         <View style={s.info}>

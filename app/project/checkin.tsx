@@ -167,14 +167,14 @@ export default function CheckinScreen() {
           <View style={s.trio}>
             {[
               { cell: baseCell, badge: '시작' as const, txt: `${kg(project.input.weightKg)}kg`,
-                coord: project.track[0] ? coordOf(sex, project.track[0].bfPct, project.track[0].nffmi) : undefined },
+                coord: project.track[0] ? coordOf(sex, project.track[0].bfPct, project.track[0].nffmi) : undefined, bf: project.track[0]?.bfPct },
               { cell: now.nowCell, badge: '지금' as const, txt: `${kg(now.nowComp.fmKg + now.nowComp.ffmKg)}kg`,
-                coord: coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi) },
+                coord: coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi), bf: now.nowComp.bfPct },
               { cell: endCell, badge: '예상' as const, txt: `${kg(project.end.weightKg)}kg`,
-                coord: coordOf(sex, project.end.bfPct, project.end.nffmi) },
+                coord: coordOf(sex, project.end.bfPct, project.end.nffmi), bf: project.end.bfPct },
             ].map((x) => (
               <View key={x.badge} style={s.col}>
-                <AvatarView sex={sex} cell={x.cell} coord={x.coord} width={colW} badge={x.badge} />
+                <AvatarView sex={sex} cell={x.cell} coord={x.coord} own bfPct={x.bf} width={colW} badge={x.badge} />
                 <Text style={s.colTxt}>{x.txt}</Text>
               </View>
             ))}

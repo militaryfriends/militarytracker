@@ -84,6 +84,27 @@ export function morphFor(sex: Sex, c: Coord, shape: Shape = {}): Morph {
 export const xlFor = (sex: Sex, bfPct: number): number => clamp((bfPct - (sex === 'male' ? 28 : 38)) / 10, 0, 1);
 
 /**
+ * 저장된 체형(내 몸 맞추기) → 이 좌표의 몸에 그릴 체형.
+ *  · 뼈대(어깨 · 골반)와 근육 분포는 몸이 변해도 그대로 간다.
+ *  · 살이 몰린 곳(배 · 하체)은 살이 빠지면 같이 줄어든다 — 체지방 좌표 3 이상이면 그대로, 1(가장 마름)이면 0.
+ *    그래서 "지금" 몸에서 고른 뱃살이 "예상" 몸에서는 덜 나온다.
+ *  · 고도 체지방은 저장값이 아니라 체지방률에서 바로 나온다(bfPct 를 주면).
+ * 전부 0 이면 undefined(예전 그림 그대로).
+ */
+export function shapeAt(sex: Sex, stored: Omit<Shape, 'xl'> | null | undefined, c: Coord, bfPct?: number): Shape | undefined {
+  const fat = clamp((clamp(c.f, 1, 5) - 1) / 2, 0, 1);
+  const out: Shape = {
+    belly: (stored?.belly ?? 0) * fat,
+    lower: (stored?.lower ?? 0) * fat,
+    musBias: stored?.musBias ?? 0,
+    shoulder: stored?.shoulder ?? 0,
+    pelvis: stored?.pelvis ?? 0,
+    xl: bfPct === undefined ? 0 : xlFor(sex, bfPct),
+  };
+  return shapeKey(out) ? out : undefined;
+}
+
+/**
  * 결 지우기 세기 — 체지방: F1 0 · F2 약 0.3 · F3 약 0.8 · F4 이상 1 (남 9 · 13 · 17 · 22%),
  * 근육: M4 이상 0 · M3 0.25 · M2 0.5 · M1 0.7. 둘을 합칠 때는 1 - (1-a)(1-b).
  */

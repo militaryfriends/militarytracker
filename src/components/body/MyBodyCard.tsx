@@ -65,8 +65,8 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
 
   if (project && now) {
     const sex = project.input.sex;
-    const nowBody = { cell: now.nowCell, coord: coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi) };
-    const goalBody = { cell: project.end.cell, coord: coordOf(sex, project.end.bfPct, project.end.nffmi) };
+    const nowBody = { cell: now.nowCell, coord: coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi), own: true, bfPct: now.nowComp.bfPct };
+    const goalBody = { cell: project.end.cell, coord: coordOf(sex, project.end.bfPct, project.end.nffmi), own: true, bfPct: project.end.bfPct };
     const nowKg = now.nowComp.ffmKg + now.nowComp.fmKg;
     // 진행 막대 = 몸 변화(지금 몸이 목표 몸까지 온 비율) — 체중을 기록하면 지금 몸과 함께 움직인다(10/31 피드백 8절 2).
     // 눈금 = 이 날짜의 예상 진행률(기간 기준)
@@ -106,7 +106,7 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
             </View>
           )}
         </View>
-        {has3D(sex) ? <Text style={s.hint}>좌우로 밀어 돌려 보세요</Text> : null}
+        {has3D(sex) ? <FitLink /> : null}
         <View style={{ marginTop: 12 }}>
           <Segmented<View3> options={VIEWS} value={view} onChange={setView} label="내 몸 보기" />
         </View>
@@ -150,11 +150,11 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
         <Text style={s.label}>지금 내 몸</Text>
         <View style={s.stage}>
           <View style={s.col}>
-            <AvatarView sex={sex} cell={free.cell} coord={free.coord} width={Math.round(Math.min(220, inner * 0.62))} badge="지금" live />
+            <AvatarView sex={sex} cell={free.cell} coord={free.coord} own bfPct={free.bf} width={Math.round(Math.min(220, inner * 0.62))} badge="지금" live />
             <Text style={s.colTxt}>{kg(free.kg)}kg · 체지방 약 {pct0(free.bf)}%</Text>
           </View>
         </View>
-        {has3D(sex) ? <Text style={s.hint}>좌우로 밀어 돌려 보세요</Text> : null}
+        {has3D(sex) ? <FitLink /> : null}
         <PressableScale style={s.cta} onPress={() => router.push('/project')} accessibilityLabel="프로젝트 4가지 보기">
           <Text style={s.ctaTxt}>프로젝트 4가지 보기</Text>
         </PressableScale>
@@ -171,6 +171,22 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
       <PressableScale style={s.cta} onPress={() => router.push('/project/new')} accessibilityLabel="내 몸 계산하기">
         <Text style={s.ctaTxt}>내 몸 계산하기</Text>
       </PressableScale>
+    </View>
+  );
+}
+
+/** 돌려 보기 안내 + 내 몸 맞추기(보고 직접 고르기 — 그림만 바뀐다) */
+function FitLink() {
+  useThemeMode();
+  const router = useRouter();
+  const fitted = useAppStore((st) => Object.values(st.profile?.bodyShape ?? {}).some((v) => !!v));
+  return (
+    <View style={s.fitRow}>
+      <Text style={s.hint}>좌우로 밀어 돌려 보세요</Text>
+      <TouchableOpacity activeOpacity={0.7} hitSlop={10} onPress={() => router.push('/project/fit')} accessibilityRole="button"
+        accessibilityLabel={fitted ? '내 몸 다시 맞추기' : '내 몸과 다르면 맞추기'}>
+        <Text style={s.fitTxt}>{fitted ? '내 몸 다시 맞추기 ›' : '내 몸과 다른가요? 맞추기 ›'}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -196,6 +212,8 @@ const s = themed(() => StyleSheet.create({
   col: { alignItems: 'center' },
   colTxt: { fontSize: 12.5, color: colors.mid, marginTop: 6, fontWeight: '700', textAlign: 'center' },
   hint: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 4 },
+  fitRow: { alignItems: 'center' },
+  fitTxt: { fontSize: 12.5, color: colors.mid, fontWeight: '700', textDecorationLine: 'underline', marginTop: 8 },
   proj: { marginTop: 16 },
   projName: { fontSize: 16, fontWeight: '800', color: colors.ink, marginTop: 6 },
   projSub: { fontSize: 12.5, color: colors.mid, marginTop: 4, lineHeight: 18 },

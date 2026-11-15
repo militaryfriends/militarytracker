@@ -15,7 +15,7 @@
 > - 남성: `scripts/avatar-shape-axes.py` 가 v20 .blend(avatar-mf-keys.py 결과)에 셰이프 키를 더한다 → `build-avatar-3d.py` 가 있는 키만 같이 내보낸다(`OPTIONAL_KEYS`).
 > - 여성: `scripts/build-avatar-mh.py` 의 `AXES['f']`(MakeHuman 부위 타깃 배합) — 빌드 로그에 허리 · 엉덩이 둘레 표가 찍힌다.
 > - 세기는 전부 줄자(볼록 껍질 둘레)로 재서 맞췄다. 축을 고치면 로그의 표와 검수 시트(`scripts/avatar-review`, 쿼리 belly · lower · bias · sh · pv · xl)를 다시 본다.
-> - 앱 코드: `morph.ts` `Shape` · `morphFor(sex, c, shape)` · `shapeKey()`, `AvatarView` 의 `shape` prop. **아직 어떤 화면도 shape 을 넘기지 않는다**(엔진 좌표는 그대로 f · m 두 개 — 그림만 달라지는 값).
+> - 앱 코드: `morph.ts` `Shape` · `morphFor(sex, c, shape)` · `shapeKey()`, `AvatarView` 의 `shape` prop. 화면 연결은 `own`(내 몸) → `shapeAt()` → 저장값 `profile.bodyShape`(내 몸 맞추기 `/project/fit`). 엔진 좌표는 그대로 f · m 두 개 — 그림만 달라지는 값.
 > - `stage.ts` `modelBox()`: three.js 는 모프가 늘면 모델 상자를 키워(GLTFLoader 가 모든 모프의 최대 변위를 더한다) 화면 속 몸이 작아진다 — 키 계산은 예전 키(`SIZE_KEYS`)만 쓴다. 모프를 더 추가해도 여기에 넣지 않는다.
 > - 알려진 한계: `fat_xl` 은 타깃을 범위 밖으로 민 것이라 남성은 허리띠 위 접힌 자국 · 겨드랑이 AO 가 거칠다. 앱용 glb 가 약 2배(남 1.5 → 2.7MB, 여 1.2 → 2.4MB).
 > ```bash

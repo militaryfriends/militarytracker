@@ -66,7 +66,7 @@ service cloud.firestore {
       return p is map
         && p.keys().hasOnly([
           'sex', 'age', 'height', 'weight', 'goal', 'env', 'days', 'level', 'food', 'allergy',
-          'waistCm', 'goalArchetypeId', 'focus', 'strategy'
+          'waistCm', 'goalArchetypeId', 'focus', 'strategy', 'bodyShape'
         ])
         && p.sex in ['male', 'female']
         && p.age is string && p.age.size() <= 4
@@ -84,7 +84,18 @@ service cloud.firestore {
         // 신경 쓰이는 부위(2026-11-01 온보딩 10단계) — 선택
         && (!('focus' in p) || (p.focus is list && p.focus.size() <= 6))
         // 고른 프로젝트 카드 방식(2026-11-02) — 프로젝트 없이도 식단 칼로리가 카드와 같게
-        && (!('strategy' in p) || p.strategy in ['cut_fast', 'cut', 'leanmass', 'bulk']);
+        && (!('strategy' in p) || p.strategy in ['cut_fast', 'cut', 'leanmass', 'bulk'])
+        // 보고 맞춘 체형(2026-11-15 내 몸 맞추기) — 3D 그림에만 쓰는 값. 선택
+        && (!('bodyShape' in p) || validShape(p.bodyShape));
+    }
+    function shapeNum(m, k) {
+      return !(k in m) || (m[k] is number && m[k] >= -1 && m[k] <= 1);
+    }
+    function validShape(m) {
+      return m is map
+        && m.keys().hasOnly(['belly', 'lower', 'musBias', 'shoulder', 'pelvis'])
+        && shapeNum(m, 'belly') && shapeNum(m, 'lower') && shapeNum(m, 'musBias')
+        && shapeNum(m, 'shoulder') && shapeNum(m, 'pelvis');
     }
 
     // users 문서의 허용 키. update 의 request.resource.data 는 쓰기 후 문서 전체라
