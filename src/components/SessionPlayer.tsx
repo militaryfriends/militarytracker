@@ -2,7 +2,7 @@ import { prescription, repsText, rxText } from '../utils/prescription';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList,
-  Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Keyboard,
+  Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Keyboard, PanResponder,
 } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -69,6 +69,19 @@ export default function SessionPlayer() {
 
   // 원형 휴식 타이머의 전체 길이 — 휴식이 시작될 때(+15초로 늘리면 그만큼) 잡는다
   const restTotal = useRef(0);
+  // 시트 올리기 — 손잡이를 위로 끌거나 누르면 영상이 한 줄로 접히고 세트 칸이 넓어진다(아래로 끌면 다시 펼침).
+  // 웹(마우스 끌기)에서도 같은 손잡이로 된다.
+  const [up, setUp] = useState(false);
+  const grabPan = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderRelease: (_e, g) => {
+      if (g.dy < -18) setUp(true);
+      else if (g.dy > 18) setUp(false);
+      else if (Math.abs(g.dy) < 6 && Math.abs(g.dx) < 6) setUp((v) => !v);
+    },
+  }), []);
   if (rest > 0 && (!wasResting.current || rest > restTotal.current)) restTotal.current = rest;
 
   // 휴식이 끝나는 순간 알린다
@@ -217,6 +230,18 @@ export default function SessionPlayer() {
       </View>
 
       {/* 영상은 1:1 로 위에 고정, 자동 재생 — 아래 세트 기록만 스크롤된다(10/31 피드백 4절). 종목 탭을 누르면 영상이 바뀐다 */}
+      {up && !kb ? (
+        <View style={s.compact}>
+          <ExerciseMedia key={cur.id} exId={cur.id} rounded={12} dim={0.15} style={s.compactThumb} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.compactName} numberOfLines={1}>{e?.n ?? ''}</Text>
+            <Text style={s.compactSub} numberOfLines={1}>{e && rx ? `${PART_LABEL[e.part]} · ${rxText(rx)}` : ''}</Text>
+          </View>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => setUp(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="영상 다시 펼치기" style={s.compactBtn}>
+            <Text style={s.compactBtnTxt}>영상 보기</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <View style={s.mediaArea}>
         <View style={{ width: mediaSize, height: mediaSize, alignSelf: 'center' }}>
           <ExerciseMedia key={cur.id} exId={cur.id} autoPlay rounded={20} dim={0.15} style={{ width: mediaSize, height: mediaSize }} />
@@ -234,6 +259,7 @@ export default function SessionPlayer() {
           ) : null}
         </View>
       </View>
+      )}
 
       <ScrollView
         horizontal
@@ -269,7 +295,10 @@ export default function SessionPlayer() {
       </ScrollView>
 
       <View style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        <View style={s.grab} />
+        <View {...grabPan.panHandlers} style={s.grabZone} accessibilityRole="button"
+          accessibilityLabel={up ? '세트 칸 내리기 — 영상 펼치기' : '세트 칸 올리기 — 영상 접기'}>
+          <View style={s.grab} />
+        </View>
 
         {/* 휴식 슬롯은 항상 같은 높이로 자리를 잡는다 — 마운트/언마운트되면 방금 누른 ✓ 가 손가락 아래서 밀린다 */}
         <View style={[s.restBox, rest > 0 && s.restBoxOn]}>
@@ -589,10 +618,18 @@ const s = themed(() => StyleSheet.create({
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 16, paddingTop: 8, flex: 1, minHeight: 200,
   },
-  grab: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: colors.line2, alignSelf: 'center', marginBottom: 12,
+  // 손잡이 — 보이는 막대는 작지만 끌 수 있는 자리는 시트 폭 전체 · 높이 32
+  grabZone: {
+    height: 32, marginTop: -8, marginHorizontal: -16, alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({ web: { cursor: 'grab', userSelect: 'none', touchAction: 'none' } as object, default: {} }),
   },
+  grab: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line2 },
+  compact: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  compactThumb: { width: 56, height: 56 },
+  compactName: { fontSize: 18, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  compactSub: { fontSize: 12.5, color: colors.mid, marginTop: 2 },
+  compactBtn: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, borderColor: colors.line2, justifyContent: 'center' },
+  compactBtnTxt: { fontSize: 13, fontWeight: '600', color: colors.ink },
   sheetTitle: { fontSize: 10.5, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, marginTop: 4 },
   swapLink: { fontSize: 12, color: colors.onMedia, fontWeight: '700' },
 

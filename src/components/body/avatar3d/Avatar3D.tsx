@@ -123,7 +123,7 @@ function GLBody({
   const GL = GLView;
   return (
     <View style={{ width: w, height: h }} {...(interactive ? pan.panHandlers : null)}>
-      {state !== 'ready' ? <View style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} pointerEvents="none">{fallback}</View> : null}
+      {state !== 'ready' ? <View style={StyleSheet.absoluteFill} pointerEvents="none">{fallback}</View> : null}
       <GL key={`${w}x${h}|${mode}`} style={{ width: w, height: h, backgroundColor: 'transparent' }} onContextCreate={onContextCreate} msaaSamples={4} />
     </View>
   );

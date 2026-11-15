@@ -54,7 +54,7 @@ export function Avatar3DStill({ sex, coord, shape, width, height, fallback }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   if (failed) return <>{fallback}</>;
-  if (!url) return <View style={{ width: w, height: h, opacity: 0.35 }}>{fallback}</View>;
+  if (!url) return <View style={{ width: w, height: h }}>{fallback}</View>;
   return (
     <Animated.View entering={FadeIn.duration(220)}>
       <Image source={{ uri: url }} style={{ width: w, height: h }} resizeMode="contain" accessibilityIgnoresInvertColors />
@@ -117,7 +117,7 @@ export function Avatar3DLive({ sex, coord, shape, width, height, morphMs = 700, 
 
   return (
     <View style={{ width: w, height: h }}>
-      {state !== 'ready' ? <View style={[StyleSheet.absoluteFill, state === 'loading' && { opacity: 0.35 }]}>{fallback}</View> : null}
+      {state !== 'ready' ? <View style={StyleSheet.absoluteFill}>{fallback}</View> : null}
       {state !== 'failed' ? <View ref={host} style={StyleSheet.absoluteFill} /> : null}
     </View>
   );

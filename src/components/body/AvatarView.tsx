@@ -2,19 +2,18 @@
  * 아바타 한 장.
  *  · 3D 모델이 있으면(웹 · 남성, avatar3d/) 엔진 좌표 그대로의 3D 몸 — coord 를 주면 칸 중심이 아니라 그 좌표.
  *    live 면 손으로 돌리는 뷰어(좌표가 바뀌면 몸이 서서히 변한다), 아니면 정지 이미지.
- *  · 3D 가 없으면 칸(F?M?)의 프리셋 이미지(src/data/avatarGrid.ts), 없으면 회색 실루엣.
+ *  · 3D 를 기다리는 동안 · 못 그릴 때는 자리 표시만(2D 프리셋 · 실루엣은 보여 주지 않는다).
  *
  * 배지: 지금(입력·측정 기반) · 예상(엔진 계산 — 항상 붙인다) · 목표(O2 에서 고른 칸).
  * 칸이 바뀌면 이전 칸 → 새 칸 0.6초 크로스페이드(같은 카메라라 자연스럽다, 명세 4-4).
  * 블러 · 가림 처리는 하지 않는다 — 결제 전에도 전부 선명하게.
  */
 import { memo, useEffect, useRef, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { AVATARS } from '../../data/avatarGrid';
-import { parseCell, type Coord, type Sex } from '../../utils/bodyComp';
+import { type Coord, type Sex } from '../../utils/bodyComp';
 import { colors, themed, useThemeMode } from '../../theme';
-import { Silhouette } from './Silhouette';
+import { Skeleton } from '../../ui';
 import { Avatar3DLive, Avatar3DStill, has3D } from './avatar3d/Avatar3D';
 import { cellCoord, shapeAt, type Shape } from './avatar3d/morph';
 import { useAppStore } from '../../stores/appStore';
@@ -23,19 +22,24 @@ export type AvatarBadge = '지금' | '예상' | '목표' | '시작';
 
 const FADE_MS = 600;
 
-/** 칸 한 장 — 2D (프리셋 이미지 또는 실루엣) */
-const Flat = memo(function Flat({ sex, cell, width, height }: { sex: Sex; cell: string; width: number; height: number }) {
-  const src = AVATARS[sex][cell];
-  if (src) return <Image source={src} style={{ width, height }} resizeMode="contain" accessibilityIgnoresInvertColors />;
-  const { f, m } = parseCell(cell);
-  return <Silhouette sex={sex} f={f} m={m} width={width} height={height} />;
+/**
+ * 3D 를 기다리는 동안 · 3D 를 못 그릴 때의 자리 — 2D 그림(프리셋 · 실루엣)은 더 이상 보여 주지 않는다(2026-11-15).
+ * 느린 연결에서 2D 가 잠깐 보였다가 3D 로 바뀌는 깜빡임을 없앤다. 몸 자리만 은은하게 숨 쉰다.
+ */
+const Wait = memo(function Wait({ width, height }: { width: number; height: number }) {
+  useThemeMode();
+  return (
+    <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="몸을 불러오는 중">
+      <Skeleton width={Math.round(width * 0.42)} height={Math.round(height * 0.86)} radius={Math.round(width * 0.21)} style={{ opacity: 0.5 }} />
+    </View>
+  );
 });
 
-/** 한 장 (배지 없음) — 3D 가 되면 3D, 아니면 2D */
+/** 한 장 (배지 없음) — 3D. 준비되기 전에는 자리 표시만 */
 const Still = memo(function Still({ sex, cell, coord, shape, width, height }: { sex: Sex; cell: string; coord?: Coord; shape?: Shape; width: number; height: number }) {
-  const flat = <Flat sex={sex} cell={cell} width={width} height={height} />;
-  if (!has3D(sex)) return flat;
-  return <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} width={width} height={height} fallback={flat} />;
+  const wait = <Wait width={width} height={height} />;
+  if (!has3D(sex)) return wait;
+  return <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} width={width} height={height} fallback={wait} />;
 });
 
 export function AvatarView({
@@ -107,12 +111,12 @@ export function AvatarView({
         <View style={[s.layer, { width, height }]}>
           <Avatar3DLive sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} width={width} height={height}
             morphMs={morphMs} yawGroup={yawGroup} intro={intro}
-            fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
+            fallback={<Wait width={width} height={height} />} />
         </View>
       ) : native3d ? (
         <View style={[s.layer, { width, height }]}>
           <Avatar3DStill sex={sex} coord={coord ?? cellCoord(cell)} shape={shape} from={fadeFrom && fadeFrom !== cell ? cellCoord(fadeFrom) : undefined}
-            width={width} height={height} fallback={<Flat sex={sex} cell={cell} width={width} height={height} />} />
+            width={width} height={height} fallback={<Wait width={width} height={height} />} />
         </View>
       ) : (
         <>

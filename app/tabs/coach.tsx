@@ -17,6 +17,7 @@ import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar } from '../../src/components/ui';
 import { ProLock } from '../../src/components/ProLock';
 import { MealCard, WarningCard } from '../../src/components/CoachCards';
+import { CoachThinking } from '../../src/components/CoachThinking';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
@@ -31,6 +32,9 @@ import {
 
 /** 처음 화면의 빠른 질문 — 누르면 바로 보낸다 */
 const QUICK = ['내 하루 칼로리 얼마야?', '지금 뭐 먹어야 해?', '운동 후에 뭐 먹을까?', '오늘 운동 뭐 하지?'];
+
+/** 대화 한 줄 — pending 은 답을 기다리는 자리(저장하지 않는다) */
+type Row = CoachMessage & { pending?: boolean };
 
 const WELCOME: CoachMessage = {
   role: 'assistant',
@@ -145,7 +149,8 @@ export default function CoachScreen() {
   // inverted 목록: 최신이 index 0
   const data = useMemo(() => {
     const list = chat.length ? chat : [WELCOME];
-    const withBusy = chatBusy ? [...list, { role: 'assistant' as const, content: '…' }] : list;
+    // 답을 기다리는 동안의 자리(맨 아래) — 말풍선 대신 CoachThinking 을 그린다
+    const withBusy: Row[] = chatBusy ? [...list, { role: 'assistant', content: '', pending: true }] : list;
     return [...withBusy].reverse();
   }, [chat, chatBusy]);
 
@@ -181,7 +186,9 @@ export default function CoachScreen() {
             contentContainerStyle={s.list}
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) =>
-              item.role === 'user' ? (
+              item.pending ? (
+                <CoachThinking />
+              ) : item.role === 'user' ? (
                 <View style={s.msgU}><Text style={s.msgUTxt}>{item.content}</Text></View>
               ) : (
                 <View>
@@ -232,7 +239,7 @@ export default function CoachScreen() {
               accessibilityLabel="보내기"
               accessibilityState={{ disabled: coachEmpty || !input.trim() || chatBusy }}
             >
-              {chatBusy ? <ActivityIndicator color={colors.onRed} size="small" /> : <Text style={s.sendTxt}>↑</Text>}
+              <Text style={s.sendTxt}>↑</Text>
             </TouchableOpacity>
           </View>
           {/* 키보드가 떠 있으면 안내 줄은 숨겨 입력칸을 키보드 바로 위에 둔다 */}
