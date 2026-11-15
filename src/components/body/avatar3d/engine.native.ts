@@ -7,6 +7,7 @@
  * 장면 · 조명 · 움직임은 웹과 같은 stage.ts.
  */
 import { getThemeMode } from '../../../theme/tokens';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Asset } from 'expo-asset';
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
@@ -62,6 +63,47 @@ export function markBroken(e?: unknown) {
 }
 /** 3D 를 끈 이유(처음 실패한 오류 메시지) — 없으면 null. MY 탭 아래에 작게 보여 준다(기기 진단용) */
 export const avatar3DError = () => brokenWhy;
+
+/**
+ * 3D 때문에 앱이 꺼지는 기기를 스스로 알아챈다 (2026-11-15, 안드로이드 내부 테스트에서 로그인 뒤 튕김).
+ * GL 드라이버에서 죽으면 JS 의 try/catch 로는 못 잡는다 — 다음 실행도 같은 화면에서 또 죽어 앱에 못 들어간다.
+ *  · 3D 를 처음 띄우기 직전에 '시도 중' 을 적고, 무사히 그리고 2.5초가 지나면 '정상' 으로 바꾼다.
+ *  · 다음 실행에 '시도 중' 이 두 번 연달아 남아 있으면 = 두 번 죽었다 → 이 기기에서는 3D 를 끈다(자리 표시만 보인다).
+ *  · GUARD_REV 를 올리면(3D 코드를 고쳤을 때) 꺼 둔 기기도 한 번 다시 시도한다.
+ * 3D 화면은 glGuard() 가 true 를 준 뒤에만 GLView 를 만든다.
+ */
+const GUARD_KEY = 'mt-gl-guard';
+const GUARD_REV = '1';
+const GUARD_MSG = '이전 실행에서 3D 를 그리다 앱이 종료되어 이 기기에서는 3D 를 껐습니다';
+let guard: Promise<boolean> | null = null;
+export function glGuard(): Promise<boolean> {
+  if (!guard) {
+    guard = (async () => {
+      try {
+        const [st, rev, nStr] = ((await AsyncStorage.getItem(GUARD_KEY)) ?? '').split(':');
+        const same = rev === GUARD_REV;
+        const n = same && st === 'trying' ? Number(nStr) || 0 : 0;
+        if ((same && st === 'off') || n >= 2) {
+          if (st !== 'off') await AsyncStorage.setItem(GUARD_KEY, `off:${GUARD_REV}:${n}`);
+          markBroken(new Error(GUARD_MSG));
+          return false;
+        }
+        await AsyncStorage.setItem(GUARD_KEY, `trying:${GUARD_REV}:${n + 1}`);
+        return true;
+      } catch {
+        return true;
+      }
+    })();
+  }
+  return guard;
+}
+let guardSettled = false;
+/** 3D 를 한 번 무사히 그렸다 — 조금 뒤에도 살아 있으면 '정상' 으로 적는다 */
+export function glGuardOk() {
+  if (guardSettled) return;
+  guardSettled = true;
+  setTimeout(() => { AsyncStorage.setItem(GUARD_KEY, `ok:${GUARD_REV}:0`).catch(() => {}); }, 2500);
+}
 
 /**
  * three r163+ 는 `context instanceof WebGLRenderingContext` 면 "WebGL 1 은 지원 안 함" 으로 멈춘다.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppState, Platform, StyleSheet } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Font from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,6 +13,35 @@ import { ConfettiLayer, FONT_ASSETS, restoreHaptics } from '../src/ui';
 import MobileFrame from '../src/components/MobileFrame';
 import { BootCurtain } from '../src/components/brand/BootCurtain';
 import { hideSplash, holdSplash } from '../src/components/brand/splash';
+
+/**
+ * 화면을 그리다 오류가 나면 — 빈 화면 · 앱 종료 대신 무슨 오류인지 보여 주고 다시 시도하게 한다(expo-router 가 이 이름을 찾는다).
+ * 테마가 깨진 상태일 수도 있어 색은 고정(다크). 오류 글은 길게 눌러 복사할 수 있다 — 문의할 때 그대로 보내면 된다.
+ */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> | void }) {
+  useEffect(() => { hideSplash(); }, []);
+  return (
+    <View style={eb.root}>
+      <Text style={eb.title}>화면을 여는 중 문제가 생겼습니다</Text>
+      <Text style={eb.sub}>아래 내용을 캡처해 보내 주시면 바로 확인하겠습니다.</Text>
+      <Text style={eb.msg} selectable>{String(error?.message ?? error)}</Text>
+      <TouchableOpacity activeOpacity={0.8} style={eb.btn} onPress={() => void retry()} accessibilityRole="button">
+        <Text style={eb.btnTxt}>다시 시도</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+const eb = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#09090A', alignItems: 'center', justifyContent: 'center', padding: 28 },
+  title: { color: '#F4F4F5', fontSize: 19, fontWeight: '800', textAlign: 'center' },
+  sub: { color: '#A6A6AD', fontSize: 13.5, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  msg: {
+    color: '#F4F4F5', fontSize: 12.5, lineHeight: 18, marginTop: 18, padding: 14, borderRadius: 14, alignSelf: 'stretch',
+    backgroundColor: '#18181B', borderWidth: 1, borderColor: '#37373D',
+  },
+  btn: { marginTop: 20, minHeight: 52, paddingHorizontal: 32, borderRadius: 26, backgroundColor: '#D13848', alignItems: 'center', justifyContent: 'center' },
+  btnTxt: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '700' },
+});
 
 // 첫 화면이 스플래시와 같은 장면을 그려 둘 때까지 스플래시를 잡아둔다 — 걷는 쪽은 그 화면 (src/components/brand/splash.ts)
 holdSplash();

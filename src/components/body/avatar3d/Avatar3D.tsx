@@ -9,7 +9,7 @@ import { PanResponder, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import type { ExpoWebGLRenderingContext, GLView as GLViewType } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
-import { attach, loadModel, markBroken, native3D, type NativeView } from './engine.native';
+import { attach, glGuard, glGuardOk, loadModel, markBroken, native3D, type NativeView } from './engine.native';
 export { avatar3DError } from './engine.native';
 import { joinYawGroup } from './stage';
 import { shapeKey, type Shape } from './morph';
@@ -65,6 +65,17 @@ function GLBody({
   const alive = useRef(true);
   const group = useRef<ReturnType<typeof joinYawGroup> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  // 이 기기에서 3D 를 띄워도 되는지(지난 실행에서 3D 때문에 꺼지지 않았는지) 확인한 뒤에만 GL 뷰를 만든다
+  const [allowed, setAllowed] = useState(false);
+  useEffect(() => {
+    let on = true;
+    void glGuard().then((ok) => {
+      if (!on) return;
+      if (ok) setAllowed(true);
+      else setState('failed');
+    });
+    return () => { on = false; };
+  }, []);
 
   useEffect(() => {
     alive.current = true;
@@ -94,6 +105,7 @@ function GLBody({
       // 이전 칸에서 시작하면(프로젝트 카드 선택) 지금 좌표로 변해 간다
       v.setCoord(coordRef.current, from ? 600 : 0, shapeRef.current);
       setState('ready');
+      glGuardOk();
     } catch (e) {
       markBroken(e);
       if (alive.current) setState('failed');
@@ -119,7 +131,7 @@ function GLBody({
     });
   }, []);
 
-  if (state === 'failed' || !GLView) return <>{fallback}</>;
+  if (state === 'failed' || !GLView || !allowed) return <>{fallback}</>;
   const GL = GLView;
   return (
     <View style={{ width: w, height: h }} {...(interactive ? pan.panHandlers : null)}>
