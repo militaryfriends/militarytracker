@@ -157,7 +157,8 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - **네이티브가 바뀌면 코드 푸시로 못 보낸다**: 네이티브 모듈 추가 · 업그레이드(npx expo install 로 새 패키지), Expo SDK 올림,
   app.json 의 아이콘 · 스플래시 · 권한 · 플러그인. 이때는 `version` 을 올리고 스토어 빌드 → 옛 버전 앱에는 그 업데이트가 안 간다.
   버전을 안 올리고 네이티브가 필요한 JS 를 보내면 옛 앱이 그 모듈을 못 찾아 깨진다.
-- 1.1.0 이하 빌드에는 expo-updates 가 없어 코드 푸시를 받지 못한다.
+- 스토어 · TestFlight 빌드(1.0.0 부터, production 채널)는 전부 expo-updates 가 들어 있다. 2026-10-15 이전의 옛 개발 빌드만 코드 푸시를 못 받는다.
+- `eas update` 는 **맥에 체크아웃된 코드**를 보낸다 — 보내기 전에 브랜치(main)와 `git status` 를 확인한다. 모델(.glb) · 이미지도 같이 올라간다.
 - 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
 
 ## 비밀 파일 (Bitwarden)
