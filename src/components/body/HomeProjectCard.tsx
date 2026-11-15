@@ -79,9 +79,9 @@ export function HomeProjectCard() {
           {stopped ? '멈춤 · 다시 구독하면 이어서' : `${now.week}주차 · ${now.dueIn <= 0 ? '체크인할 때예요' : `다음 체크인 D-${now.dueIn}`}`}
         </Text>
         <View style={s.pair}>
-          <AvatarView sex={sex} cell={now.nowCell} coord={coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi)} width={AV} badge="지금" />
+          <AvatarView sex={sex} cell={now.nowCell} coord={coordOf(sex, now.nowComp.bfPct, now.nowComp.nffmi)} own bfPct={now.nowComp.bfPct} width={AV} badge="지금" />
           <Ionicons name="arrow-forward" size={16} color={colors.muted} />
-          <AvatarView sex={sex} cell={project.end.cell} coord={coordOf(sex, project.end.bfPct, project.end.nffmi)} width={AV} badge="예상" />
+          <AvatarView sex={sex} cell={project.end.cell} coord={coordOf(sex, project.end.bfPct, project.end.nffmi)} own bfPct={project.end.bfPct} width={AV} badge="예상" />
         </View>
         <View style={s.bar} accessibilityElementsHidden>
           <View style={[s.barFill, { width: `${Math.max(3, bodyPct)}%` }]} />
@@ -102,9 +102,9 @@ export function HomeProjectCard() {
         <Text style={s.name} numberOfLines={1}>{rec.recommended ? '추천' : '내가 고른 카드'} · {rec.name}</Text>
         <Text style={s.sub}>{rec.months}개월 · {kg(rec.end.weightKg)}kg · 체지방 {pct1(rec.end.bfPct)}%</Text>
         <View style={s.pair}>
-          <AvatarView sex={analysis.input.sex} cell={freeNow.cell} coord={freeNow.coord} width={AV} badge="지금" />
+          <AvatarView sex={analysis.input.sex} cell={freeNow.cell} coord={freeNow.coord} own width={AV} badge="지금" />
           <Ionicons name="arrow-forward" size={16} color={colors.muted} />
-          <AvatarView sex={analysis.input.sex} cell={rec.end.cell} coord={coordOf(analysis.input.sex, rec.end.bfPct, rec.end.nffmi)} width={AV} badge="예상" />
+          <AvatarView sex={analysis.input.sex} cell={rec.end.cell} coord={coordOf(analysis.input.sex, rec.end.bfPct, rec.end.nffmi)} own bfPct={rec.end.bfPct} width={AV} badge="예상" />
         </View>
         <Text style={s.link}>프로젝트 4가지 보기 ›</Text>
       </PressableScale>

@@ -1,5 +1,28 @@
 # 3D 아바타 (웹에서 지금 쓰는 방식)
 
+> **2026-11-15 — 체형 축 6개 추가(남녀).** 체지방 · 근육 2축으로 못 그리는 몸(배만 나온 몸 · 하체형 · 어깨 넓은 몸 · 체지방 F5 너머)을 위한 모프.
+> 기존 몸(기본 + 모프 4개 · 남성 soft)은 정점 하나 바뀌지 않는다 — 새 모프는 값 0 이면 예전 그림 그대로(텍스처도 그대로 쓴다).
+>
+> | 모프 | 1.0 일 때 (남 176cm · 여 162cm 환산) | 앱 `Shape` 필드 |
+> |---|---|---|
+> | `belly` | 배 집중 — 팔다리는 그대로, 허리 남 +12cm · 여 +11cm | `belly` (−0.5~1) |
+> | `lower` | 하체 집중 — 엉덩이 +8cm | `lower` (−0.5~1) |
+> | `mus_bias` | 근육 분포 — +1 상체형 / −1 하체형 (mus_up 을 위아래로 나눈 차이 × 0.6) | `musBias` (−1~1) |
+> | `shoulder` | 어깨 너비 — 좌우 남 +2cm · 여 +1.8cm 씩 | `shoulder` (−1~1) |
+> | `pelvis` | 골반 너비 — 좌우 +1.5cm 씩 | `pelvis` (−1~1) |
+> | `fat_xl` | 고도 체지방 — fat_up 1 + fat_xl 1 = 남 체지방 약 38%(허리 약 131cm) · 여 약 48%(허리 약 116cm) | `xl` (0~1, f = 5 일 때만. `xlFor(sex, 체지방%)`) |
+>
+> - 남성: `scripts/avatar-shape-axes.py` 가 v20 .blend(avatar-mf-keys.py 결과)에 셰이프 키를 더한다 → `build-avatar-3d.py` 가 있는 키만 같이 내보낸다(`OPTIONAL_KEYS`).
+> - 여성: `scripts/build-avatar-mh.py` 의 `AXES['f']`(MakeHuman 부위 타깃 배합) — 빌드 로그에 허리 · 엉덩이 둘레 표가 찍힌다.
+> - 세기는 전부 줄자(볼록 껍질 둘레)로 재서 맞췄다. 축을 고치면 로그의 표와 검수 시트(`scripts/avatar-review`, 쿼리 belly · lower · bias · sh · pv · xl)를 다시 본다.
+> - 앱 코드: `morph.ts` `Shape` · `morphFor(sex, c, shape)` · `shapeKey()`, `AvatarView` 의 `shape` prop. 화면 연결은 `own`(내 몸) → `shapeAt()` → 저장값 `profile.bodyShape`(내 몸 맞추기 `/project/fit`). 엔진 좌표는 그대로 f · m 두 개 — 그림만 달라지는 값.
+> - `stage.ts` `modelBox()`: three.js 는 모프가 늘면 모델 상자를 키워(GLTFLoader 가 모든 모프의 최대 변위를 더한다) 화면 속 몸이 작아진다 — 키 계산은 예전 키(`SIZE_KEYS`)만 쓴다. 모프를 더 추가해도 여기에 넣지 않는다.
+> - 알려진 한계: `fat_xl` 은 타깃을 범위 밖으로 민 것이라 남성은 허리띠 위 접힌 자국 · 겨드랑이 AO 가 거칠다. 앱용 glb 가 약 2배(남 1.5 → 2.7MB, 여 1.2 → 2.4MB).
+> ```bash
+> cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/avatar-shape-axes.py /tmp/mf_keys.blend /tmp/mf_axes.blend      # 남성 — 그다음 build-avatar-3d.py --blend /tmp/mf_axes.blend … --arm-angle 6
+> cd /tmp && ~/.venv-bpy/bin/python <저장소>/scripts/build-avatar-mh.py -- --sex f --mh ~/mh --out /tmp/avatar_f.raw.glb --tex /tmp/f_tex   # 여성 (지금 쓰는 여성 모델은 이 스크립트)
+> ```
+
 > **2026-11-10 — 남성은 다시 밀프 원본 .blend(클라이언트가 셰이프 키 fat_up · fat_down · mus_up · mus_down 조각)로.**
 > 원본 키는 그대로 두고 `scripts/avatar-mf-keys.py` 가 ① mus_down 을 1.25배 + 근육 부피를 살짝 줄이고 ② 근육 결(복근 · 가슴 선)을 펴는 `soft` 키를 더한다.
 > `build-avatar-3d.py` 는 몸에 `soft` 키가 있으면 같이 내보낸다. 앱에서 soft 세기 = `morph.ts` softFor()(체지방 높을수록 · 근육 낮을수록 1).

@@ -18,7 +18,9 @@ import { morphFor } from '../../src/components/body/avatar3d/morph';
   const m = prepareModel(T as any, g.scene, { normal, ao, cloth });
   const st = buildStage(m, W / H);
   const c = { f: +(q.get('f') || 0) || (sex === 'male' ? 1.6 : 2), m: +(q.get('m') || 0) || (sex === 'male' ? 4 : 3) };
-  applyMorph(st, morphFor(sex, c));
+  // 체형 축: belly · lower · bias · sh · pv · xl (주소 쿼리, 없으면 0)
+  const n = (k: string) => +(q.get(k) || 0);
+  applyMorph(st, morphFor(sex, c, { belly: n('belly'), lower: n('lower'), musBias: n('bias'), shoulder: n('sh'), pelvis: n('pv'), xl: n('xl') }));
   st.pivot.rotation.y = q.get('yaw') === null ? 0.4 : +q.get('yaw')!;
   // 가까이 보기: head=1 → 머리 · 목, head=2 → 가슴 · 겨드랑이
   const hv = q.get('head');

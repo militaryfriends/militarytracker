@@ -88,6 +88,25 @@ export interface UserProfile {
    * 카드에서 본 숫자와 같게(10/31 피드백 2절 "숫자는 한 곳에서만"). 없으면 goal 로 짐작(cut → 0.5% 감량, muscle → 린매스업).
    */
   strategy?: Strategy;
+  /** 보고 맞춘 체형(내 몸 맞추기) — 3D 그림에만 쓴다. 체지방 · 칼로리 · 기간 계산에는 들어가지 않는다 */
+  bodyShape?: BodyShape;
+}
+
+/**
+ * 체형 축 값(내 몸 맞추기에서 고른 것) — 0 = 보통. 범위는 avatar3d/morph.ts 의 Shape 와 같다.
+ * 고도 체지방(xl)은 여기 없다 — 체지방률에서 바로 나온다(xlFor).
+ */
+export interface BodyShape {
+  /** 배 집중 (-0.5 ~ 1) */
+  belly?: number;
+  /** 엉덩이 · 허벅지 집중 (-0.5 ~ 1) */
+  lower?: number;
+  /** 근육 분포: + 상체형 · - 하체형 (-1 ~ 1) */
+  musBias?: number;
+  /** 어깨 너비 (-1 ~ 1) */
+  shoulder?: number;
+  /** 골반 너비 (-1 ~ 1) */
+  pelvis?: number;
 }
 
 export type FocusPart = 'chest' | 'back' | 'shoulders' | 'arms' | 'abs' | 'legs';

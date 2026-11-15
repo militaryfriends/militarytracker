@@ -9,7 +9,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import type { ViewInstance } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import type { Coord, Sex } from '../../../utils/bodyComp';
-import { coordKey } from './morph';
+import { coordKey, shapeKey, type Shape } from './morph';
 import { cachedSnapshot, loadModel, mountViewer, snapshot, supports3D, type Viewer } from './engine.web';
 import { joinYawGroup } from './stage';
 
@@ -22,8 +22,10 @@ export function preload3D(sex: Sex): void {
 /** 앱 전용 진단(Avatar3D.tsx) — 웹은 없음 */
 export const avatar3DError = (): string | null => null;
 
-export function Avatar3DStill({ sex, coord, width, height, fallback }: {
+export function Avatar3DStill({ sex, coord, shape, width, height, fallback }: {
   sex: Sex; coord: Coord;
+  /** 체형 축(뱃살형 등) — 없으면 기본 체형 */
+  shape?: Shape;
   /** 앱에서만 씀(이 좌표에서 coord 로 변해 감) — 웹은 AvatarView 의 크로스페이드가 대신한다 */
   from?: Coord;
   width: number; height: number; fallback: ReactNode;
@@ -31,7 +33,7 @@ export function Avatar3DStill({ sex, coord, width, height, fallback }: {
   const w = Math.round(width);
   const h = Math.round(height);
   const mode = useThemeMode(); // 밝은 · 어두운 화면은 노출이 달라 다시 찍는다
-  const key = `${sex}|${coordKey(coord)}|${w}x${h}|${mode}`;
+  const key = `${sex}|${coordKey(coord)}|${shapeKey(shape)}|${w}x${h}|${mode}`;
   const [url, setUrl] = useState<string | undefined>(() => cachedSnapshot(key));
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -42,7 +44,7 @@ export function Avatar3DStill({ sex, coord, width, height, fallback }: {
       return;
     }
     setUrl(undefined);
-    snapshot(sex, coord, w, h, key)
+    snapshot(sex, coord, w, h, key, undefined, shape)
       .then((u) => alive && setUrl(u))
       .catch(() => alive && setFailed(true));
     return () => {
@@ -60,8 +62,8 @@ export function Avatar3DStill({ sex, coord, width, height, fallback }: {
   );
 }
 
-export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGroup, intro = false, fallback }: {
-  sex: Sex; coord: Coord; width: number; height: number;
+export function Avatar3DLive({ sex, coord, shape, width, height, morphMs = 700, yawGroup, intro = false, fallback }: {
+  sex: Sex; coord: Coord; shape?: Shape; width: number; height: number;
   /** 좌표가 바뀌면 이 시간 동안 몸이 변한다 */
   morphMs?: number;
   yawGroup?: string;
@@ -74,6 +76,9 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
   const viewer = useRef<Viewer | null>(null);
   const coordRef = useRef(coord);
   coordRef.current = coord;
+  const shapeRef = useRef(shape);
+  shapeRef.current = shape;
+  const sKey = shapeKey(shape);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const w = Math.round(width);
   const h = Math.round(height);
@@ -83,11 +88,11 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
     const el = host.current as unknown as HTMLElement | null;
     if (!el) return;
     const group = joinYawGroup(yawGroup, {}, (y) => viewer.current?.setYaw(y));
-    mountViewer(el, { sex, coord: coordRef.current, w, h, intro, onYaw: group.emit, breathe: !reduce })
+    mountViewer(el, { sex, coord: coordRef.current, shape: shapeRef.current, w, h, intro, onYaw: group.emit, breathe: !reduce })
       .then((v) => {
         if (!alive) return v.dispose();
         viewer.current = v;
-        v.setCoord(coordRef.current, 0);
+        v.setCoord(coordRef.current, 0, shapeRef.current);
         setState('ready');
       })
       .catch(() => alive && setState('failed'));
@@ -102,9 +107,9 @@ export function Avatar3DLive({ sex, coord, width, height, morphMs = 700, yawGrou
   }, [sex]);
 
   useEffect(() => {
-    viewer.current?.setCoord(coord, morphMs);
+    viewer.current?.setCoord(coord, morphMs, shapeRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coord.f, coord.m]);
+  }, [coord.f, coord.m, sKey]);
 
   useEffect(() => {
     viewer.current?.resize(w, h);

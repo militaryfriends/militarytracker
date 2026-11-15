@@ -35,6 +35,7 @@ ra = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ra)
 
 KEYS = ('fat_up', 'fat_down', 'mus_up', 'mus_down')
+OPTIONAL_KEYS = ('soft', 'belly', 'lower', 'mus_bias', 'shoulder', 'pelvis', 'fat_xl')
 
 
 def log(*a):
@@ -466,9 +467,11 @@ def main():
     ra.freeze_animation([rig, rig.data] + [o.data.shape_keys for o in [body] + clothes if o.data.shape_keys])
 
     # 선택 키 'soft'(근육 결 · 복근 칸을 지운 몸) — 있으면 같이 내보낸다(앱 morph.ts 가 좌표로 세기를 정한다)
-    if body.data.shape_keys and 'soft' in body.data.shape_keys.key_blocks and 'soft' not in KEYS:
-        KEYS = KEYS + ('soft',)
-        log('선택 키 soft 사용')
+    # 체형 축(scripts/avatar-shape-axes.py — belly · lower · mus_bias · shoulder · pelvis · fat_xl)도 있으면 같이
+    for opt in OPTIONAL_KEYS:
+        if body.data.shape_keys and opt in body.data.shape_keys.key_blocks and opt not in KEYS:
+            KEYS = KEYS + (opt,)
+            log('선택 키', opt, '사용')
     # 모델러 키가 있으면 기본 상태에서는 0
     sk = body.data.shape_keys
     if sk:

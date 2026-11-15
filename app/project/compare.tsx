@@ -68,7 +68,7 @@ export default function CompareScreen() {
         <Text style={s.sub}>지금 내 몸이에요</Text>
 
         <Animated.View entering={FadeInDown.duration(320)} style={s.hero}>
-          <AvatarView sex={sex} cell={a.cell} coord={a.coord} width={Math.max(150, avW)} badge="지금" live intro
+          <AvatarView sex={sex} cell={a.cell} coord={a.coord} own bfPct={a.comp.bfPct} width={Math.max(150, avW)} badge="지금" live intro
             label={`지금 내 몸, ${kg(a.input.weightKg)}kg, 체지방 ${pct0(a.comp.bfPct)}%`} />
           {has3D(sex) ? <Text style={s.spin}>좌우로 밀어 돌려 보세요</Text> : null}
         </Animated.View>

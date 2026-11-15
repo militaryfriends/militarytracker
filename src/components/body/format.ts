@@ -63,5 +63,7 @@ export function profileFromAnalysis(
     // 온보딩 10단계에서 고른 부위 — 빠뜨리면 루틴 보조 종목이 사라진다
     ...(base?.focus?.length ? { focus: base.focus } : {}),
     ...(strategy ? { strategy } : {}),
+    // 보고 맞춘 체형은 다시 계산해도 남긴다(그림 전용)
+    ...(base?.bodyShape ? { bodyShape: base.bodyShape } : {}),
   };
 }

@@ -9,6 +9,7 @@ cp ../../assets/avatar/*.glb ../../assets/avatar/*.jpg web/
 echo '<!doctype html><body style="margin:0"><script type="module" src="app.js"></script>' > web/app.html
 (cd web && python3 -m http.server 8766 &)
 node shots.cjs web out/m male            # out/m_F1M1.png … (주소 쿼리: sex · f · m · yaw · light=1 · head=1)
+# 체형 축은 주소 쿼리로: belly · lower · bias(근육 분포) · sh(어깨) · pv(골반) · xl(고도 체지방, f=5 일 때만) — 예: app.html?sex=male&f=3&m=2&belly=1&yaw=1.5708
 python3 sheet.py out/m out/sheet_m       # out/sheet_m_grid.png · out/sheet_m_views.png
 ```
 

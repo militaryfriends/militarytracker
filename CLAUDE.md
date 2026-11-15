@@ -82,7 +82,15 @@ O6~O8 은 `/project` 아래라 온보딩이 끝난 뒤에도 홈에서 다시 �
   `soft` 키 추가 → `build-avatar-3d.py --arm-angle 6`. 기본 몸 F1.6M4(`morph.ts` BASE), soft 세기는 `softFor()`(체지방↑ · 근육↓ 에서 1).
   여성 = MakeHuman(CC0) + 진짜 체중 · 근육 타깃(`scripts/build-avatar-female.py`/`build-avatar-mh.py`, 기본 몸 F2M3). 힘 뺀 선 자세, 손바닥은 허벅지 쪽.
   재질은 무광 클레이(roughness 0.78), 테두리 빛 약하게, AO 는 살에 따라 약하게, 밝은 화면 노출 1.0 · 어두운 화면 0.75, 기본 각도 3/4(`DEFAULT_YAW`).
-  모델을 바꾸면 `scripts/avatar-review/` 로 25칸 시트를 뽑아 밀프 검수를 받는다.
+  모델을 바꾸면 `scripts/avatar-review/` 로 25칸 시트를 뽑아 본다(2026-11-15 모델 전권 위임 — 밀프 검수 없이 진행).
+  **체형 축(2026-11-15)**: 모프 `belly · lower · mus_bias · shoulder · pelvis · fat_xl` 추가(남 `scripts/avatar-shape-axes.py`, 여 `build-avatar-mh.py` AXES) —
+  `morph.ts` `Shape` · `morphFor(sex, c, shape)`, `AvatarView shape` prop. 값 0 이면 예전 그림 그대로.
+  **내 몸 맞추기(2026-11-15)** `/project/fit`(MY › 내 몸 카드의 '내 몸과 다른가요? 맞추기'): 배 · 엉덩이/허벅지 · 근육이 붙은 곳 · 어깨 · 골반을 보고 골라
+  `profile.bodyShape`(다섯 축 전부 숫자로 — saveProfile 이 merge 라 축을 빼면 서버에 옛 값이 남는다)에 저장. **그림 전용 — 엔진 숫자에는 안 들어간다.**
+  사용자 자신의 몸을 그리는 `AvatarView` 에는 `own`(+ 있으면 `bfPct`)을 준다 → `morph.ts shapeAt()` 이 좌표에 맞게 입힌다
+  (배 · 하체 살은 살이 빠지면 같이 줄고, 어깨 · 골반 · 근육 분포는 그대로, 지도 끝 너머 체지방은 `bfPct` 에서). 목표 체형 카드(StepGoal)처럼 남의 몸에는 주지 않는다.
+  `firestore.rules validProfile` 에 `bodyShape` 가 있다 — **이 기능이 든 앱을 내보내기 전에 규칙을 먼저 배포**(안 하면 프로필 저장 전체가 거절된다).
+  `stage.ts modelBox()` 는 예전 키만으로 모델 키를 잰다(모프가 늘어도 화면 속 몸 크기가 안 바뀌게) — 새 모프를 `SIZE_KEYS` 에 넣지 말 것.
   웹 = three.js(`engine.web.ts`, 모델 `avatar_m.glb` meshopt), 앱 = expo-gl GLView + three.js(`engine.native.ts`, 모델 `avatar_m_native.glb`
   — meshopt 해제기가 WebAssembly 라 Hermes 에서 못 씀). 장면 · 조명 · 움직임은 `stage.ts` 한 벌. 앱에서 GL 초기화가 한 번이라도 실패하면
   그 뒤로는 2D(`markBroken`). expo-gl 은 네이티브 모듈 — 앱에 반영하려면 새 빌드.

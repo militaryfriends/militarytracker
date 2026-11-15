@@ -32,6 +32,8 @@ export function ProjectCard({
         sex={sex}
         cell={p.end.cell}
         coord={coordOf(sex, p.end.bfPct, p.end.nffmi)}
+        own
+        bfPct={p.end.bfPct}
         width={compact ? 64 : 92}
         badge="예상"
         fadeFrom={selected && !compact ? fromCell : null}
@@ -130,6 +132,8 @@ export function ProjectGridCard({
           sex={sex}
           cell={p.end.cell}
           coord={coordOf(sex, p.end.bfPct, p.end.nffmi)}
+          own
+          bfPct={p.end.bfPct}
           width={avatarW}
           badge="예상"
           label={`예상 몸, ${kg(p.end.weightKg)}kg, 체지방 ${pct1(p.end.bfPct)}%`}
