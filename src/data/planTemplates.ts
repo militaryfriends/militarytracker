@@ -187,3 +187,16 @@ export function splitLabel(place: Place, days: number, level: 1 | 2 | 3): string
   if (place === 'home') return d === 2 ? '홈 상하체 2분할' : d === 4 ? '홈 상하체 + 푸시 · 레그' : '홈 푸시 · 풀 · 레그';
   return d === 2 ? '상하체 2분할' : d === 3 ? '푸시 · 풀 · 레그' : d === 4 ? '상하체 2분할 × 2' : d === 5 ? '부위별 5분할' : '푸시 · 풀 · 레그 × 2';
 }
+
+/** 자동 루틴 템플릿 어딘가의 슬롯 후보인 종목 전체(장소별) — 가진 기구로 슬롯이 비면 이 안에서만 대체한다 */
+const SLOT_IDS = new Map<Place, Set<string>>();
+export function allSlotIds(place: Place): Set<string> {
+  let set = SLOT_IDS.get(place);
+  if (!set) {
+    set = new Set<string>();
+    for (const d of [2, 3, 4, 5, 6]) for (const lv of [1, 2, 3] as const)
+      for (const t of splitTemplates(place, d, lv)) for (const sl of t.slots) for (const id of [...sl.opts, ...(sl.beginner ?? [])]) set.add(id);
+    SLOT_IDS.set(place, set);
+  }
+  return set;
+}

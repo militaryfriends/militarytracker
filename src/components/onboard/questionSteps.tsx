@@ -9,6 +9,7 @@ import { colors, useThemeMode } from '../../theme';
 import type { FocusPart, UserProfile } from '../../types';
 import { Opt, StepHead, type Update } from './basicSteps';
 import { o } from './styles';
+import { EquipPicker, defaultEquip, equipFits } from './EquipPicker';
 import { PressableScale } from '../../ui';
 
 export function StepSex({ p, update, num, total }: { p: UserProfile; update: Update; num: number; total: number }) {
@@ -74,11 +75,30 @@ export function StepLevel({ p, update, num, total }: { p: UserProfile; update: U
 
 export function StepPlace({ p, update, num, total }: { p: UserProfile; update: Update; num: number; total: number }) {
   useThemeMode();
+  // 장소를 바꾸면 기구 목록도 새 장소 기본값으로(헬스장 목록이 홈트에 남으면 덤벨만 있는 걸로 읽힌다)
+  const pick = (env: 'gym' | 'home') => {
+    if (p.env !== env || !equipFits(env, p.equip)) update('equip', defaultEquip(env));
+    update('env', env);
+  };
   return (
     <View>
       <StepHead num={num} total={total} q={'어디서 운동하나요?'} />
-      <Opt label="헬스장" sub="바벨 · 머신 · 케이블이 다 있어요" on={p.env === 'gym'} onPress={() => update('env', 'gym')} />
-      <Opt label="홈트레이닝" sub="맨몸 · 덤벨 · 밴드" on={p.env === 'home'} onPress={() => update('env', 'home')} />
+      <Opt label="헬스장" sub="바벨 · 머신 · 케이블" on={p.env === 'gym'} onPress={() => pick('gym')} />
+      <Opt label="홈트레이닝" sub="맨몸 · 덤벨 · 밴드" on={p.env === 'home'} onPress={() => pick('home')} />
+    </View>
+  );
+}
+
+/** 운동 장소 다음 한 화면 — 가진 기구. 헬스장은 "일반 헬스장이에요"를 누르면 바로 다음 */
+export function StepEquip({ p, update, num, total, onNext }: { p: UserProfile; update: Update; num: number; total: number; onNext: () => void }) {
+  useThemeMode();
+  const gym = p.env === 'gym';
+  return (
+    <View>
+      <StepHead num={num} total={total} q={gym ? '어떤 헬스장인가요?' : '집에 있는 기구를\n골라 주세요'}
+        desc={gym ? '없는 기구가 필요한 운동은 루틴에 넣지 않아요.' : '나중에 MY › 내 정보에서 바꿀 수 있어요.'} />
+      <EquipPicker env={p.env} equip={p.equip} onChange={(v) => update('equip', v)}
+        onGeneralGym={() => setTimeout(onNext, 180)} />
     </View>
   );
 }

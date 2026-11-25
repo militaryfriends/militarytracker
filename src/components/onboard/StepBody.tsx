@@ -96,7 +96,11 @@ export function StepBody({
         placeholder="예: 84" placeholderTextColor={colors.muted} keyboardType="decimal-pad"
         value={waist} onChangeText={onWaist} accessibilityLabel="허리둘레 (cm)"
       />
-      {errors.waist ? <Text style={o.err}>{errors.waist}</Text> : <Text style={s.hint}>배꼽 높이 둘레예요(바지 사이즈 아님). 비워 둬도 되고, 넣으면 정확도가 '좋음'이 됩니다.</Text>}
+      {errors.waist ? <Text style={o.err}>{errors.waist}</Text> : <Text style={s.hint}>배꼽 높이에서, 숨을 내쉬고, 줄자가 파고들지 않게 재요. 바지 사이즈와 달라요.</Text>}
+      {/* 11/23 체형 추정 오차 보완 2 — 허리가 없으면 키 · 체중만으로 추정해 근육형 · 복부형 오차가 커진다 */}
+      {!errors.waist && !waist.trim() && !inbody.on ? (
+        <Text style={o.warn}>허리를 비우면 키·체중만으로 추정해요. 근육이 많은 몸은 체지방이 높게, 배가 나온 몸은 낮게 나올 수 있어요.</Text>
+      ) : null}
 
       <View style={s.toggle}>
         <View style={{ flex: 1 }}>
@@ -156,6 +160,7 @@ export function StepBody({
               <Text style={s.inchBtnTxt}>{inchCm > 0 ? `${Math.round(inchCm * 10) / 10}cm 넣기` : 'cm 로 바꾸기'}</Text>
             </PressableScale>
           </View>
+          <Text style={[s.hint, { marginTop: 8 }]}>바지 사이즈는 실제 배꼽 둘레보다 작게 나오는 경우가 많아요. 줄자가 더 정확해요.</Text>
           <PressableScale style={o.textBtn} onPress={() => setGuide(false)} accessibilityRole="button">
             <Text style={[o.textBtnTxt, { textDecorationLine: 'none' }]}>닫기</Text>
           </PressableScale>

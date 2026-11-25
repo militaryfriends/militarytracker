@@ -93,7 +93,7 @@ export default function CompareScreen() {
           <AccuracyMeter accuracy={a.comp.accuracy} compact />
           {a.comp.accuracy === 'basic' ? (
             <PressableScale onPress={addWaist} hitSlop={8} accessibilityRole="button">
-              <Text style={s.link}>허리둘레를 넣으면 더 정확해져요</Text>
+              <Text style={s.link}>허리둘레가 없어서 오차가 커요. 허리를 넣으면 더 정확해져요 ›</Text>
             </PressableScale>
           ) : null}
         </View>

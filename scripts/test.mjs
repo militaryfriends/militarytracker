@@ -26,6 +26,7 @@ function walk(dir, hit = []) {
 
 const resolveTs = (from, spec) => {
   const base = resolve(dirname(from), spec);
+  if (base.endsWith('.json') && existsSync(base)) return base;
   for (const c of [`${base}.ts`, `${base}.tsx`, join(base, 'index.ts')]) if (existsSync(c)) return c;
   throw new Error(`못 찾음: ${spec} (${relative(ROOT, from)})`);
 };
@@ -35,6 +36,13 @@ function emit(file) {
   if (done.has(file)) return;
   done.add(file);
   const src = readFileSync(file, 'utf8');
+  if (file.endsWith('.json')) {
+    // JSON import(예: mediaManifest.json) — 기본 내보내기 모듈로
+    const target = join(OUT, relative(ROOT, file)).replace(/\.json$/, '.mjs');
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, `export default ${src};`);
+    return;
+  }
   const deps = [];
   const out = ts.transpileModule(src, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, verbatimModuleSyntax: false },
@@ -42,7 +50,7 @@ function emit(file) {
   }).outputText.replace(/(from\s+|import\s*\()(['"])(\.{1,2}\/[^'"]+)\2/g, (_, pre, q, spec) => {
     const dep = resolveTs(file, spec);
     deps.push(dep);
-    let rel = relative(dirname(file), dep).replace(/\.tsx?$/, '.mjs').replace(/\\/g, '/');
+    let rel = relative(dirname(file), dep).replace(/\.(tsx?|json)$/, '.mjs').replace(/\\/g, '/');
     if (!rel.startsWith('.')) rel = `./${rel}`;
     return `${pre}${q}${rel}${q}`;
   });

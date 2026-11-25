@@ -1,5 +1,6 @@
 import { exById, exFilter, type Place } from '../data/exercises';
-import { DANGER, LUMBAR, WEEKLY_ONCE, splitLabel, splitTemplates, type DayTemplate, type Slot } from '../data/planTemplates';
+import { canDo, kitOf } from '../data/equipment';
+import { DANGER, LUMBAR, WEEKLY_ONCE, allSlotIds, splitLabel, splitTemplates, type DayTemplate, type Slot } from '../data/planTemplates';
 import mediaSnapshot from '../data/mediaManifest.json';
 import { routineById } from '../data/routines';
 import { FocusPart, Plan, PlanDay, UserProfile } from '../types';
@@ -34,13 +35,30 @@ export function planFromRoutine(routineId: string): Plan | null {
 
 const HAS_VIDEO: Set<string> = new Set(Object.keys((mediaSnapshot as { items?: Record<string, unknown> }).items ?? {}));
 
-/** 이 슬롯에서 고를 수 있는 종목(장소 · 존재 · 위험 제외) — 영상 있는 것이 앞 */
-function slotCandidates(slot: Slot, level: 1 | 2 | 3, place: Place): string[] {
+/**
+ * 이 슬롯에서 고를 수 있는 종목(장소 · 존재 · 위험 · 가진 기구) — 영상 있는 것이 앞.
+ * 가진 기구로 슬롯 후보가 다 빠지면 같은 부위 대체 종목 — 단, 자동 루틴 템플릿 어딘가의 슬롯 후보인 종목 안에서만
+ * (보여주기용 변형 종목은 자동 루틴에 들어가지 않는다는 원칙, planner.test.ts). 그래도 없으면 빈 목록 → 슬롯 생략.
+ */
+export function slotCandidates(slot: Slot, level: 1 | 2 | 3, place: Place, kit?: Set<string>): string[] {
   const base = level === 1 && slot.beginner ? slot.beginner : slot.opts;
-  const ok = base.filter((id) => {
+  const usable = (id: string) => {
     const e = exById(id);
-    return !!e && e.pl.includes(place) && !DANGER.has(id);
-  });
+    return !!e && e.pl.includes(place) && !DANGER.has(id) && (!kit || canDo(id, kit));
+  };
+  let ok = base.filter(usable);
+  if (!ok.length && kit) {
+    const ref = exById(slot.opts[0]) ?? exById(base[0]);
+    if (ref) {
+      const pool = [...allSlotIds(place)].filter((id) => {
+        const e = exById(id);
+        return !!e && e.part === ref.part && e.lv <= Math.max(level, 2) && usable(id);
+      });
+      // 같은 세부 타겟 → 같은 밀기 · 당기기 → 나머지 순
+      const score = (id: string) => { const e = exById(id)!; return (e.g === ref.g ? 0 : 2) + (e.ppl === ref.ppl ? 0 : 1); };
+      ok = pool.sort((a, b) => score(a) - score(b));
+    }
+  }
   // 영상 있는 종목을 앞으로 — 같은 그룹 안에서는 원래 순서(정석 우선) 유지
   return [...ok.filter((id) => HAS_VIDEO.has(id)), ...ok.filter((id) => !HAS_VIDEO.has(id))];
 }
@@ -50,7 +68,7 @@ function slotCandidates(slot: Slot, level: 1 | 2 | 3, place: Place): string[] {
  * 허리 부하 종목은 같은 날 하나, 데드리프트 · 랙풀은 주 1회 — 어기면 그 슬롯의 다음 후보.
  */
 export function planFromTemplates(
-  templates: DayTemplate[], o: { level: 1 | 2 | 3; place: Place; perDay: number; seed?: number },
+  templates: DayTemplate[], o: { level: 1 | 2 | 3; place: Place; perDay: number; seed?: number; kit?: Set<string> },
 ): PlanDay[] {
   const rnd = o.seed !== undefined ? mulberry32(o.seed) : null;
   const weekly = new Set<string>();
@@ -59,7 +77,7 @@ export function planFromTemplates(
     let lumbar = false;
     const slots = t.slots.filter((sl) => !sl.optional || o.perDay > 5).slice(0, o.perDay);
     for (const sl of slots) {
-      let cands = slotCandidates(sl, o.level, o.place).filter((id) => !ids.includes(id));
+      let cands = slotCandidates(sl, o.level, o.place, o.kit).filter((id) => !ids.includes(id));
       cands = cands.filter((id) => !(LUMBAR.has(id) && lumbar) && !(WEEKLY_ONCE.has(id) && weekly.has(id)));
       if (!cands.length) continue;
       // 재구성도 영상 있는 후보 안에서만 바꾼다(영상 우선 원칙) — 영상 후보가 하나뿐이면 전체에서
@@ -75,7 +93,7 @@ export function planFromTemplates(
 }
 
 /** 신경 쓰이는 부위 → 그 부위가 있는 첫 데이에 더할 보조 종목(앞이 우선, 이미 있으면 다음) */
-const FOCUS_EXTRA: Record<FocusPart, { parts: string[]; gym: string[]; home: string[] }> = {
+export const FOCUS_EXTRA: Record<FocusPart, { parts: string[]; gym: string[]; home: string[] }> = {
   chest: { parts: ['chest'], gym: ['crossover', 'pecdeck', 'dbfly'], home: ['dbfly', 'pushup'] },
   back: { parts: ['back'], gym: ['straightarmpull', 'facepull', 'reversefly'], home: ['reversefly', 'facepull'] },
   shoulders: { parts: ['shoulders'], gym: ['cablelatraise', 'latraise', 'reardeltfly'], home: ['latraise', 'bandedlatraise'] },
@@ -84,14 +102,15 @@ const FOCUS_EXTRA: Record<FocusPart, { parts: string[]; gym: string[]; home: str
   legs: { parts: ['legs'], gym: ['hipthrust', 'legext', 'seatedcalf'], home: ['glutebridge', 'stepup'] },
 };
 
-function addFocus(days: PlanDay[], focus: FocusPart[] | undefined, place: Place): PlanDay[] {
+function addFocus(days: PlanDay[], focus: FocusPart[] | undefined, place: Place, kit?: Set<string>): PlanDay[] {
   if (!focus?.length) return days;
   const out = days.map((d) => ({ ...d, ids: [...d.ids] }));
   for (const f of focus) {
     const spec = FOCUS_EXTRA[f];
     const day = out.find((d) => d.ids.length < 7 && d.ids.some((id) => spec.parts.includes(exById(id)?.part ?? '')));
     if (!day) continue;
-    const pick = (place === 'home' ? spec.home : spec.gym).find((id) => !day.ids.includes(id) && exById(id)?.pl.includes(place));
+    const pick = (place === 'home' ? spec.home : spec.gym)
+      .find((id) => !day.ids.includes(id) && exById(id)?.pl.includes(place) && (!kit || canDo(id, kit)));
     if (pick) day.ids.push(pick);
   }
   return out;
@@ -108,7 +127,7 @@ export function templateSlots(p: UserProfile): { name: string; focus: string; sl
     name: t.name,
     focus: t.focus,
     slots: t.slots.filter((sl) => !sl.optional || perDay > 5).slice(0, perDay)
-      .map((sl) => slotCandidates(sl, level, p.env).slice(0, 6))
+      .map((sl) => slotCandidates(sl, level, p.env, kitOf(p)).slice(0, 6))
       .filter((c) => c.length > 0),
   }));
 }
@@ -118,7 +137,8 @@ export function buildLocalPlan(p: UserProfile, seed?: number): Plan {
   const level = (p.level ?? 2) as 1 | 2 | 3;
   const perDay = p.goal === 'habit' ? 3 : 5;
   const templates = splitTemplates(p.env, p.days, level);
-  const days = addFocus(planFromTemplates(templates, { level, place: p.env, perDay, seed }), p.goal === 'habit' ? undefined : p.focus, p.env);
+  const kit = kitOf(p);
+  const days = addFocus(planFromTemplates(templates, { level, place: p.env, perDay, seed, kit }), p.goal === 'habit' ? undefined : p.focus, p.env, kit);
   return {
     routineId: null,
     days,
@@ -138,7 +158,8 @@ export function conformToTemplates(ai: Plan, p: UserProfile): Plan {
   const level = (p.level ?? 2) as 1 | 2 | 3;
   const perDay = p.goal === 'habit' ? 3 : 5;
   const templates = splitTemplates(p.env, p.days, level);
-  const base = planFromTemplates(templates, { level, place: p.env, perDay });
+  const kit = kitOf(p);
+  const base = planFromTemplates(templates, { level, place: p.env, perDay, kit });
   const weekly = new Set<string>();
   const days: PlanDay[] = base.map((bd, di) => {
     const t = templates.find((x) => x.id === bd.id)!;
@@ -147,7 +168,7 @@ export function conformToTemplates(ai: Plan, p: UserProfile): Plan {
     let lumbar = false;
     const ids: string[] = [];
     slots.forEach((sl, si) => {
-      const cands = slotCandidates(sl, level, p.env);
+      const cands = slotCandidates(sl, level, p.env, kit);
       const want = cands.find((id) => aiIds.has(id)) ?? bd.ids[si] ?? cands[0];
       const ok = (id: string) => !!id && !ids.includes(id) && !(LUMBAR.has(id) && lumbar) && !(WEEKLY_ONCE.has(id) && weekly.has(id));
       const pick = ok(want) ? want : cands.find(ok);
@@ -158,7 +179,7 @@ export function conformToTemplates(ai: Plan, p: UserProfile): Plan {
     });
     return { ...bd, ids };
   });
-  return { ...ai, days: addFocus(days, p.goal === 'habit' ? undefined : p.focus, p.env) };
+  return { ...ai, days: addFocus(days.filter((d) => d.ids.length > 0), p.goal === 'habit' ? undefined : p.focus, p.env, kit) };
 }
 
 const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -174,7 +195,8 @@ export function planFromAI(
 ): Plan | null {
   const j = (raw ?? {}) as { days?: unknown; reason?: unknown };
   if (!Array.isArray(j.days) || !j.days.length) return null;
-  const allowed = new Set(exFilter({ place: fallbackProfile.env }).map((e) => e.id));
+  const kit = kitOf(fallbackProfile);
+  const allowed = new Set(exFilter({ place: fallbackProfile.env }).map((e) => e.id).filter((id) => canDo(id, kit)));
   const seen = new Set<string>();
 
   const days: PlanDay[] = j.days

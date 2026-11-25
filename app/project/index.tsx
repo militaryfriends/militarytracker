@@ -88,6 +88,15 @@ export default function ProjectsScreen() {
     ? `${TRIAL_DAYS}일 무료 체험 후 월 ${monthly.price.replace('₩', '')}원`
     : `월 ${monthly.price.replace('₩', '')}원${yearly ? ` · 연 ${yearly.price.replace('₩', '')}원` : ''}`;
 
+  // 허리둘레를 넣으러 O3 로 — 입력 흐름이 스택에 있으면 그 화면까지 닫고, 없으면 새로 연다
+  function addWaist() {
+    const d = useOnboardDraft.getState();
+    d.patch({ resume: 'body' });
+    const flow = !redo ? '/onboard' : d.restart ? '/project/new?restart=1' : '/project/new';
+    if (d.seeded) router.dismissTo(flow);
+    else router.push('/project/new');
+  }
+
   function start() {
     if (!a) return;
     if (pro) router.push(`/project/start?project=${sel}`);
@@ -187,6 +196,12 @@ export default function ProjectsScreen() {
 
         <View style={s.acc}>
           <AccuracyMeter accuracy={a.comp.accuracy} compact />
+          {/* 11/23 체형 추정 오차 보완 2 — 키 · 체중만으로 낸 추정이면 오차가 크다는 것을 숨기지 않는다 */}
+          {a.comp.accuracy === 'basic' ? (
+            <PressableScale onPress={addWaist} hitSlop={8} accessibilityRole="button" style={{ marginTop: 8 }}>
+              <Text style={s.accWarn}>허리둘레가 없어서 오차가 커요. 허리를 넣으면 더 정확해져요 ›</Text>
+            </PressableScale>
+          ) : null}
         </View>
 
         {!running ? (
@@ -242,6 +257,7 @@ const s = themed(() => StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   sub: { fontSize: 13.5, color: colors.muted, marginTop: 6, lineHeight: 20 },
   acc: { marginTop: 2, marginBottom: 14 },
+  accWarn: { fontSize: 12.5, color: colors.pr, fontWeight: '700', lineHeight: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   practice: { fontSize: 12, color: colors.mid, textAlign: 'center', marginTop: 10, fontWeight: '600' },
   again: { alignItems: 'center', paddingVertical: 10, minHeight: 44, justifyContent: 'center' },

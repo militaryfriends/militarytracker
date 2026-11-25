@@ -66,7 +66,7 @@ service cloud.firestore {
       return p is map
         && p.keys().hasOnly([
           'sex', 'age', 'height', 'weight', 'goal', 'env', 'days', 'level', 'food', 'allergy',
-          'waistCm', 'goalArchetypeId', 'focus', 'strategy', 'bodyShape'
+          'waistCm', 'goalArchetypeId', 'focus', 'strategy', 'bodyShape', 'equip'
         ])
         && p.sex in ['male', 'female']
         && p.age is string && p.age.size() <= 4
@@ -86,7 +86,10 @@ service cloud.firestore {
         // 고른 프로젝트 카드 방식(2026-11-02) — 프로젝트 없이도 식단 칼로리가 카드와 같게
         && (!('strategy' in p) || p.strategy in ['cut_fast', 'cut', 'leanmass', 'bulk'])
         // 보고 맞춘 체형(2026-11-15 내 몸 맞추기) — 3D 그림에만 쓰는 값. 선택
-        && (!('bodyShape' in p) || validShape(p.bodyShape));
+        && (!('bodyShape' in p) || validShape(p.bodyShape))
+        // 가진 기구(2026-11-25) — 선택. 기구 이름 목록
+        && (!('equip' in p) || (p.equip is list && p.equip.size() <= 9
+              && p.equip.hasOnly(['bb', 'db', 'mc', 'cb', 'sm', 'plate', 'band', 'bar', 'bench'])));
     }
     function shapeNum(m, k) {
       return !(k in m) || (m[k] is number && m[k] >= -1 && m[k] <= 1);

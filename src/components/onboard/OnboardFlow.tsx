@@ -4,8 +4,8 @@
  *  redo    = 홈 "내 몸 계산하기" — 저장된 프로필로 채움
  *  restart = 마이 "온보딩 처음부터 다시 하기" — 거절해도 처음 가입처럼 루틴을 새로 정한다(draft.restart)
  *
- *  1 성별 → 2 나이 → 3 키 → 4 체중 → 5 허리 · 인바디(선택) → 6 운동 경력 → 7 운동 장소 → 8 주 운동 일수 → 9 식사 환경
- *  → 10 신경 쓰이는 부위(선택) → 11 계산 중(/project/analysis) → 12 지금 내 몸(3D) → 프로젝트 카드 4장(/project)
+ *  1 성별 → 2 나이 → 3 키 → 4 체중 → 5 허리 · 인바디(선택) → 6 운동 경력 → 7 운동 장소 → 8 가진 기구(11/25) → 9 주 운동 일수 → 10 식사 환경
+ *  → 11 신경 쓰이는 부위(선택) → 12 계산 중(/project/analysis) → 13 지금 내 몸(3D) → 프로젝트 카드 4장(/project)
  *  '원하는 체형' 고르기는 없다 — 목표는 결과를 본 뒤 카드에서 고른다. 온보딩에서는 AI 를 부르지 않는다.
  *  예전 습관 경로(목표 단계의 "습관이 먼저")는 카드 화면의 "운동 자세만 볼래요"가 대신한다.
  */
@@ -23,15 +23,16 @@ import { useOnboardDraft, DEFAULT_PROFILE, type StepKey } from '../../stores/onb
 import { validateField, validateProfile } from '../../utils/body';
 import { draftAccuracy, validateBodyDraft } from './draftInput';
 import { StepFood } from './basicSteps';
-import { StepDays, StepFocus, StepLevel, StepNumber, StepPlace, StepSex } from './questionSteps';
+import { StepDays, StepEquip, StepFocus, StepLevel, StepNumber, StepPlace, StepSex } from './questionSteps';
 import { StepBody, type BodyErrors } from './StepBody';
 import { o } from './styles';
+import { equipFits } from './EquipPicker';
 import { preload3D } from '../body/avatar3d/Avatar3D';
 import { PressableScale } from '../../ui';
 
-const BODY_PATH: StepKey[] = ['sex', 'age', 'height', 'weight', 'body', 'level', 'place', 'days', 'food', 'focus'];
-/** 계산 · 결과까지 합친 전체 단계 수(진행 막대 · STEP n / 12) */
-const TOTAL_STEPS = 12;
+const BODY_PATH: StepKey[] = ['sex', 'age', 'height', 'weight', 'body', 'level', 'place', 'equip', 'days', 'food', 'focus'];
+/** 계산 · 결과까지 합친 전체 단계 수(진행 막대 · STEP n / 13) */
+const TOTAL_STEPS = 13;
 
 export type FlowMode = 'first' | 'redo' | 'restart';
 
@@ -129,7 +130,10 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
     go(1);
   }
 
-  const canNext = key === 'age' || key === 'height' || key === 'weight' ? !!String(d.profile[key]).trim() : true;
+  const canNext = key === 'age' || key === 'height' || key === 'weight' ? !!String(d.profile[key]).trim()
+    // 홈트는 기구를 하나라도(맨몸만 포함) 골라야 다음
+    : key === 'equip' ? d.profile.env === 'gym' || equipFits('home', d.profile.equip)
+    : true;
   const isLastInput = key === 'focus';
   const num = idx + 1;
   const numStep = (k: 'age' | 'height' | 'weight', q: string, unit: string, ph: string, decimal: boolean, desc?: string) => (
@@ -172,6 +176,7 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
           )}
           {key === 'level' && <StepLevel p={d.profile} update={d.setProfile} num={num} total={total} />}
           {key === 'place' && <StepPlace p={d.profile} update={d.setProfile} num={num} total={total} />}
+          {key === 'equip' && <StepEquip p={d.profile} update={d.setProfile} num={num} total={total} onNext={next} />}
           {key === 'days' && <StepDays p={d.profile} update={d.setProfile} num={num} total={total} />}
           {key === 'food' && <StepFood p={d.profile} update={d.setProfile} num={num} total={total} />}
           {key === 'focus' && <StepFocus p={d.profile} update={d.setProfile} num={num} total={total} />}

@@ -180,6 +180,15 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
 - `eas update` 는 **맥에 체크아웃된 코드**를 보낸다 — 보내기 전에 브랜치(main)와 `git status` 를 확인한다. 모델(.glb) · 이미지도 같이 올라간다.
 - 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
 
+## 가진 기구 (2026-11-25)
+
+- `profile.equip` — 헬스장은 남긴 GYM_KIT(바벨 · 덤벨 · 머신 · 케이블 · 스미스), 홈트는 HOME_KIT(덤벨 · 밴드 · 턱걸이바 · 벤치), 맨몸만 = `[]`.
+  없으면(예전 사용자) 예전 가정 그대로(헬스장 전부 / 홈트 덤벨 · 밴드 · 턱걸이바 · 벤치). `src/data/equipment.ts` 의 `kitOf` · `canDo`.
+- 자동 루틴 · AI 루틴(conformToTemplates · planFromAI) 모두 `canDo` 로 거른다. 슬롯 후보가 다 빠지면 같은 부위 대체(템플릿 종목 안에서만), 그래도 없으면 슬롯 생략.
+  쇼케이스 변형 · 위험 종목은 여전히 자동 루틴에 못 들어간다 — `src/utils/__tests__/planner.test.ts` 가 지킨다.
+- 장소를 바꾸면 equip 은 새 장소 기본값으로 바꾼다(프로필은 merge 저장이라 undefined 로는 예전 값이 안 지워진다).
+- Firestore 규칙 validProfile 에 `equip` 이 있어야 저장된다 — **규칙을 먼저 배포하고** 그 다음 코드 푸시.
+
 ## 비밀 파일 (Bitwarden)
 
 git 에 없는 비밀 파일은 Bitwarden 금고 폴더 `militarytracker` 에 보안 메모로 둔다(`scripts/bw-sync.mjs`, smiscamp 와 같은 방식).

@@ -90,6 +90,11 @@ export interface UserProfile {
   strategy?: Strategy;
   /** 보고 맞춘 체형(내 몸 맞추기) — 3D 그림에만 쓴다. 체지방 · 칼로리 · 기간 계산에는 들어가지 않는다 */
   bodyShape?: BodyShape;
+  /**
+   * 가진 기구(2026-11-25) — 헬스장: GYM_KIT 중 있는 것(없으면 일반 헬스장 = 전부), 집: HOME_KIT 중 있는 것(빈 배열 = 맨몸만).
+   * 없는 기구가 필요한 종목은 자동 루틴에 넣지 않는다(src/data/equipment.ts). 없으면 예전 가정.
+   */
+  equip?: string[];
 }
 
 /**

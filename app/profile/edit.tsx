@@ -8,7 +8,10 @@ import { showAlert } from '../../src/utils/alert';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState } from '../../src/components/ui';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { saveProfile } from '../../src/services/authService';
+import { savePlan, saveProfile } from '../../src/services/authService';
+import { buildLocalPlan } from '../../src/utils/planner';
+import { kitSummary } from '../../src/data/equipment';
+import { EquipPicker, defaultEquip, equipFits } from '../../src/components/onboard/EquipPicker';
 import { calcBodyStats, effectiveWeight, validateProfile } from '../../src/utils/body';
 import { UserProfile } from '../../src/types';
 import { STRATEGIES, STRATEGY, legacyGoalOf, strategyOfGoal } from '../../src/utils/projection';
@@ -24,6 +27,8 @@ export default function ProfileEditScreen() {
   // 진행 중인 내 변화 프로젝트가 있으면 칼로리 · 단백질은 지금 단계 값(엔진)
   const bodyProject = useAppStore((s) => s.project);
   const setProfile = useAppStore((s) => s.setProfile);
+  const plan = useAppStore((s) => s.plan);
+  const setPlan = useAppStore((s) => s.setPlan);
   const [p, setP] = useState<UserProfile | null>(profile);
   const [saving, setSaving] = useState(false);
 
@@ -44,10 +49,18 @@ export default function ProfileEditScreen() {
   const update = <K extends keyof UserProfile>(k: K, v: UserProfile[K]) =>
     setP((prev) => (prev ? { ...prev, [k]: v } : prev));
 
+  // 장소를 바꾸면 기구 목록도 새 장소 기본값으로
+  const pickEnv = (env: 'gym' | 'home') => setP((prev) => {
+    if (!prev || prev.env === env) return prev;
+    return { ...prev, env, equip: defaultEquip(env) };
+  });
+
   const st = calcBodyStats(p, weights, bodyProject);
   const eff = effectiveWeight(p, weights);
   const changed = JSON.stringify(p) !== JSON.stringify(profile);
-  const validationError = validateProfile(p);
+  // 홈트로 바꿨는데 기구를 아직 안 골랐으면 저장하지 않는다(맨몸만도 하나의 선택)
+  const validationError = validateProfile(p)
+    ?? (p.env === 'home' && !equipFits('home', p.equip) ? '집에 있는 기구를 골라 주세요(없으면 맨몸만).' : null);
   const valid = !validationError;
 
   function handleBack() {
@@ -66,6 +79,27 @@ export default function ProfileEditScreen() {
       await saveProfile(user.uid, p);
       setProfile(p);
       patchUser({ profile: p });
+      // 장소 · 기구가 바뀌었으면 지금 루틴을 새 기구에 맞출지 묻는다(없는 기구 종목이 루틴에 남지 않게)
+      const kitChanged = profile && (profile.env !== p.env || kitSummary(profile) !== kitSummary(p));
+      if (kitChanged && plan) {
+        showAlert('루틴도 바꿀까요?', `${kitSummary(p)} 기준으로 운동 루틴을 다시 짭니다. 지금 루틴은 되돌릴 수 없어요.`, [
+          { text: '나중에', style: 'cancel', onPress: () => router.back() },
+          {
+            text: '다시 짜기',
+            onPress: async () => {
+              try {
+                const next = buildLocalPlan(p, Date.now());
+                await savePlan(user.uid, next);
+                setPlan(next);
+              } catch {
+                showAlert('오류', '루틴을 바꾸지 못했어요. 운동 탭에서 다시 구성해 주세요.');
+              }
+              router.back();
+            },
+          },
+        ]);
+        return;
+      }
       // 저장했으면 바로 돌아간다 — 확인 버튼을 한 번 더 누르게 하지 않는다
       router.back();
     } catch {
@@ -130,9 +164,11 @@ export default function ProfileEditScreen() {
 
           <SectionLabel>운동 환경</SectionLabel>
           <View style={s.grid2}>
-            <Opt label="헬스장" on={p.env === 'gym'} onPress={() => update('env', 'gym')} />
-            <Opt label="홈트레이닝" on={p.env === 'home'} onPress={() => update('env', 'home')} />
+            <Opt label="헬스장" on={p.env === 'gym'} onPress={() => pickEnv('gym')} />
+            <Opt label="홈트레이닝" on={p.env === 'home'} onPress={() => pickEnv('home')} />
           </View>
+          <Text style={s.label}>{p.env === 'gym' ? '헬스장 기구' : '집에 있는 기구'}</Text>
+          <EquipPicker key={p.env} env={p.env} equip={p.equip} onChange={(v) => update('equip', v)} />
 
           <Text style={s.label}>주당 운동 일수</Text>
           <View style={s.chipRow}>
