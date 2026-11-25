@@ -5,7 +5,7 @@
  *  · GL 이 안 되거나(expo-gl 이 없는 옛 빌드 포함) 그리다 오류가 나면 fallback(2D)으로 — 그 뒤로는 계속 2D.
  */
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { PanResponder, StyleSheet, View } from 'react-native';
+import { Animated, PanResponder, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import type { ExpoWebGLRenderingContext, GLView as GLViewType } from 'expo-gl';
 import type { Coord, Sex } from '../../../utils/bodyComp';
@@ -65,6 +65,10 @@ function GLBody({
   const alive = useRef(true);
   const group = useRef<ReturnType<typeof joinYawGroup> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (state === 'ready') Animated.timing(fade, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+  }, [state, fade]);
   // 이 기기에서 3D 를 띄워도 되는지(지난 실행에서 3D 때문에 꺼지지 않았는지) 확인한 뒤에만 GL 뷰를 만든다
   const [allowed, setAllowed] = useState(false);
   useEffect(() => {
@@ -136,7 +140,10 @@ function GLBody({
   return (
     <View style={{ width: w, height: h }} {...(interactive ? pan.panHandlers : null)}>
       {state !== 'ready' ? <View style={StyleSheet.absoluteFill} pointerEvents="none">{fallback}</View> : null}
-      <GL key={`${w}x${h}|${mode}`} style={{ width: w, height: h, backgroundColor: 'transparent' }} onContextCreate={onContextCreate} msaaSamples={4} />
+      {/* 준비되면 0.25초 동안 서서히 — 자리 표시에서 몸으로 툭 바뀌지 않게(검수 2) */}
+      <Animated.View style={{ opacity: fade }}>
+        <GL key={`${w}x${h}|${mode}`} style={{ width: w, height: h, backgroundColor: 'transparent' }} onContextCreate={onContextCreate} msaaSamples={4} />
+      </Animated.View>
     </View>
   );
 }

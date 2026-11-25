@@ -55,7 +55,6 @@ export default function RoutineDetailScreen() {
     <Screen>
       <TopBar
         title={routine.name}
-        meta={routine.short}
         onBack={isOnboard ? undefined : () => router.back()}
       />
       <Body>

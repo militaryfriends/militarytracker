@@ -29,7 +29,7 @@ export const o = themed(() => StyleSheet.create({
   },
   inputErr: { borderColor: colors.wrongLine },
   err: { fontSize: 12, color: colors.wrong, marginTop: 6, lineHeight: 17 },
-  warn: { fontSize: 12, color: colors.pr, marginTop: 6, lineHeight: 17 },
+  warn: { fontSize: 12, color: colors.ink, fontWeight: '600', marginTop: 6, lineHeight: 17 },
   grid2: { flexDirection: 'row', gap: 9 },
   opt: {
     flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line2,

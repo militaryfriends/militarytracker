@@ -44,7 +44,7 @@ export default function RoutineDayScreen() {
 
   return (
     <Screen>
-      <TopBar title={day.name} meta={routine.short} onBack={goBack} />
+      <TopBar title={day.name} onBack={goBack} />
       <Body>
         <Text style={s.focus}>{day.focus}</Text>
         <Text style={s.desc}>{day.desc}</Text>
@@ -57,7 +57,7 @@ export default function RoutineDayScreen() {
 
         {planDayIdx >= 0 && (
           <PrimaryBtn
-            label="▶  이 데이 운동 시작"
+            label="이 데이 운동 시작"
             onPress={() => {
               if (session) {
                 // 진행 중인 세션을 덮어쓰면 입력하던 세트가 전부 사라진다

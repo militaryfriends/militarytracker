@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { Feature, FEATURE_LABEL, FEATURE_DESC } from '../config/entitlements';
@@ -32,7 +33,7 @@ export function ProLock({
   return (
     <View style={[s.card, style]}>
       <View style={s.head}>
-        <Text style={s.lock}>🔒</Text>
+        <Ionicons name="lock-closed-outline" size={15} color={colors.mid} />
         <Text style={s.title}>{title ?? FEATURE_LABEL[feature]}</Text>
         <ProBadge />
       </View>

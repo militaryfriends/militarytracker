@@ -43,7 +43,7 @@ interface DraftState {
 
   patch: (p: Partial<Omit<DraftState, 'patch' | 'reset' | 'setProfile'>>) => void;
   setProfile: <K extends keyof UserProfile>(k: K, v: UserProfile[K]) => void;
-  reset: (seed?: Partial<Pick<DraftState, 'profile' | 'waist' | 'pick' | 'restart'>>) => void;
+  reset: (seed?: Partial<Pick<DraftState, 'profile' | 'waist' | 'pick' | 'restart' | 'resume'>>) => void;
 }
 
 const empty = () => ({

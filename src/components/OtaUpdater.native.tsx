@@ -113,7 +113,7 @@ export function OtaUpdater() {
     <Modal visible={applying} transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
       <View style={s.overlay}>
         <View style={s.card}>
-          <ActivityIndicator size="large" color={colors.red} />
+          <ActivityIndicator size="large" color={colors.ink} />
           <Text style={s.title}>새 버전 적용 중</Text>
           <Text style={s.sub}>잠시 뒤 앱이 다시 열립니다.</Text>
         </View>

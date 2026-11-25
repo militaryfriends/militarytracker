@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, useSafeBack } from '../../src/components/ui';
@@ -7,6 +8,18 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 import { PressableScale, PRESS_SCALE } from '../../src/ui';
+
+/** 루틴마다 대표 종목 하나 — 첫날 첫 종목, 앞 루틴이 이미 쓴 종목이면 그다음(카드마다 다른 그림) */
+const coverOf: Map<string, string> = (() => {
+  const used = new Set<string>();
+  const m = new Map<string, string>();
+  for (const r of ROUTINES) {
+    const all = r.days.flatMap((d) => d.exIds);
+    const pick = all.find((id) => !used.has(id)) ?? all[0];
+    if (pick) { m.set(r.id, pick); used.add(pick); }
+  }
+  return m;
+})();
 
 export default function RoutineListScreen() {
   useThemeMode();
@@ -23,7 +36,7 @@ export default function RoutineListScreen() {
 
   return (
     <Screen>
-      <TopBar title="루틴" meta="ROUTINE LIBRARY" onBack={goBack} />
+      <TopBar title="루틴" onBack={goBack} />
       <Body>
         <Text style={s.lead}>
           분할 방식을 고르면 데이별 종목까지 바로 확인할 수 있습니다.
@@ -36,8 +49,9 @@ export default function RoutineListScreen() {
           </PressableScale>
         )}
 
-        <SectionLabel>전체 루틴 {ROUTINES.length}개</SectionLabel>
+        <SectionLabel>전체 루틴</SectionLabel>
         {ROUTINES.map((r) => {
+          const cover = coverOf.get(r.id);
           const isCurrent = plan?.routineId === r.id;
           return (
             <PressableScale scaleTo={PRESS_SCALE.card}
@@ -46,9 +60,10 @@ export default function RoutineListScreen() {
               onPress={() => router.push(`/routine/${r.id}`)}
             >
               <View style={s.head}>
-                <View style={s.shortBox}>
-                  <Text style={s.short}>{r.short}</Text>
-                </View>
+                {/* 대표 이미지 — 그 루틴 첫날 첫 종목의 자세 클립 한 프레임(검수 3-2). 앞 카드와 겹치면 다음 종목 */}
+                {cover ? <ExerciseMedia exId={cover} rounded={14} style={s.cover} dim={0.15} /> : (
+                  <View style={s.shortBox}><Text style={s.short}>{r.short}</Text></View>
+                )}
                 <View style={{ flex: 1 }}>
                   <View style={s.nameRow}>
                     <Text style={s.name}>{r.name}</Text>
@@ -92,6 +107,7 @@ const s = themed(() => StyleSheet.create({
   },
   cardCurrent: { borderColor: colors.line2, backgroundColor: colors.panel2 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cover: { width: 64, height: 64, borderRadius: 14, overflow: 'hidden' },
   shortBox: {
     width: 52, height: 52, borderRadius: 14, backgroundColor: colors.panel3,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line2,

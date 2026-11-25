@@ -3,6 +3,7 @@
  * 앱 번들에는 Anthropic API 키가 들어가지 않는다.
  * 함수가 아직 배포되지 않았거나 호출에 실패하면 로컬 폴백으로 조용히 전환된다.
  */
+import { useAppStore } from '../stores/appStore';
 import { httpsCallable, FunctionsError } from 'firebase/functions';
 import { functions } from './firebase';
 import { askAiConsent } from './aiConsent';
@@ -205,7 +206,7 @@ export async function generateDiet(
       st
         ? {
             bodyType: st.bodyType,
-            goal: goalLabel(p),
+            goal: goalLabel(p, useAppStore.getState().project),
             kcal: st.kcal,
             protein: st.protein,
             carb: st.carb,

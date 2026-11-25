@@ -1,4 +1,6 @@
 import { prescription, repsText } from '../../src/utils/prescription';
+import { LoadingSkeleton } from '../../src/components/LoadingSkeleton';
+import { hasHydrated } from '../../src/stores/appStore';
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator,
@@ -112,13 +114,13 @@ export default function PlanScreen() {
     }
   }
 
-  if (!plan && hydrating) {
+  const planChecked = useAuthStore((st) => st.planChecked);
+  const loading = !plan && (hydrating || !planChecked || !hasHydrated());
+  if (loading) {
+    // 로그인 직후 플랜이 오기 전에 "플랜 없음" 을 보이면 루틴을 골라 기존 플랜을 덮어쓰게 된다 — 빈 상태 대신 자리 표시(검수 2)
     return (
       <SafeAreaView style={s.root} edges={['top']}>
-        <View style={s.empty}>
-          <ActivityIndicator color={colors.muted} />
-          <Text style={[s.emptyTxt, { marginTop: 12 }]}>플랜을 불러오는 중…</Text>
-        </View>
+        <LoadingSkeleton />
       </SafeAreaView>
     );
   }
@@ -171,7 +173,7 @@ export default function PlanScreen() {
         ))}
       </View>
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.scrollInner, { paddingBottom: tabSpace + 8 + 54 + 28 }]} showsVerticalScrollIndicator={false}>
         <View style={s.dayHeader}>
           <View style={{ flex: 1 }}>
             <Text style={s.dayKicker}>DAY {dayIdx + 1} / {plan.days.length}</Text>
@@ -255,9 +257,9 @@ const s = themed(() => StyleSheet.create({
     flex: 1, minWidth: 0, height: 56, borderRadius: 18, paddingHorizontal: 4,
     backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center',
   },
-  pillActive: { backgroundColor: colors.redSoft, borderColor: colors.red, borderWidth: 1.5 },
+  pillActive: { backgroundColor: colors.panel3, borderColor: colors.ink, borderWidth: 1.5 },
   pillNum: { fontFamily: FONT.num, fontSize: 20, lineHeight: 22, color: colors.muted },
-  pillNumActive: { color: colors.redText },
+  pillNumActive: { color: colors.ink },
   pillSub: { fontSize: 12, fontWeight: '600', color: colors.muted },
   pillSubActive: { color: colors.ink },
 

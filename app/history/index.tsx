@@ -109,7 +109,7 @@ export default function HistoryScreen() {
                 <View style={s.cardStats}>
                   <Text style={s.statMain}>{item.totalSets}세트</Text>
                   <Text style={s.statSub}>
-                    {item.totalVolume > 0 ? fmtVolume(item.totalVolume) : '—'}
+                    {item.totalVolume > 0 ? `볼륨 ${fmtVolume(item.totalVolume)}` : '—'}
                     {item.durationSec > 0 ? ` · ${fmtDuration(item.durationSec)}` : ''}
                   </Text>
                 </View>

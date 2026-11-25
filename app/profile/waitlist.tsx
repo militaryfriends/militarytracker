@@ -91,7 +91,7 @@ export default function WaitlistAdmin() {
 
   return (
     <Screen>
-      <TopBar title="대기자 명단" meta="ADMIN" onBack={goBack} />
+      <TopBar title="대기자 명단" onBack={goBack} />
       {!isAdmin ? (
         <EmptyState text="관리자만 사용할 수 있어요." />
       ) : (

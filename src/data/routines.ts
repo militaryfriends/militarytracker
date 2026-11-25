@@ -31,7 +31,7 @@ export const ROUTINES: Routine[] = [
     name: '푸시 풀 레그',
     short: 'PPL',
     subtitle: '주 3일 · 미는 동작 / 당기는 동작 / 하체',
-    desc: '동작 방향으로 나누는 가장 검증된 3분할. 한 부위를 72시간 간격으로 자극해 회복과 빈도의 균형이 좋습니다.',
+    desc: '미는 동작 · 당기는 동작 · 하체로 나눈 3분할. 한 부위를 주 1~2회 운동합니다.',
     daysPerWeek: 3,
     // 바벨 스쿼트·바벨로우·풀업이 들어가는 구성이라 입문(1)이 아니라 중급으로 표기한다.
     // 입문자는 recommendRoutine 이 fullbody 로 보낸다.

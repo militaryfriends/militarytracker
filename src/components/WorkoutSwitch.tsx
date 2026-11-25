@@ -13,7 +13,7 @@ export function WorkoutSwitch({ value }: { value: Side }) {
   const router = useRouter();
   const options = [
     { value: 'plan', label: '내 플랜' },
-    { value: 'form', label: `종목과 자세 ${EX.length}` },
+    { value: 'form', label: '종목과 자세' },
   ] as const satisfies readonly { value: Side; label: string }[];
   return (
     <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>

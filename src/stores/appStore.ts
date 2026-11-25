@@ -1,4 +1,5 @@
 import { prescription } from '../utils/prescription';
+import { normalizeStoredAnalysis } from '../utils/bodyAnalysis';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -375,7 +376,8 @@ export const useAppStore = create<AppState>()(
       clearChat: () => set({ chat: [] }),
       setChatBusy: (v) => set({ chatBusy: v }),
 
-      setAnalysis: (a) => set({ analysis: a }),
+      // 예전 엔진으로 저장된 분석(허리 범위 검사 전)은 지금 엔진 값으로 — 화면마다 몸 숫자가 달라지지 않게(검수 1-1)
+      setAnalysis: (a) => set({ analysis: a ? normalizeStoredAnalysis(a) : a }),
       setProject: (p) => set((s) => ({
         project: p,
         // 다른 프로젝트로 바뀌면 이전 체크인은 화면에 남기지 않는다
@@ -427,6 +429,7 @@ export const useAppStore = create<AppState>()(
       },
       onRehydrateStorage: () => (state) => {
         state?.pruneSession();
+        if (state?.analysis) state.setAnalysis(state.analysis);
       },
     }
   )

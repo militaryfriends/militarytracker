@@ -113,6 +113,29 @@ function scoreIntent(t: string): Intent {
   return best ?? 'general';
 }
 
+/** 질문에 나온 아픈 부위(되묻지 않으려고) — 없으면 null */
+const PARTS: [RegExp, string][] = [
+  [/어깨/, '어깨'], [/무릎/, '무릎'], [/허리/, '허리'], [/손목/, '손목'], [/발목/, '발목'], [/팔꿈치/, '팔꿈치'],
+  [/고관절/, '고관절'], [/목(이|\s|$)/, '목'],
+];
+export function injuryPart(q: string): string | null {
+  for (const [re, name] of PARTS) if (re.test(q)) return name;
+  return null;
+}
+
+/** 부상 안내 — 부위를 이미 말했으면 그 부위로 끝맺는다(검수 4: "오른쪽 어깨"라고 했는데 "어느 부위인지" 되묻던 것) */
+export function injuryReply(q: string): { text: string; warning: string } {
+  const part = injuryPart(q);
+  const base = SAFETY_REPLY.injury;
+  if (!part) return base;
+  const side = /오른/.test(q) ? '오른쪽 ' : /왼/.test(q) ? '왼쪽 ' : '';
+  return {
+    ...base,
+    text: base.text.replace(/아프지 않은 부위 운동은 해도 됩니다 — 어느 부위인지 알려 주시면 그 부위를 뺀 오늘 운동을 짜 드릴게요\.$/,
+      `${side}${part}에 힘이 실리는 종목은 오늘 전부 빼고, ${part}를 쓰지 않는 종목만 하세요. 할 때 조금이라도 같은 통증이 오면 그 종목도 멈춥니다.`),
+  };
+}
+
 /** 응급 · 부상 — AI 를 부르지 않고 이 문장으로 답한다 (진단 · 처방 금지, 진료 안내) */
 export const SAFETY_REPLY: Record<'emergency' | 'injury', { text: string; warning: string }> = {
   emergency: {

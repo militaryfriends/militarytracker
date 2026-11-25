@@ -90,15 +90,41 @@ const SHOT_LIMIT = 80;
 let shooter: { r: import('three').WebGLRenderer; stages: Map<Sex, Stage> } | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
-export function cachedSnapshot(key: string): string | undefined {
-  return shots.get(`${key}|${getThemeMode() === 'light' ? 'L' : 'D'}`);
+/**
+ * 찍은 사진을 브라우저에도 몇 장 남긴다(검수 2 — 다시 열 때 3D 를 기다리는 2초 빈 자리 대신 지난번 사진이 바로 보이게).
+ * 모델을 바꾸면 SHOT_VER 를 올린다. 저장이 막힌 브라우저(사생활 보호 창)에서는 그냥 메모리만 쓴다.
+ */
+const SHOT_VER = 'm1';
+const DISK_LIMIT = 10;
+const DISK_INDEX = `mt-shot-index:${SHOT_VER}`;
+function diskGet(key: string): string | undefined {
+  try { return window.localStorage.getItem(`mt-shot:${SHOT_VER}:${key}`) ?? undefined; } catch { return undefined; }
+}
+function diskSet(key: string, url: string): void {
+  try {
+    const ls = window.localStorage;
+    const idx: string[] = JSON.parse(ls.getItem(DISK_INDEX) ?? '[]').filter((k: string) => k !== key);
+    idx.push(key);
+    while (idx.length > DISK_LIMIT) ls.removeItem(`mt-shot:${SHOT_VER}:${idx.shift()}`);
+    ls.setItem(`mt-shot:${SHOT_VER}:${key}`, url);
+    ls.setItem(DISK_INDEX, JSON.stringify(idx));
+  } catch { /* 저장 공간이 없거나 막힘 */ }
+}
+
+export function cachedSnapshot(key0: string): string | undefined {
+  const key = `${key0}|${getThemeMode() === 'light' ? 'L' : 'D'}`;
+  const hit = shots.get(key);
+  if (hit) return hit;
+  const disk = diskGet(key);
+  if (disk) shots.set(key, disk);
+  return disk;
 }
 
 /** 좌표의 몸을 yaw(라디안, 기본 3/4 각도)에서 찍은 PNG data URL — 밝은 · 어두운 화면은 노출이 달라 따로 찍는다 */
 export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string, yaw = DEFAULT_YAW, shape?: Shape): Promise<string> {
   const light = getThemeMode() === 'light';
   const key = `${key0}|${light ? 'L' : 'D'}`;
-  const hit = shots.get(key);
+  const hit = shots.get(key) ?? diskGet(key);
   if (hit) return Promise.resolve(hit);
   const job = queue.then(async () => {
     const again = shots.get(key);
@@ -118,6 +144,7 @@ export function snapshot(sex: Sex, c: Coord, w: number, h: number, key0: string,
     shooter.r.render(st.scene, st.camera);
     const url = shooter.r.domElement.toDataURL('image/png');
     shots.set(key, url);
+    diskSet(key, url);
     if (shots.size > SHOT_LIMIT) shots.delete(shots.keys().next().value as string);
     return url;
   });

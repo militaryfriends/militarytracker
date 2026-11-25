@@ -162,7 +162,7 @@ const s = themed(() => StyleSheet.create({
   pct: { fontFamily: FONT.num, fontSize: 80, lineHeight: 82, color: colors.ink, letterSpacing: -1 },
   pctUnit: { fontFamily: FONT.num, fontSize: 30, lineHeight: 50, color: colors.mid },
   bar: { height: 6, borderRadius: 3, backgroundColor: colors.track, marginTop: 6 },
-  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.red },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
   barTick: { position: 'absolute', top: -3, width: 2, height: 12, borderRadius: 1, marginLeft: -1, backgroundColor: colors.ink },
   note: { fontSize: 12, lineHeight: 18, color: colors.mid, marginTop: 9 },
   rows: { marginTop: 10 },

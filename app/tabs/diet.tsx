@@ -117,7 +117,7 @@ export default function DietScreen() {
           <View style={{ flex: 1 }}>
             <Text style={s.basisLabel}>계산 기준</Text>
             <Text style={s.basisMain}>
-              {st.weightUsed}kg · {profile.height}cm · {profile.age}세 · {goalLabel(profile)}
+              {st.weightUsed}kg · {profile.height}cm · {profile.age}세 · {goalLabel(profile, bodyProject)}
             </Text>
             <Text style={s.basisSub}>
               {st.weightSrc === 'project'
@@ -143,7 +143,7 @@ export default function DietScreen() {
           </View>
         )}
 
-        <Text style={s.sectionLabel}>DAILY TARGET</Text>
+        <Text style={s.sectionLabel}>하루 목표</Text>
         <View style={s.macroRow}>
           <MacroCard value={st.kcal.toLocaleString()} unit="" label="목표 kcal" />
           <MacroCard value={`${st.protein}`} unit="g" label="단백질" />
@@ -192,7 +192,7 @@ export default function DietScreen() {
               </View>
             ))}
             {diet.tip ? (
-              <View style={s.tipCard}><Text style={s.tipTxt}>💡 {diet.tip}</Text></View>
+              <View style={s.tipCard}><Text style={s.tipTxt}>{diet.tip}</Text></View>
             ) : null}
           </>
         ) : canDiet ? (

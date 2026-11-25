@@ -27,9 +27,9 @@ export default function Root({ children }: PropsWithChildren) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
 
         <title>밀리터리트래커</title>
-        <meta name="description" content="검증된 자세 가이드 위에서 기록하는 트레이닝 앱" />
+        <meta name="description" content="자세 가이드를 보며 기록하는 트레이닝 앱" />
         <meta property="og:title" content="밀리터리트래커" />
-        <meta property="og:description" content="검증된 자세 가이드 위에서 기록하는 트레이닝 앱" />
+        <meta property="og:description" content="자세 가이드를 보며 기록하는 트레이닝 앱" />
         <meta property="og:type" content="website" />
 
         {/* RN Web 의 스크롤 컨테이너 기본값 리셋 */}

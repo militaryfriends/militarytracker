@@ -51,7 +51,9 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
   // 처음 열 때 한 번 채운다 — 다시 분석이면 저장된 프로필에서. O7 에서 돌아온 거면(resume) 입력 그대로
   useEffect(() => {
     const st = useOnboardDraft.getState();
-    if (st.resume) return;
+    // O7 에서 돌아온 것(입력 중이던 초안)은 그대로. 홈 · MY 의 '허리 다시 재기'는 초안이 없으니 채우고 그 단계로
+    if (st.resume && st.seeded) return;
+    const resume = st.resume;
     if (mode === 'first' && st.seeded) return;
     if (mode !== 'first' && savedProfile) {
       st.reset({
@@ -60,9 +62,10 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
         // 처음부터 다시 하기는 목표를 새로 고른다
         pick: null,
         restart: mode === 'restart',
+        resume,
       });
     } else {
-      st.reset({ restart: mode === 'restart' });
+      st.reset({ restart: mode === 'restart', resume });
     }
     // 화면이 열릴 때 한 번만 — 프로필이 바뀌었다고 입력 중인 값을 덮어쓰지 않는다
     // eslint-disable-next-line react-hooks/exhaustive-deps

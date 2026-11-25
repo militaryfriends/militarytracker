@@ -1,4 +1,5 @@
 import { prescription, repsText, rxText } from '../utils/prescription';
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, FlatList,
@@ -65,7 +66,9 @@ function SetCheck({ done, now, label, onPress, onLongPress }: {
       accessibilityRole="checkbox" accessibilityState={{ checked: done }}
       accessibilityLabel={label} accessibilityHint="길게 누르면 세트를 삭제합니다">
       <Animated.View style={[s.ck, done && s.ckDone, now && s.ckNow, anim]}>
-        <Text style={[s.ckTxt, done && s.ckTxtDone, now && s.ckTxtNow]}>{done || now ? '✓' : '○'}</Text>
+        {done || now
+          ? <Ionicons name="checkmark" size={18} color={(StyleSheet.flatten([s.ckTxt, done && s.ckTxtDone, now && s.ckTxtNow])?.color as string)} />
+          : <View style={s.ckDot} />}
       </Animated.View>
     </PressableScale>
   );
@@ -326,7 +329,7 @@ export default function SessionPlayer() {
           accessibilityRole="button"
           accessibilityLabel={anyRecorded ? '운동 종료하고 저장' : '운동 취소'}
         >
-          <Text style={s.closeTxt}>✕</Text>
+          <Ionicons name="close" size={20} color={colors.mid} />
         </PressableScale>
         <View style={s.headerCenter}>
           <Text style={s.headerDay} maxFontSizeMultiplier={1.3}>{session.dayName}</Text>
@@ -399,7 +402,7 @@ export default function SessionPlayer() {
               <Text style={[s.filmName, active && s.filmNameActive]} numberOfLines={2}>
                 {info?.n ?? ''}
               </Text>
-              {done && <Text style={s.filmCheck}>✓</Text>}
+              {done && <Ionicons name="checkmark" size={13} color={colors.mid} style={{ marginTop: 4 }} />}
             </PressableScale>
           );
         })}
@@ -423,7 +426,7 @@ export default function SessionPlayer() {
             <>
               <View style={s.restLeft}>
                 <View style={s.ringWrap}>
-                  <ProgressRing size={52} stroke={5} color={colors.red} progress={restTotal.current ? rest / restTotal.current : 0} animate={false} />
+                  <ProgressRing size={52} stroke={5} color={colors.ink} progress={restTotal.current ? rest / restTotal.current : 0} animate={false} />
                 </View>
                 <View>
                   <Text style={s.restLabel}>다음 {Math.min(completedSets + 1, cur.sets.length)}세트</Text>
@@ -471,7 +474,7 @@ export default function SessionPlayer() {
               <Text style={s.lastEmpty}>이 종목의 첫 기록입니다</Text>
             )}
           </View>
-          <Text style={s.sheetTitle}>세트 기록 · ✓ 길게 눌러 삭제</Text>
+          <Text style={s.sheetTitle}>세트 기록 · 체크를 길게 눌러 삭제</Text>
           {cur.sets.map((st, si) => {
             const ref = last?.detail[si];
             // 지금 할 세트(아직 안 한 첫 줄) 하나만 빨강 — 끝낸 줄은 흰 체크
@@ -534,7 +537,7 @@ export default function SessionPlayer() {
               {saving ? (
                 <ActivityIndicator color={colors.onRed} />
               ) : (
-                <Text style={s.navSolidTxt}>{doneAll ? '운동 완료 ✓' : '저장하고 종료'}</Text>
+                <Text style={s.navSolidTxt}>{doneAll ? '운동 완료' : '저장하고 종료'}</Text>
               )}
             </PressableScale>
           ) : (
@@ -603,7 +606,7 @@ function ExercisePicker({
           </Text>
         </View>
         <PressableScale style={p.close} onPress={onClose}>
-          <Text style={p.closeTxt}>✕</Text>
+          <Ionicons name="close" size={18} color={colors.mid} />
         </PressableScale>
       </View>
 
@@ -714,7 +717,7 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line,
     alignItems: 'center',
   },
-  filmCellActive: { borderColor: colors.red, backgroundColor: colors.redSoft },
+  filmCellActive: { borderColor: colors.ink, backgroundColor: colors.panel2 },
   filmCellDone: { opacity: 0.5 },
   filmNum: { fontSize: 10, fontWeight: '700', color: colors.muted, letterSpacing: 0.5, marginBottom: 4 },
   filmNumActive: { color: colors.ink },
@@ -766,10 +769,11 @@ const s = themed(() => StyleSheet.create({
   setsScroll: { flex: 1 },
   setsContainer: { gap: 8, paddingBottom: 12 },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, paddingVertical: 2 },
-  setRowNow: { backgroundColor: colors.redSoft },
-  setNumNow: { color: colors.redText, fontWeight: '700' },
-  ckNow: { backgroundColor: colors.red, borderColor: colors.red },
-  ckTxtNow: { color: colors.onRed, fontWeight: '700' },
+  setRowNow: { backgroundColor: colors.panel2 },
+  setNumNow: { color: colors.ink, fontWeight: '700' },
+  // 지금 할 세트 = 굵은 테두리 + 체크(끝낸 세트는 꽉 찬 흰색) — 빨강은 큰 버튼에만(검수 3)
+  ckNow: { backgroundColor: 'transparent', borderColor: colors.ink, borderWidth: 2 },
+  ckTxtNow: { color: colors.ink, fontWeight: '700' },
   setNum: { fontSize: 11, color: colors.muted, width: 18, textAlign: 'right', flexShrink: 0 },
   setNumDone: { color: colors.ink },
   setInput: {
@@ -789,6 +793,7 @@ const s = themed(() => StyleSheet.create({
   },
   ckDone: { backgroundColor: colors.ink, borderColor: colors.ink },
   ckTxt: { fontSize: 16, color: colors.muted },
+  ckDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: colors.muted },
   ckTxtDone: { color: colors.bg, fontWeight: '700' },
   addSet: { paddingVertical: 10, alignItems: 'center' },
   addSetTxt: { fontSize: 12.5, color: colors.muted, fontWeight: '600' },

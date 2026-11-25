@@ -1,4 +1,7 @@
 import { prescription, rxText } from '../../src/utils/prescription';
+import { LoadingSkeleton } from '../../src/components/LoadingSkeleton';
+import { hasHydrated } from '../../src/stores/appStore';
+import { RemeasureNote } from '../../src/components/body/RemeasureNote';
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
@@ -34,13 +37,13 @@ export default function HomeScreen() {
   // 월 = 0 … 일 = 6 (이번 주 칸과 같은 순서)
   const todayDow = (new Date().getDay() + 6) % 7;
 
-  if (!plan && hydrating) {
-    // 로그인 직후 플랜이 오기 전에 "플랜 없음" 을 보이면 루틴을 골라 기존 플랜을 덮어쓰게 된다
+  const planChecked = useAuthStore((st) => st.planChecked);
+  const loading = !plan && (hydrating || !planChecked || !hasHydrated());
+  if (loading) {
+    // 로그인 직후 플랜이 오기 전에 "플랜 없음" 을 보이면 루틴을 골라 기존 플랜을 덮어쓰게 된다 — 빈 상태 대신 자리 표시(검수 2)
     return (
       <SafeAreaView style={s.root} edges={['top']}>
-        <View style={s.empty}>
-          <ActivityIndicator color={colors.muted} />
-        </View>
+        <LoadingSkeleton />
       </SafeAreaView>
     );
   }
@@ -72,7 +75,8 @@ export default function HomeScreen() {
 
   const lastLog = logs[0];
   const comment = lastLog && lastLog.totalSets > 0
-    ? `최근 ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 완료했습니다. 오늘은 ${day.name} 차례예요.`
+    // '최근'이 언제인지 날짜를 붙인다 — 바로 위 이번 주 0세트와 어긋나 보이지 않게(검수 5)
+    ? `${Number(lastLog.date.slice(5, 7))}/${Number(lastLog.date.slice(8, 10))} ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 오늘은 ${day.name} 차례예요.`
     : (() => {
       const first = day.ids.map((id) => exById(id)).find(Boolean);
       const rx = first ? prescription(first, (profile?.level ?? 2) as 1 | 2 | 3) : null;
@@ -108,6 +112,7 @@ export default function HomeScreen() {
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
         <HomeHero avatarW={Math.round(Math.min(168, (Math.min(width, 480) - 40) * 0.44))} />
+        <RemeasureNote />
 
         {/* 오늘 할 일 */}
         <View style={s.sheet}>
@@ -288,10 +293,10 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.panel3, alignItems: 'center', justifyContent: 'center',
   },
   streakOn: { backgroundColor: colors.ink },
-  streakToday: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.red },
+  streakToday: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.ink },
   streakDay: { fontSize: 12, color: colors.mid, fontWeight: '600' },
   streakDayOn: { color: colors.bg, fontWeight: '700' },
-  streakDayToday: { color: colors.redText, fontWeight: '700' },
+  streakDayToday: { color: colors.ink, fontWeight: '700' },
   commentTxt: { fontSize: 14, color: colors.mid, lineHeight: 22 },
 
   secRow: {

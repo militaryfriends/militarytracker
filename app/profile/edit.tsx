@@ -16,6 +16,7 @@ import { calcBodyStats, effectiveWeight, validateProfile } from '../../src/utils
 import { UserProfile } from '../../src/types';
 import { STRATEGIES, STRATEGY, legacyGoalOf, strategyOfGoal } from '../../src/utils/projection';
 import { PressableScale } from '../../src/ui';
+import { useOnboardDraft } from '../../src/stores/onboardDraft';
 
 export default function ProfileEditScreen() {
   useThemeMode();
@@ -71,6 +72,18 @@ export default function ProfileEditScreen() {
     ]);
   }
 
+  function remeasure() {
+    const go = () => {
+      useOnboardDraft.getState().patch({ resume: 'body' });
+      router.push('/project/new');
+    };
+    if (!changed) { go(); return; }
+    showAlert('변경사항이 있습니다', '저장하지 않고 허리 · 인바디를 다시 넣을까요?', [
+      { text: '계속 수정', style: 'cancel' },
+      { text: '저장 없이 이동', onPress: go },
+    ]);
+  }
+
   async function handleSave() {
     if (!user || !p) return;
     if (validationError) { showAlert('입력 확인', validationError); return; }
@@ -111,7 +124,7 @@ export default function ProfileEditScreen() {
 
   return (
     <Screen>
-      <TopBar title="내 정보" meta="PROFILE" onBack={handleBack} />
+      <TopBar title="내 정보" onBack={handleBack} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -161,6 +174,16 @@ export default function ProfileEditScreen() {
           {bodyProject?.status === 'active' ? (
             <Text style={s.projNote}>진행 중인 프로젝트({bodyProject.name})가 있어 하루 칼로리는 프로젝트 단계 값을 씁니다.</Text>
           ) : null}
+
+          {/* 검수 1-2 — 허리 · 인바디는 몸 숫자 전체(지금 몸 · 목표 · 칼로리)를 바꾸므로 여기서 칸만 고치지 않고 '내 몸 다시 계산'의 그 단계로 */}
+          <SectionLabel>허리둘레 · 인바디</SectionLabel>
+          <PressableScale haptic="select" style={s.opt} onPress={remeasure} accessibilityRole="button">
+            <View style={{ flex: 1 }}>
+              <Text style={s.optTxt}>{p.waistCm ? `허리 ${p.waistCm}cm` : '허리둘레 없음'}</Text>
+              <Text style={s.optSub}>다시 넣으면 지금 몸 · 목표 · 칼로리를 다시 계산해요</Text>
+            </View>
+            <Text style={s.optDot}>›</Text>
+          </PressableScale>
 
           <SectionLabel>운동 환경</SectionLabel>
           <View style={s.grid2}>

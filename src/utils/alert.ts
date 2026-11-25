@@ -1,4 +1,5 @@
 import { Alert, Platform } from 'react-native';
+import { hostAlert } from '../components/AlertHost';
 
 export interface AlertButton {
   text?: string;
@@ -16,8 +17,11 @@ export function showAlert(title: string, message?: string, buttons?: AlertButton
     return;
   }
 
-  const body = message ? `${title}\n\n${message}` : title;
   const list = buttons ?? [];
+  // 앱 안 대화상자(브라우저가 confirm 을 막아도 답할 수 있게) — 호스트가 아직 없을 때만 window.*
+  if (hostAlert({ title, message, buttons: list })) return;
+
+  const body = message ? `${title}\n\n${message}` : title;
 
   // 버튼이 없거나 하나뿐이면 단순 알림
   if (list.length <= 1) {

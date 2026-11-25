@@ -1,7 +1,7 @@
 import { analyzeBody } from '../src/utils/bodyAnalysis';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking,
+  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking, useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors, themed, useThemeMode } from '../src/theme';
@@ -9,10 +9,7 @@ import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, useSafeBack } from '../
 import { showAlert } from '../src/utils/alert';
 import { useAuthStore } from '../src/stores/authStore';
 import { useEntitlement } from '../src/hooks/useEntitlement';
-import {
-  PRO_FEATURES, FEATURE_LABEL, FEATURE_DESC, FREE_HIGHLIGHTS,
-  PRODUCTS, TRIAL_DAYS, PRO_NAME, Feature, LEGAL,
-} from '../src/config/entitlements';
+import { PRODUCTS, TRIAL_DAYS, PRO_NAME, LEGAL } from '../src/config/entitlements';
 import {
   purchase, restore, startTrial, redeemPromo, canPurchase, getOfferings, manageSubscriptionUrl,
   BillingUnavailable, PromoError, EmailUnverified, STORE_BILLING_READY,
@@ -21,17 +18,22 @@ import { resendVerification } from '../src/services/authService';
 import { SUB_STATUS_LABEL } from '../src/utils/subscription';
 import type { Subscription } from '../src/types';
 import { useAppStore } from '../src/stores/appStore';
-import { ProjectCard } from '../src/components/body/ProjectCard';
+import { AvatarView } from '../src/components/body/AvatarView';
+import { coordOf } from '../src/components/body/avatar3d/morph';
+import { useNowBody } from '../src/components/body/nowBody';
+import { kg } from '../src/components/body/format';
+import { calcBodyStats } from '../src/utils/body';
 import { PressableScale, PRESS_SCALE } from '../src/ui';
 
-/** '코치' → '코치는', '플랜' → '플랜은' — 받침 유무로 조사를 고른다 */
-function eun(word: string): string {
-  const ch = word.charCodeAt(word.length - 1);
-  if (ch < 0xac00 || ch > 0xd7a3) return `${word}은(는)`;
-  return (ch - 0xac00) % 28 === 0 ? `${word}는` : `${word}은`;
-}
-
 type Busy = null | 'buy' | 'trial' | 'promo' | 'restore';
+
+/** 구독하면 열리는 것 — 한 줄씩, 그 사람의 숫자로(검수 3-1). 코치 하루 10번은 서버 한도(quota.ts)와 같아야 한다 */
+const PITCH = (days?: number, kcal?: number): [string, string][] => [
+  ['매일 할 운동', `내 몸 · 장소 · 주 ${days ?? 3}일에 맞춘 분할과 세트`],
+  ['매일 먹을 것', kcal ? `하루 ${kcal.toLocaleString('ko-KR')}kcal을 끼니마다 g 단위로` : '하루 칼로리를 끼니마다 g 단위로'],
+  ['물어보면 답하는 코치', '내 기록을 보고, 하루 10번'],
+  ['4주마다 체크인', '체중을 넣으면 지금 몸이 바뀝니다'],
+];
 
 export default function SubscribeScreen() {
   useThemeMode();
@@ -49,13 +51,34 @@ export default function SubscribeScreen() {
       return null;
     }
   }, [f, project, analysis]);
+  // 위 3D · 한 줄에 쓸 목표 — 고른 카드 → 진행 중 프로젝트 → 내가 고른(추천) 카드 순(검수 3-1)
+  const profile = useAppStore((st) => st.profile);
+  const weights = useAppStore((st) => st.weights);
+  const bodyProject = useAppStore((st) => st.project);
+  const now = useNowBody();
+  const target = useMemo(() => {
+    if (chosen) return { name: chosen.name, months: chosen.months, end: chosen.end };
+    if (bodyProject && (bodyProject.status === 'active' || bodyProject.status === 'paused')) {
+      return { name: bodyProject.name, months: bodyProject.months, end: bodyProject.end };
+    }
+    if (!analysis) return null;
+    try {
+      const cards = analyzeBody(analysis.input).projects;
+      const c = cards.find((x) => x.strategy === profile?.strategy) ?? cards.find((x) => x.recommended) ?? cards[0];
+      return c ? { name: c.name, months: c.months, end: c.end } : null;
+    } catch {
+      return null;
+    }
+  }, [chosen, bodyProject, analysis, profile?.strategy]);
+  const dayKcal = calcBodyStats(profile, weights, bodyProject)?.kcal ?? chosen?.nutrition.kcal;
   const patchUser = useAuthStore((s) => s.patchUser);
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const { sub, pro, left } = useEntitlement();
   // 결제 SDK 연결 전엔 가격표·구매·복원·코드 입력을 숨긴다 (심사 거절 사유)
   const storeReady = STORE_BILLING_READY && Platform.OS !== 'web';
 
-  const focus = PRO_FEATURES.includes(f as Feature) ? (f as Feature) : null;
+  const { width } = useWindowDimensions();
+  const avW = Math.round(Math.min(150, (Math.min(width, 480) - 48) / 2));
   // 요금제는 월간 하나(₩9,900). 스토어 가격을 받으면 그 값으로 바꿔 보여 준다
   const [products, setProducts] = useState(PRODUCTS);
   const [picked, setPicked] = useState(PRODUCTS.find((p) => p.best)?.id ?? PRODUCTS[0].id);
@@ -119,18 +142,34 @@ export default function SubscribeScreen() {
 
   return (
     <Screen>
-      <TopBar title={PRO_NAME} meta="SUBSCRIPTION" onBack={goBack} />
+      <TopBar title={PRO_NAME} onBack={goBack} />
       <Body>
-        {chosen && analysis ? (
-          <View style={s.chosen}>
-            <Text style={s.chosenLabel}>선택한 프로젝트</Text>
-            <ProjectCard sex={analysis.input.sex} project={chosen} fromCell={analysis.cell} selected={false} days={analysis.input.days} compact />
-            {pro ? (
-              <PrimaryBtn label="맞춤형 프로젝트 바로 시작하기" onPress={() => router.replace(`/project/start?project=${chosen.id}`)} style={{ marginTop: 10 }} />
-            ) : null}
+        {/* 검수 3-1 — 맨 위는 지금 몸 vs 목표 몸, 그 사람의 숫자로 */}
+        {now && target ? (
+          <View style={s.pair}>
+            <AvatarView sex={now.sex} cell={now.cell} coord={now.coord} own bfPct={now.bfPct} width={avW} badge="지금" />
+            <AvatarView sex={now.sex} cell={target.end.cell} coord={coordOf(now.sex, target.end.bfPct, target.end.nffmi)} width={avW} badge="예상" />
           </View>
         ) : null}
-        {pro ? (
+        <Text style={s.headline}>이 몸까지, 가는 길을 엽니다.</Text>
+        {target && now ? (
+          <Text style={s.headSub}>{target.name} · {target.months}개월 · {kg(now.weightKg)}kg → {kg(target.end.weightKg)}kg</Text>
+        ) : null}
+        {chosen && pro ? (
+          <PrimaryBtn label="맞춤형 프로젝트 바로 시작하기" onPress={() => router.replace(`/project/start?project=${chosen.id}`)} style={{ marginTop: 14 }} />
+        ) : null}
+
+        <View style={s.pitch}>
+          {PITCH(profile?.days, dayKcal).map(([t, d]) => (
+            <View key={t} style={s.pitchRow}>
+              <Text style={s.pitchTitle}>{t}</Text>
+              <Text style={s.pitchSub}>{d}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={s.freeLine}>구독 없이도: 정석 루틴 · 세트 기록 · 종목별 자세 영상</Text>
+
+        {pro && (sub.status !== 'trial' || isAdmin) ? (
           <View style={s.activeBox}>
             <Text style={s.activeLabel}>{isAdmin && sub.status === 'none' ? '관리자 계정' : SUB_STATUS_LABEL[sub.status]}</Text>
             <Text style={s.activeTxt}>
@@ -150,31 +189,11 @@ export default function SubscribeScreen() {
               </PressableScale>
             ) : null}
           </View>
-        ) : (
-          <Text style={s.lead}>
-            {focus
-              ? `${eun(FEATURE_LABEL[focus])} 구독 기능입니다.`
-              : '기록은 계속 무료입니다. 개인화만 구독으로 열립니다.'}
-          </Text>
-        )}
-
-        <SectionLabel>구독하면 열리는 기능</SectionLabel>
-        {PRO_FEATURES.map((k) => (
-          <View key={k} style={[s.row, focus === k && s.rowFocus]}>
-            <View style={[s.dot, focus === k && s.dotFocus]} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.rowTitle}>{FEATURE_LABEL[k]}</Text>
-              <Text style={s.rowSub}>{FEATURE_DESC[k]}</Text>
-            </View>
-          </View>
-        ))}
-
-        <SectionLabel>구독하지 않아도 그대로</SectionLabel>
-        <View style={s.freeBox}>
-          {FREE_HIGHLIGHTS.map((t) => (
-            <Text key={t} style={s.freeTxt}>· {t}</Text>
-          ))}
-        </View>
+        ) : null}
+        {/* 체험 중은 초록 카드 대신 회색 한 줄(검수 3 #7) */}
+        {pro && sub.status === 'trial' && !isAdmin ? (
+          <Text style={s.trialLine}>무료 체험 {left ?? 0}일 남음</Text>
+        ) : null}
 
         {!pro && storeReady && (
           <>
@@ -303,10 +322,19 @@ const s = themed(() => StyleSheet.create({
   lead: { fontSize: 14, color: colors.ink, lineHeight: 22, marginTop: 4, marginBottom: 4 },
 
   activeBox: {
-    backgroundColor: colors.goodBg, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: colors.goodLine, marginTop: 6,
+    backgroundColor: colors.panel, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: colors.line, marginTop: 18,
   },
-  activeLabel: { fontSize: 10, fontWeight: '800', color: colors.good, letterSpacing: 1.5 },
+  activeLabel: { fontSize: 12, fontWeight: '700', color: colors.mid },
+  pair: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 4 },
+  headline: { fontSize: 24, fontWeight: '800', color: colors.ink, marginTop: 14, letterSpacing: -0.4 },
+  headSub: { fontSize: 14, color: colors.mid, marginTop: 6, lineHeight: 20 },
+  pitch: { marginTop: 22, borderTopWidth: 1, borderTopColor: colors.line },
+  pitchRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.line },
+  pitchTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  pitchSub: { fontSize: 13, color: colors.mid, marginTop: 4, lineHeight: 19 },
+  freeLine: { fontSize: 12.5, color: colors.muted, marginTop: 14, lineHeight: 18 },
+  trialLine: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 18 },
   activeTxt: { fontSize: 15, fontWeight: '700', color: colors.ink, marginTop: 6 },
   activeSub: { fontSize: 11.5, color: colors.muted, marginTop: 6, lineHeight: 18 },
 

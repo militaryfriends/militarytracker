@@ -220,7 +220,7 @@ const s = themed(() => StyleSheet.create({
   bar: { height: 8, borderRadius: 4, backgroundColor: colors.panel3, marginTop: 10, overflow: 'hidden' },
   barTick: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: colors.mid },
   barTxt: { fontSize: 11.5, color: colors.muted, marginTop: 5, fontWeight: '600' },
-  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.red },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
   btnRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   kgRow: { flexDirection: 'row', marginTop: 12, gap: 8 },
   kgCell: { flex: 1, alignItems: 'center' },

@@ -1,4 +1,5 @@
 import { avatar3DError } from '../../src/components/body/avatar3d/Avatar3D';
+import { RemeasureNote } from '../../src/components/body/RemeasureNote';
 import { useEffect, useRef, useState } from 'react';
 import { MyBodyCard } from '../../src/components/body/MyBodyCard';
 import {
@@ -222,6 +223,7 @@ export default function MyScreen() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView ref={scrollRef} style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <RemeasureNote />
         <MyBodyCard onWeigh={goWeigh} />
 
         {/* Summary */}

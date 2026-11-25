@@ -257,7 +257,7 @@ const s = themed(() => StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
   sub: { fontSize: 13.5, color: colors.muted, marginTop: 6, lineHeight: 20 },
   acc: { marginTop: 2, marginBottom: 14 },
-  accWarn: { fontSize: 12.5, color: colors.pr, fontWeight: '700', lineHeight: 18 },
+  accWarn: { fontSize: 12.5, color: colors.ink, fontWeight: '700', lineHeight: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   practice: { fontSize: 12, color: colors.mid, textAlign: 'center', marginTop: 10, fontWeight: '600' },
   again: { alignItems: 'center', paddingVertical: 10, minHeight: 44, justifyContent: 'center' },

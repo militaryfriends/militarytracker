@@ -251,7 +251,7 @@ export default function LoginScreen() {
               <Animated.Text style={[styles.word, trackStyle]} numberOfLines={1}>MILITARY TRACKER</Animated.Text>
             </Animated.View>
             <Rise clock={clock} T={T} i={0}>
-              <Text style={styles.sub}>검증된 자세 가이드 위에서 기록하는{'\n'}가장 단순한 트레이닝 앱</Text>
+              <Text style={styles.sub}>자세 가이드를 보며 기록하는{'\n'}가장 단순한 트레이닝 앱</Text>
             </Rise>
           </View>
 

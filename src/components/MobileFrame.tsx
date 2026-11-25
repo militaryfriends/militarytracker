@@ -33,7 +33,7 @@ export default function MobileFrame({ children }: { children: ReactNode }) {
       <View style={s.side}>
         <Text style={s.brand}>MILITARY TRACKER</Text>
         <Text style={s.tagline}>
-          검증된 자세 가이드 위에서{'\n'}기록하는 트레이닝 앱
+          자세 가이드를 보며{'\n'}기록하는 트레이닝 앱
         </Text>
         <Text style={s.note}>
           앱 출시 전 미리보기입니다.{'\n'}

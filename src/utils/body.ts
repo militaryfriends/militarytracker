@@ -236,8 +236,10 @@ export function calcBodyStats(
 }
 
 /** 화면 · 코치에 쓰는 목표 이름 — 카드 방식이 있으면 그 이름(최대 감량 · 근육 유지 감량 · 린매스업 · 벌크업) */
-export const goalLabel = (p: Pick<UserProfile, 'goal' | 'strategy'>): string =>
-  p.goal !== 'habit' && p.strategy ? STRATEGY[p.strategy].name : GOAL_LABEL[p.goal];
+/** 진행 중인 프로젝트가 있으면 그 프로젝트의 방식이 목표다(검수 1-1 — 프로젝트는 린매스업인데 식단은 '벌크업'이던 것) */
+export const goalLabel = (p: Pick<UserProfile, 'goal' | 'strategy'>, project?: BodyProject | null): string =>
+  project && project.status === 'active' && project.strategy ? STRATEGY[project.strategy].name
+    : p.goal !== 'habit' && p.strategy ? STRATEGY[p.strategy].name : GOAL_LABEL[p.goal];
 
 export const GOAL_LABEL: Record<UserProfile['goal'], string> = {
   muscle: '린매스업',

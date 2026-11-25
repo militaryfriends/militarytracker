@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, EmptyState, Notice, useSafeBack } from '../../src/components/ui';
@@ -51,7 +52,7 @@ export default function ExerciseDetailScreen() {
           autoPlay
           rounded={0}
           dim={0.2}
-          badge={hasVideo ? '▶ LOOP' : undefined}
+          badge={undefined}
           style={s.hero}
         />
 
@@ -85,7 +86,7 @@ export default function ExerciseDetailScreen() {
           {/* 주의가 필요한 종목만 표시 */}
           {risk ? (
             <View style={s.riskBox}>
-              <Text style={s.riskTitle}>⚠  주의</Text>
+              <Text style={s.riskTitle}>주의</Text>
               <Text style={s.riskTxt}>{risk}</Text>
             </View>
           ) : null}
@@ -171,9 +172,7 @@ function Point({ text, mode }: { text: string; mode: 'w' | 'c' }) {
   return (
     <View style={s.pointRow}>
       <View style={[s.pointIcon, mode === 'w' ? s.pIconW : s.pIconC]}>
-        <Text style={[s.pointIconTxt, mode === 'w' ? s.pTxtW : s.pTxtC]}>
-          {mode === 'w' ? '✕' : '✓'}
-        </Text>
+        <Ionicons name={mode === 'w' ? 'close' : 'checkmark'} size={12} color={colors.mid} />
       </View>
       <Text style={s.pointTxt}>{text}</Text>
     </View>
@@ -234,12 +233,14 @@ const s = themed(() => StyleSheet.create({
     width: 22, height: 22, borderRadius: 11,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
   },
-  pIconW: { backgroundColor: colors.wrongBg },
-  pIconC: { backgroundColor: colors.goodBg },
+  // 실수 · 올바른 수행 표시는 회색 한 톤(검수 3 — 빨강 · 초록 원을 뺐다). 모양(✕ · ✓)으로만 구분
+  pIconW: { backgroundColor: colors.panel3 },
+  pIconC: { backgroundColor: colors.panel3 },
   pointIconTxt: { fontSize: 11, fontWeight: '700' },
-  pTxtW: { color: colors.wrong },
-  pTxtC: { color: colors.good },
-  pointTxt: { fontSize: 14, color: colors.ink, lineHeight: 21, flex: 1 },
+  pTxtW: { color: colors.mid },
+  pTxtC: { color: colors.mid },
+  // flex: 1(기준 0)은 웹에서 줄 높이를 낮게 잡아 셋째 줄이 잘렸다(검수 2) — 남는 폭만 채우고 높이는 글이 정한다
+  pointTxt: { fontSize: 14, color: colors.ink, lineHeight: 21, flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 0 },
   emptyForm: { fontSize: 13, color: colors.muted, lineHeight: 21 },
 
   relGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

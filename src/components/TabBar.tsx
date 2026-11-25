@@ -44,7 +44,7 @@ function TabIcon({ on, name }: { on: boolean; name: IoniconName }) {
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: k.value }] }));
   return (
     <Animated.View style={anim}>
-      <Ionicons name={name} size={21} color={on ? colors.redText : colors.mid} />
+      <Ionicons name={name} size={21} color={on ? colors.ink : colors.mid} />
     </Animated.View>
   );
 }
@@ -122,7 +122,7 @@ const s = themed(() => StyleSheet.create({
     }),
   },
   item: { flex: 1, borderRadius: 25, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  blob: { position: 'absolute', left: PAD, top: PAD, bottom: PAD, borderRadius: 25, backgroundColor: colors.redSoft },
+  blob: { position: 'absolute', left: PAD, top: PAD, bottom: PAD, borderRadius: 25, backgroundColor: colors.panel3 },
   label: { fontSize: 10.5, fontWeight: '600', color: colors.mid },
-  labelOn: { color: colors.redText, fontWeight: '700' },
+  labelOn: { color: colors.ink, fontWeight: '700' },
 }));

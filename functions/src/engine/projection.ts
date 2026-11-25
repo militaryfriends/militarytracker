@@ -326,8 +326,8 @@ export const STRATEGY: Record<Strategy, StrategySpec> = {
   cut: { phase: 'cut', name: '근육 유지 감량', how: '주 체중의 약 0.5% 감량', cutRate: CUT_RATE, recompShare: 1 },
   // 증량은 "현실적인 근육 증가 한도"에서 출발한다(11/7 대표 피드백 — 여성 45kg → 12개월 57.6kg 은 대부분 지방이라 목표 몸이 뱃살처럼 보였다).
   // 근육이 붙는 속도(GAIN: 성별 · 경력) × 지방 비율로 체중 증가를 정하고, 잉여 칼로리도 그 값에서 거꾸로 계산한다.
-  leanmass: { phase: 'gain', name: '린매스업', how: '천천히 증량 — 늘어나는 체중의 약 70%가 근육', fatRatio: 0.4, leanShare: 0.9 },
-  bulk: { phase: 'gain', name: '벌크업', how: '빠른 증량 — 늘어나는 체중의 절반이 근육', fatRatio: 1.0, leanShare: 1 },
+  leanmass: { phase: 'gain', name: '린매스업', how: '천천히 증량 — 지방이 덜 붙는 속도', fatRatio: 0.4, leanShare: 0.9 },
+  bulk: { phase: 'gain', name: '벌크업', how: '빠르게 증량 — 지방도 함께 붙는 속도', fatRatio: 1.0, leanShare: 1 },
 };
 
 /** 증량 잉여 칼로리 중 몸에 저장되는 비율(나머지는 활동 · 열로 소모 — 보수적), 근육 1kg 을 만드는 데 드는 kcal */

@@ -109,6 +109,7 @@ export async function startSession(fu: FirebaseUser): Promise<void> {
 /** 구독을 끊고 진행 중인 응답을 버린다 (signedOut · 로그아웃 · 계정 삭제가 부른다) */
 export function endSession(): void {
   gen++;
+  useAuthStore.getState().setPlanChecked(false);
   stopListener();
   live = null;
   lastRefreshAt = 0;
@@ -344,6 +345,7 @@ export function refreshData(uid: string, opts: { force?: boolean } = {}): Promis
       }
     } finally {
       if (spinner) useAuthStore.getState().setHydrating(false);
+      if (g === gen) useAuthStore.getState().setPlanChecked(true);
       if (refreshing === entry) refreshing = null;
     }
     if (g !== gen) return;

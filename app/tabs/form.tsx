@@ -48,7 +48,7 @@ export default function FormScreen() {
   const Header = useCallback(
     () => (
       <Text style={s.descTxt}>
-        {list.length}개 종목 · 전 종목에 자주 하는 실수와 교정 포인트가 있습니다.
+        전 종목에 자주 하는 실수와 교정 포인트가 있습니다.
       </Text>
     ),
     [list.length]
@@ -127,13 +127,12 @@ const Card = memo(function Card({ ex, onPress }: { ex: Exercise; onPress: (id: s
       <ExerciseMedia exId={ex.id} rounded={16} style={s.thumb} dim={0.4} />
 
       <View style={s.badgeRow}>
-        {video && <View style={s.vBadge}><Text style={s.vBadgeTxt}>▶ 영상</Text></View>}
-        {form && (
-          <>
-            <View style={s.errBadge}><Text style={s.errBadgeTxt}>✕ {form.w.length}</Text></View>
-            <View style={s.okBadge}><Text style={s.okBadgeTxt}>✓ {form.c.length}</Text></View>
-          </>
-        )}
+        {/* 회색 한 톤 글자 한 줄(검수 3 — 컬러 칩 · 기호를 뺐다) */}
+        {video || form ? (
+          <Text style={s.metaLine} numberOfLines={1}>
+            {[video ? '영상' : null, form ? `실수 ${form.w.length} · 포인트 ${form.c.length}` : null].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
       </View>
 
       <Text style={s.name} numberOfLines={1}>{ex.n}</Text>
@@ -153,6 +152,7 @@ const s = themed(() => StyleSheet.create({
   },
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   meta: { fontSize: 10, color: colors.muted, letterSpacing: 0.8 },
+  metaLine: { fontSize: 11, color: colors.muted },
 
   searchWrap: { paddingHorizontal: 16, paddingBottom: 10, justifyContent: 'center' },
   search: {

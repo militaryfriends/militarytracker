@@ -12,6 +12,8 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { nextDayIdx } from '../../src/utils/stats';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar } from '../../src/components/ui';
@@ -86,10 +88,12 @@ export default function CoachScreen() {
       : '신체 정보 없음';
     return [
       `사용자: ${profile?.sex === 'male' ? '남' : '여'} ${profile?.age ?? '-'}세, ${profile?.height ?? '-'}cm/${profile?.weight ?? '-'}kg, ${body}`,
-      `목표: ${profile ? goalLabel(profile) : '-'}`,
+      `목표: ${profile ? goalLabel(profile, useAppStore.getState().project) : '-'}`,
       ...(profile ? [`환경: ${profile.env === 'home' ? '집(홈트)' : '헬스장'}, 주 ${profile.days}회, 경력 ${LEVEL_LABEL[profile.level]}, `
         + `식사 ${FOOD_LABEL[profile.food]}, 알레르기 · 못 먹는 음식 ${profile.allergy?.trim() || '없음'}`] : []),
       `현재 플랜: ${planTxt}`,
+      // 오늘 할 데이 — "어깨가 아픈데 오늘 가슴?" 에 오늘이 등 데이라는 걸 답에 쓰게(검수 4)
+      ...(plan?.days.length ? [`오늘 할 데이: ${plan.days[nextDayIdx(logs, plan)]?.name ?? '-'} (${(plan.days[nextDayIdx(logs, plan)]?.ids ?? []).length}종목)`] : []),
       `최근 기록: ${logTxt}`,
       `이번 주 부위별 세트: ${PART_ORDER.map((p) => `${PART_LABEL[p]} ${vol[p]}`).join(', ')}`,
       // 내 변화 프로젝트 요약 한 단락 — 숫자는 엔진 값(서버 프롬프트 규칙: 바꾸거나 새로 만들지 않는다)
@@ -132,9 +136,11 @@ export default function CoachScreen() {
       }
       if (e instanceof QuotaExceeded) {
         setQuota({ used: e.limit, limit: e.limit, remaining: 0 });
+        // 쓰던 질문은 버리지 않는다 — 내일 그대로 보낼 수 있게 칸에 돌려 둔다(검수 4)
+        if (!preset) setInput(text);
         addChat({
           role: 'assistant',
-          content: `오늘 코치 대화 ${e.limit}회를 모두 사용했습니다. 내일 다시 채워집니다.`,
+          content: `오늘 코치 대화 ${e.limit}회를 모두 사용했습니다. 내일 다시 채워집니다.${preset ? '' : ' 입력한 질문은 칸에 남겨 뒀어요.'}`,
         });
         return;
       }
@@ -191,9 +197,9 @@ export default function CoachScreen() {
     ? undefined
     : isAdmin || quota?.unlimited
     ? '제한 없음'
-    : quota
-    ? `오늘 ${quota.remaining}/${quota.limit}회 남음`
-    : 'COACH';
+    : undefined;
+  // 남은 질문 수는 입력칸 바로 위에 — 갑자기 '다 썼어요'가 뜨지 않게(검수 4)
+  const leftLabel = canCoach && quota && !quota.unlimited && !isAdmin ? `남은 질문 ${quota.remaining}/${quota.limit}` : null;
 
   return (
     <Screen>
@@ -259,7 +265,8 @@ export default function CoachScreen() {
               ))}
             </View>
           ) : null}
-          <View style={[s.inRow, { paddingBottom: 8 }]}>
+          {leftLabel ? <Text style={s.left}>{leftLabel}</Text> : null}
+          <View style={[s.inRow, { paddingBottom: 8 }, leftLabel ? { paddingTop: 4 } : null]}>
             <TextInput
               style={[s.input, coachEmpty && s.inputOff]}
               placeholder={coachEmpty ? '오늘 질문을 다 썼어요 · 내일 다시 채워집니다' : '코치에게 질문하기'}
@@ -267,6 +274,14 @@ export default function CoachScreen() {
               value={input}
               onChangeText={setInput}
               onSubmitEditing={() => send()}
+              // 웹: 엔터로 보내기(Shift+엔터는 줄바꿈) — 여러 줄 칸은 onSubmitEditing 이 웹에서 안 온다
+              onKeyPress={Platform.OS === 'web' ? (e) => {
+                const ne = e.nativeEvent as unknown as { key: string; shiftKey?: boolean; isComposing?: boolean; preventDefault?: () => void };
+                if (ne.key === 'Enter' && !ne.shiftKey && !ne.isComposing) {
+                  (e as unknown as { preventDefault?: () => void }).preventDefault?.();
+                  void send();
+                }
+              } : undefined}
               returnKeyType="send"
               blurOnSubmit={false}
               editable={!coachEmpty && !chatBusy}
@@ -282,7 +297,7 @@ export default function CoachScreen() {
               accessibilityLabel="보내기"
               accessibilityState={{ disabled: coachEmpty || !input.trim() || chatBusy }}
             >
-              <Text style={s.sendTxt}>↑</Text>
+              <Ionicons name="arrow-up" size={20} color={coachEmpty || !input.trim() || chatBusy ? colors.muted : colors.bg} />
             </PressableScale>
           </View>
           {/* 키보드가 떠 있으면 안내 줄은 숨겨 입력칸을 키보드 바로 위에 둔다 */}
@@ -337,13 +352,17 @@ const s = themed(() => StyleSheet.create({
     backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line2,
     borderRadius: 26, paddingHorizontal: 18, paddingVertical: 12, minHeight: 52,
     fontSize: 16, color: colors.ink,
+    // 웹 포커스 테두리(두꺼운 흰 선)를 끈다 — 테두리는 1px 회색 그대로
+    ...(Platform.OS === 'web' ? { outlineWidth: 0 } : null),
   },
+  left: { fontSize: 11.5, color: colors.muted, paddingHorizontal: 22, paddingTop: 8 },
   inputOff: { opacity: 0.5 },
   send: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: colors.red,
+    width: 52, height: 52, borderRadius: 26, backgroundColor: colors.ink,
     alignItems: 'center', justifyContent: 'center',
   },
-  sendOff: { opacity: 0.4 },
+  // 글자가 없을 때는 회색 — 흰 버튼은 보낼 게 있을 때만
+  sendOff: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line2 },
   sendTxt: { color: colors.onRed, fontSize: 20, fontWeight: '700' },
   notice: { fontSize: 11, color: colors.muted, textAlign: 'center', paddingVertical: 8 },
 }));

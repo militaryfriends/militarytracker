@@ -13,6 +13,8 @@ import { ConfettiLayer, FONT_ASSETS, restoreHaptics, PressableScale } from '../s
 import MobileFrame from '../src/components/MobileFrame';
 import { BootCurtain } from '../src/components/brand/BootCurtain';
 import { OtaUpdater } from '../src/components/OtaUpdater';
+import { AlertHost } from '../src/components/AlertHost';
+import { preload3D } from '../src/components/body/avatar3d/Avatar3D';
 import { hideSplash, holdSplash } from '../src/components/brand/splash';
 
 /**
@@ -50,6 +52,11 @@ holdSplash();
 export default function RootLayout() {
   useThemeMode();
   const user = useAuthStore((s) => s.user);
+  // 로그인이 확인되면 곧바로 3D 모델을 받아 둔다 — 홈의 몸이 2초 비어 있던 것(검수 2)
+  const mySex = user?.profile?.sex;
+  useEffect(() => {
+    if (mySex) preload3D(mySex);
+  }, [mySex]);
   // 저장된 화면 모드 · 진동 설정 — 스플래시가 걷히기 전에 (다른 모드가 비쳤다 바뀌지 않게)
   const [prefsReady, setPrefsReady] = useState(false);
   const isInitialized = useAuthStore((s) => s.isInitialized);
@@ -161,6 +168,7 @@ export default function RootLayout() {
       </MobileFrame>
       <ConfettiLayer />
       <OtaUpdater />
+      <AlertHost />
       {boot && ready && user ? <BootCurtain onDone={() => setBoot(false)} /> : null}
     </ThemeProvider>
     </SafeAreaProvider>

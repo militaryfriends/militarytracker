@@ -138,3 +138,27 @@ export function analyzeBody(input0: AnalysisInput, pick?: GoalPick): AnalysisCor
 export function stripTracks(projects: readonly CardProject[]): Omit<CardProject, 'track'>[] {
   return projects.map(({ track: _t, ...rest }) => rest);
 }
+
+/**
+ * 몸으로 보기 어려운 체지방 하한(2026-11-25 클라이언트 검수 1-2) — 이보다 낮으면 대회 직전 보디빌더 수준이라
+ * 허리를 잘못 잰 경우가 대부분이다. 입력 화면은 다시 재 보라고 하고, 예전 저장값은 아래 normalizeStoredAnalysis 가 고친다.
+ */
+export const BF_FLOOR = { male: 8, female: 15 } as const;
+export const belowFloor = (sex: Sex, bfPct: number): boolean => bfPct < BF_FLOOR[sex];
+
+/**
+ * 예전 엔진(허리 범위 검사 전)으로 저장된 분석을 지금 엔진 값으로 — 저장된 지금 몸(예: 허리 60cm → 체지방 5.3%)과
+ * 입력으로 다시 계산하는 카드 4장(키 · 체중만 → 15.7%)이 서로 달랐다(검수 1-1). 입력이 그대로면 손대지 않는다.
+ */
+export function normalizeStoredAnalysis<T extends { input: AnalysisInput; comp: BodyComp; coord: Coord; cell: string }>(a: T): T {
+  const clean = sanitizeWaist(a.input);
+  if (clean === a.input) return a;
+  const comp = estimateBodyComp(clean);
+  return {
+    ...a,
+    input: clean,
+    comp,
+    coord: toCoord(clean.sex, comp.bfPct, comp.nffmi),
+    cell: toCell(clean.sex, comp.bfPct, comp.nffmi),
+  };
+}
