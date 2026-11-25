@@ -12,6 +12,7 @@ import { ThemeProvider, colors, restoreThemePref, useThemeMode } from '../src/th
 import { ConfettiLayer, FONT_ASSETS, restoreHaptics, PressableScale } from '../src/ui';
 import MobileFrame from '../src/components/MobileFrame';
 import { BootCurtain } from '../src/components/brand/BootCurtain';
+import { OtaUpdater } from '../src/components/OtaUpdater';
 import { hideSplash, holdSplash } from '../src/components/brand/splash';
 
 /**
@@ -159,6 +160,7 @@ export default function RootLayout() {
       </Stack>
       </MobileFrame>
       <ConfettiLayer />
+      <OtaUpdater />
       {boot && ready && user ? <BootCurtain onDone={() => setBoot(false)} /> : null}
     </ThemeProvider>
     </SafeAreaProvider>

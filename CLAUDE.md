@@ -172,6 +172,11 @@ eas update --channel production --message "무엇을 바꿨는지"     # 맥에�
   app.json 의 아이콘 · 스플래시 · 권한 · 플러그인. 이때는 `version` 을 올리고 스토어 빌드 → 옛 버전 앱에는 그 업데이트가 안 간다.
   버전을 안 올리고 네이티브가 필요한 JS 를 보내면 옛 앱이 그 모듈을 못 찾아 깨진다.
 - 스토어 · TestFlight 빌드(1.0.0 부터, production 채널)는 전부 expo-updates 가 들어 있다. 2026-10-15 이전의 옛 개발 빌드만 코드 푸시를 못 받는다.
+- **바로 적용(2026-11-25)**: `eas update` 가 끝난 뒤 관리자가 MY › 관리자 › '방금 올린 코드푸시 모두 적용' 을 누르면
+  `appConfig/main.otaRequiredAfter` 가 지금으로 바뀌고, 켜져 있는 앱(`src/components/OtaUpdater.native.tsx`)이 실시간으로 알아채
+  새 코드를 받아 '새 버전 적용 중' 을 잠깐 보이고 다시 켠다(운동 중이면 끝난 뒤). 누르지 않아도 뒤에서 받아 두었다가 30분 넘게 쉬고 돌아오면 적용.
+  SMIS CAMP 앱(smiscamp)과 같은 방식이지만 **설정 문서 · 규칙은 이 앱의 Firebase(military-tracker-96bdd)에 따로** 있다 — 섞지 말 것.
+  이 기능 자체도 코드푸시로 들어가므로, 처음 한 번은 예전처럼 껐다 켜야 깔린다.
 - `eas update` 는 **맥에 체크아웃된 코드**를 보낸다 — 보내기 전에 브랜치(main)와 `git status` 를 확인한다. 모델(.glb) · 이미지도 같이 올라간다.
 - 웹은 지금처럼 Firebase Hosting 배포(코드 푸시와 별개).
 

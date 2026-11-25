@@ -19,6 +19,7 @@ import { saveWeight } from '../../src/services/workoutService';
 import { saveProfile } from '../../src/services/authService';
 import { logoutUser, deleteUserAccount } from '../../src/services/session';
 import { askAiConsent, hasAiConsent, revokeAiConsent } from '../../src/services/aiConsent';
+import { requireLatestOtaNow } from '../../src/services/appConfig';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 import { SUB_STATUS_LABEL } from '../../src/utils/subscription';
@@ -194,6 +195,22 @@ export default function MyScreen() {
         },
       ]
     );
+  }
+
+  function confirmOtaNow() {
+    const uid = user?.uid;
+    if (!uid) return;
+    showAlert('코드푸시 모두 적용', '맥에서 eas update 가 다 끝났나요? 지금 앱을 쓰는 모든 사람에게 새 버전을 바로 적용합니다.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '모두 적용',
+        onPress: () => {
+          requireLatestOtaNow(uid)
+            .then(() => showAlert('적용했습니다', '켜져 있는 앱은 곧 새 코드를 받아 다시 열립니다. 이 기기도 새 코드가 있으면 바로 다시 열립니다.'))
+            .catch(() => showAlert('저장하지 못했습니다', '네트워크를 확인하고 다시 시도해주세요.'));
+        },
+      },
+    ]);
   }
 
   return (
@@ -389,6 +406,14 @@ export default function MyScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={s.subTitle}>대기자 명단 등록</Text>
                 <Text style={s.subSub}>Tally CSV → 3개월 · 1개월 프리미엄 자동 지급</Text>
+              </View>
+              <Text style={s.subChev}>›</Text>
+            </PressableScale>
+            <PressableScale scaleTo={PRESS_SCALE.card} style={s.subRow} onPress={confirmOtaNow}
+              accessibilityRole="button" accessibilityLabel="방금 올린 코드푸시 모두 적용">
+              <View style={{ flex: 1 }}>
+                <Text style={s.subTitle}>방금 올린 코드푸시 모두 적용</Text>
+                <Text style={s.subSub}>eas update 가 끝난 뒤 누르면, 켜져 있는 앱까지 새 코드를 받아 저절로 다시 열립니다(운동 중이면 끝난 뒤)</Text>
               </View>
               <Text style={s.subChev}>›</Text>
             </PressableScale>

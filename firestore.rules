@@ -266,6 +266,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── appConfig/main ────────────────────────────────────────────────────
+    // 필수 코드푸시 시각(otaRequiredAfter) — 앱이 로그인 전에도 구독하므로 공개 읽기. 관리자만 쓴다.
+    match /appConfig/{docId} {
+      allow read: if docId == 'main';
+      allow write: if isAdmin() && docId == 'main'
+                   && request.resource.data.keys().hasOnly(['otaRequiredAfter', 'updatedAt', 'updatedBy']);
+    }
+
     // ── 구독 관련 컬렉션 ──────────────────────────────────────────────────
     // promoCodes / promoRedemptions / promoAttempts / subEvents 는 전부
     // Cloud Functions(Admin SDK) 전용이다. 앱에서는 읽지도 쓰지도 않는다.
