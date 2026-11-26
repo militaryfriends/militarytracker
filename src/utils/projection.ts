@@ -325,8 +325,8 @@ export const STRATEGY: Record<Strategy, StrategySpec> = {
   cut: { phase: 'cut', name: '근육 유지 감량', how: '주 체중의 약 0.5% 감량', cutRate: CUT_RATE, recompShare: 1 },
   // 증량은 "현실적인 근육 증가 한도"에서 출발한다(11/7 대표 피드백 — 여성 45kg → 12개월 57.6kg 은 대부분 지방이라 목표 몸이 뱃살처럼 보였다).
   // 근육이 붙는 속도(GAIN: 성별 · 경력) × 지방 비율로 체중 증가를 정하고, 잉여 칼로리도 그 값에서 거꾸로 계산한다.
-  leanmass: { phase: 'gain', name: '린매스업', how: '천천히 증량 — 지방이 덜 붙는 속도', fatRatio: 0.4, leanShare: 0.9 },
-  bulk: { phase: 'gain', name: '벌크업', how: '빠르게 증량 — 지방도 함께 붙는 속도', fatRatio: 1.0, leanShare: 1 },
+  leanmass: { phase: 'gain', name: '린매스업', how: '천천히 증량 · 지방 적게', fatRatio: 0.4, leanShare: 0.9 },
+  bulk: { phase: 'gain', name: '벌크업', how: '빠르게 증량 · 지방도 붙음', fatRatio: 1.0, leanShare: 1 },
 };
 
 /** 증량 잉여 칼로리 중 몸에 저장되는 비율(나머지는 활동 · 열로 소모 — 보수적), 근육 1kg 을 만드는 데 드는 kcal */
@@ -412,7 +412,7 @@ export function strategyFit(sex: Sex, start: BodyComp, s: Strategy): CardFit {
   // 마른 몸(F2 · 근육 M1~M2)이 더 빼면 더 마른 몸이 된다
   if (s === 'cut' && (f <= 1 || (f === 2 && m <= 2))) return { ok: false, reason: '지금 체지방이 충분히 낮아요 — 근육을 채울 때예요' };
   if (s === 'leanmass' && f >= 4) return { ok: false, reason: '지금은 감량 먼저가 빠릅니다' };
-  if (s === 'bulk' && f >= 3) return { ok: false, reason: '지금은 살이 근육보다 더 붙기 쉬워요 — 감량이나 린매스업을 권해요' };
+  if (s === 'bulk' && f >= 3) return { ok: false, reason: '지금은 살이 더 붙기 쉬워요. 감량이나 린매스업을 권해요' };
   return { ok: true };
 }
 
