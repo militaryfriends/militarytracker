@@ -9,20 +9,19 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { TabGlyph, type TabIconName } from './TabIcons';
 import type { Tabs } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { haptic, PressableScale, PRESS_SCALE, SPRING } from '../ui';
 
-type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
-const ITEMS: readonly { route: string; label: string; on: IoniconName; off: IoniconName }[] = [
-  { route: 'home', label: '오늘', on: 'home', off: 'home-outline' },
-  { route: 'plan', label: '운동', on: 'barbell', off: 'barbell-outline' },
-  { route: 'coach', label: '코치', on: 'chatbubble-ellipses', off: 'chatbubble-ellipses-outline' },
-  { route: 'diet', label: '식단', on: 'restaurant', off: 'restaurant-outline' },
-  { route: 'my', label: '내 몸', on: 'body', off: 'body-outline' },
+const ITEMS: readonly { route: TabIconName; label: string }[] = [
+  { route: 'home', label: '오늘' },
+  { route: 'plan', label: '운동' },
+  { route: 'coach', label: '코치' },
+  { route: 'diet', label: '식단' },
+  { route: 'my', label: '내 몸' },
 ];
 /** 탭에 없는 화면 → 켜 둘 탭 */
 const ALIAS: Record<string, string> = { form: 'plan' };
@@ -33,7 +32,7 @@ const PAD = 6; // 바 안쪽 여백 (+ 테두리 1)
 const ITEM_GAP = 2;
 
 /** 탭 아이콘 — 켜지는 순간 한 번 튄다 */
-function TabIcon({ on, name }: { on: boolean; name: IoniconName }) {
+function TabIcon({ on, name }: { on: boolean; name: TabIconName }) {
   const k = useSharedValue(1);
   const was = useRef(on);
   useEffect(() => {
@@ -44,7 +43,7 @@ function TabIcon({ on, name }: { on: boolean; name: IoniconName }) {
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: k.value }] }));
   return (
     <Animated.View style={anim}>
-      <Ionicons name={name} size={21} color={on ? colors.ink : colors.mid} />
+      <TabGlyph name={name} on={on} color={on ? colors.ink : colors.mid} />
     </Animated.View>
   );
 }
@@ -101,7 +100,7 @@ export function FloatingTabBar({ state, navigateToTab, hidden }: TabBarProps & {
                 }
               }}
             >
-              <TabIcon on={on} name={on ? it.on : it.off} />
+              <TabIcon on={on} name={it.route} />
               <Text style={[s.label, on && s.labelOn]} allowFontScaling={false}>{it.label}</Text>
             </PressableScale>
           );
