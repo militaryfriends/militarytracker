@@ -78,6 +78,14 @@ for (const sex of SEXES) {
     const cards = core.projects;
     if (cards.length !== 4) bad('카드 수 ≠ 4', String(cards.length), input);
     if (cards.filter((p) => p.recommended).length !== 1) bad('추천 카드 수 ≠ 1', String(cards.filter((p) => p.recommended).length), input);
+    {
+      const lm = cards.find((p) => p.strategy === 'leanmass'); const bk = cards.find((p) => p.strategy === 'bulk');
+      if (lm && bk && lm.nutrition.kcal >= bk.nutrition.kcal) bad('린매스업 칼로리 ≥ 벌크업', `${lm.nutrition.kcal} vs ${bk.nutrition.kcal}`, input);
+      const cf = cards.find((p) => p.strategy === 'cut_fast'); const ct = cards.find((p) => p.strategy === 'cut');
+      if (cf && ct && cf.nutrition.kcal >= ct.nutrition.kcal) bad('최대 감량 칼로리 ≥ 근육 유지 감량', `${cf.nutrition.kcal} vs ${ct.nutrition.kcal}`, input);
+      const minK = sex === 'male' ? 1500 : 1200;
+      for (const p of cards) if (p.nutrition.kcal < minK) bad(`하루 칼로리 ${minK} 미만`, `${p.strategy} ${p.nutrition.kcal}`, input);
+    }
     for (const p of cards) {
       const st = STRATEGY[p.strategy];
       monthsSeen[p.strategy] = monthsSeen[p.strategy] ?? {};

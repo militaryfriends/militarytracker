@@ -346,7 +346,10 @@ export function gainSurplus(sex: Sex, level: Level, strategy: Strategy): number 
   const lean = GAIN[sex][level] * K * (st.leanShare ?? 1);
   const kcalPerMonth = lean * LEAN_KCAL + lean * (st.fatRatio ?? 0.5) * 7700;
   const perDay = kcalPerMonth / DAYS_PER_MONTH / SURPLUS_STORED;
-  return Math.round(Math.min(600, Math.max(150, perDay)) / 10) * 10;
+  // 하한: 린매스업 150 · 벌크업 250 — 근육 속도가 느린 몸(여 중급 · 상급, 남 상급)은 둘 다 150 에 걸려
+  // '천천히'와 '빠르게' 카드가 같은 칼로리로 보였다(11/27 밤 점검, 여 160/58 중급: 둘 다 2,160kcal)
+  const floor = strategy === 'bulk' ? 250 : 150;
+  return Math.round(Math.min(600, Math.max(floor, perDay)) / 10) * 10;
 }
 
 /** 한 가지 방식으로만 months 개월 — 감량은 stopBf(기본: 체지방 하한 + 1)에 닿으면 멈추고 유지 */
