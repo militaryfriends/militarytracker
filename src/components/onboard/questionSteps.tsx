@@ -96,7 +96,7 @@ export function StepEquip({ p, update, num, total, onNext }: { p: UserProfile; u
   return (
     <View>
       <StepHead num={num} total={total} q={gym ? '어떤 헬스장인가요?' : '집에 있는 기구를\n골라 주세요'}
-        desc={gym ? '없는 기구가 필요한 운동은 루틴에 넣지 않아요.' : '나중에 MY › 내 정보에서 바꿀 수 있어요.'} />
+        desc={gym ? '없는 기구가 필요한 운동은 루틴에 넣지 않아요.' : '나중에 내 몸 › 내 정보에서 바꿀 수 있어요.'} />
       <EquipPicker env={p.env} equip={p.equip} onChange={(v) => update('equip', v)}
         onGeneralGym={() => setTimeout(onNext, 180)} />
     </View>

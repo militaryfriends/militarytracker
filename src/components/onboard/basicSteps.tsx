@@ -18,7 +18,8 @@ export function StepHead({ num, total, q, desc }: { num: number; total: number; 
   useThemeMode();
   return (
     <>
-      <Text style={o.stepNum}>STEP {num} / {total}</Text>
+      {/* 화면 글자는 한국어만(브랜드 · WARNING 예외) — 'STEP' 영어 라벨을 뺐다(11/27 밤 점검, DAY → 일차와 같은 이유) */}
+      <Text style={o.stepNum} accessibilityLabel={`${total}단계 중 ${num}단계`}>{num} / {total}</Text>
       <Text style={o.q} accessibilityRole="header">{q}</Text>
       {desc ? <Text style={o.desc}>{desc}</Text> : null}
     </>
