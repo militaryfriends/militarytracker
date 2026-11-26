@@ -4,7 +4,7 @@
  */
 import { accuracyOf, type Accuracy } from '../../utils/bodyComp';
 import {
-  checkInbodyDate, parseNum, validateBodyFat, validateSmm, validateWaist,
+  checkInbodyDate, parseNum, validateBodyFat, validateSmm, validateWaist, waistMismatch,
 } from '../../utils/body';
 import type { AnalysisInput } from '../../utils/bodyAnalysis';
 import type { UserProfile } from '../../types';
@@ -41,6 +41,14 @@ const inbodyOk = (d: DraftLike): AnalysisInput['inbody'] => {
   if (e.bf || e.smm || e.date) return undefined;
   return { bfPct: parseNum(d.inbody.bf), smmKg: parseNum(d.inbody.smm), date: d.inbody.date };
 };
+
+/** 허리가 체중과 안 맞으면 확인 안내(진행은 막지 않는다) — 인바디를 넣었으면 인바디가 우선이라 안내하지 않는다 */
+export function waistWarn(d: DraftLike): string | null {
+  const w = waistOk(d);
+  if (!w || inbodyOk(d)) return null;
+  const p = d.profile;
+  return waistMismatch(p.sex, parseNum(p.age), parseNum(p.height), parseNum(p.weight), w);
+}
 
 /** 지금 입력으로 정해지는 정확도 — 미터가 실시간으로 따라간다 */
 export function draftAccuracy(d: DraftLike): Accuracy {

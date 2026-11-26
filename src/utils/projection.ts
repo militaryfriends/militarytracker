@@ -501,7 +501,8 @@ export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string):
 /**
  * "10kg 빼고 싶어요" · "결혼식(날짜)까지" — 사용자가 도착점을 정하면 엔진이 현실적인 길을 낸다.
  * 무리한 목표는 깎아서 정직하게 말한다: 감량은 체지방 하한(남 9% · 여 17%) 밑으로, 증량은 24개월 안에 못 가는 무게는 잡지 않는다.
- * 감량 목표에도 고정 3개월이 붙는다(요요 구간). 날짜 목표는 그 날짜까지의 몸이 끝 — 고정은 그 뒤 '다음 몸'에서.
+ * 감량은 무게 목표든 날짜 목표든 끝에 고정 3개월이 붙는다(요요 구간 — "결혼식 끝나고 요요"까지 막는다).
+ * 증량은 최소 6개월(카드와 같은 규칙). → 어떤 목표도 6개월보다 짧은 프로젝트가 되지 않는다(날짜 칩은 3개월부터).
  */
 export interface TargetAsk {
   /** 목표 체중(kg) — 무게 목표 */
@@ -527,6 +528,8 @@ export interface TargetPlan {
 }
 
 export const TARGET_MAX_MONTHS = 24;
+/** 감량 n개월 뒤 고정 기간 — 최소 3개월, 감량이 짧으면 합쳐서 6개월이 되게 늘린다("3kg 빼기" = 감량 1개월 → 고정 5개월) */
+export const keepFor = (cutM: number): number => Math.max(KEEP_MONTHS, MIN_CARD_MONTHS - cutM);
 
 export function planTarget(ctx: ProjectCtx, ask: TargetAsk): TargetPlan | null {
   const g = GRID[ctx.sex];
@@ -563,14 +566,14 @@ export function planTarget(ctx: ProjectCtx, ask: TargetAsk): TargetPlan | null {
       const stopBf = ((askKg! - ffmHit) / askKg!) * 100;
       track = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, strategy, TARGET_MAX_MONTHS, Math.max(floorBf, stopBf));
     }
-    endM = ask.months ? limitM : (dir === 'cut' ? Math.min(TARGET_MAX_MONTHS, hit + KEEP_MONTHS) : Math.max(MIN_CARD_MONTHS, hit));
+    endM = dir === 'cut' ? hit + keepFor(hit) : Math.max(MIN_CARD_MONTHS, ask.months ? limitM : hit);
     if (dir === 'cut') track = freezeAfter(track, hit);
   } else {
-    // 못 닿는다 — 날짜 안(또는 24개월)의 가장 가까운 몸. 감량은 하한에 닿는 달(그 뒤는 고정)
+    // 못 닿는다 — 날짜 안(또는 24개월)의 가장 가까운 몸. 감량은 하한에 닿는 달 · 날짜 중 먼저 오는 달에서 멈추고 고정
     const kIdx = dir === 'cut' ? within.findIndex((p) => p.phase === 'keep') : -1;
     reachM = kIdx > 0 ? kIdx : limitM;
-    if (dir === 'cut' && !ask.months) track = freezeAfter(track, reachM);
-    endM = ask.months ? limitM : (dir === 'cut' ? Math.min(TARGET_MAX_MONTHS, reachM + KEEP_MONTHS) : limitM);
+    if (dir === 'cut') track = freezeAfter(track, reachM);
+    endM = dir === 'cut' ? reachM + keepFor(reachM) : Math.max(MIN_CARD_MONTHS, limitM);
   }
   endM = Math.max(1, Math.min(TARGET_MAX_MONTHS, endM));
   const pt = track[endM];
@@ -588,7 +591,7 @@ export function planTarget(ctx: ProjectCtx, ask: TargetAsk): TargetPlan | null {
   const first = track[0];
   const kRound = (v: number) => Math.round(v * 10) / 10;
   const cutM = dir === 'cut' ? Math.min(endM, reachM) : 0;
-  const name = askKg !== null ? `${kRound(capped ? reachKg : askKg)}kg 만들기` : `${endM}개월 안에`;
+  const name = askKg !== null ? `${kRound(capped ? reachKg : askKg)}kg 만들기` : `${limitM}개월 안에`;
   const card: CardProject = {
     id: strategy,
     strategy,

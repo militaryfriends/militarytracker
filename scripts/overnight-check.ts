@@ -122,13 +122,20 @@ for (const sex of SEXES) {
 
     // 내 목표
     const ctx = { sex, age, heightCm: h, level, days: 4, start: c, waistCm: input.waistCm };
-    for (const ask of [{ kg: w - 3 }, { kg: w - 10 }, { kg: w - 25 }, { kg: w + 3 }, { kg: w + 10 }, { months: 1 }, { months: 3 }, { months: 12 }, { kg: w - 10, months: 2 }]) {
+    for (const ask of [{ kg: w - 3 }, { kg: w - 10 }, { kg: w - 25 }, { kg: w + 3 }, { kg: w + 10 }, { months: 3 }, { months: 6 }, { months: 12 }, { kg: w - 10, months: 3 }]) {
       let tp;
       try { tp = planTarget(ctx, ask); } catch (e) { bad('내 목표 계산 실패(throw)', `${JSON.stringify(ask)} ${e}`, input); continue; }
       if (!tp) { if (!('kg' in ask) || Math.abs((ask.kg ?? 0) - w) >= 0.5) bad('내 목표 null', JSON.stringify(ask), input); continue; }
       const cd = tp.card;
       if (![cd.end.weightKg, cd.end.bfPct, cd.nutrition.kcal, tp.reachKg].every(fin)) { bad('내 목표 숫자 NaN', JSON.stringify(ask), input); continue; }
-      if (cd.months < 1 || cd.months > 24) bad('내 목표 기간 범위 밖', `${cd.months} ${JSON.stringify(ask)}`, input);
+      if (cd.months < MIN_CARD_MONTHS || cd.months > 24) bad('내 목표 기간 범위 밖(6~24)', `${cd.months} ${JSON.stringify(ask)}`, input);
+      if (tp.dir === 'cut' && cd.cutMonths + cd.keepMonths !== cd.months) bad('내 목표 감량+고정 ≠ 전체', `${cd.cutMonths}+${cd.keepMonths}≠${cd.months}`, input);
+      if (tp.dir === 'cut' && cd.keepMonths < KEEP_MONTHS && cd.months < 24) bad('내 목표 감량인데 고정 3개월 없음', `${cd.how}`, input);
+      // 고정 구간은 체중 그대로여야 한다
+      if (tp.dir === 'cut') {
+        const tr = cd.track.slice(cd.cutMonths, cd.months + 1);
+        if (tr.some((pt) => Math.abs(pt.weightKg - tr[0].weightKg) > 0.05)) bad('내 목표 고정 구간 체중 변함', JSON.stringify(ask), input);
+      }
       if (tp.dir === 'cut' && cd.end.bfPct < g.bfMin + 0.5 && c.bfPct >= g.bfMin + 0.5) bad('내 목표 감량 끝 체지방이 하한 아래', `${cd.end.bfPct.toFixed(1)}`, input);
       if (tp.dir === 'cut' && 'kg' in ask && !tp.capped && Math.abs(tp.reachKg - (ask.kg ?? 0)) > 0.6) bad('내 목표 도달 체중 ≠ 요청', `${tp.reachKg} vs ${ask.kg}`, input);
       if (tp.capped && !tp.capReason) bad('내 목표 깎았는데 이유 없음', JSON.stringify(ask), input);

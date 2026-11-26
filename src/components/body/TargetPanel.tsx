@@ -3,7 +3,7 @@
  * "10kg 빼고 싶어요"(무게) · "결혼식까지 3개월"(기간) — 도착점을 사용자가 정하면 엔진(planTarget)이 현실적인 길을 낸다.
  * 무리한 목표는 깎아서 그대로 말한다(체지방 하한 · 24개월 한도) — 숨기거나 부풀리지 않는다.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale } from '../../ui';
@@ -13,7 +13,8 @@ import { ProjectGridCard } from './ProjectCard';
 import { kg } from './format';
 
 type Mode = 'kg' | 'months';
-const MONTH_CHIPS = [1, 2, 3, 6, 9, 12] as const;
+/** 날짜 칩은 3개월부터 — 감량 + 고정 3개월이 붙어 어떤 목표도 6개월 아래 프로젝트가 되지 않는다(대표 결정 "전부 최소 6개월") */
+const MONTH_CHIPS = [3, 6, 9, 12] as const;
 
 export function targetPlanOf(a: BodyAnalysis, ask: TargetAsk): TargetPlan | null {
   const i = a.input;
@@ -25,11 +26,13 @@ export function targetPlanOf(a: BodyAnalysis, ask: TargetAsk): TargetPlan | null
 }
 
 export function TargetPanel({
-  analysis, selected, onPick, width, disabled,
+  analysis, selected, onPick, onClear, width, disabled,
 }: {
   analysis: BodyAnalysis;
   selected: boolean;
   onPick: (plan: TargetPlan, ask: TargetAsk) => void;
+  /** 고른 상태에서 입력을 지우거나 바꿔 계산이 없어지면 — 위 카드(추천)로 돌아간다 */
+  onClear?: () => void;
   width: number;
   disabled?: boolean;
 }) {
@@ -50,6 +53,17 @@ export function TargetPanel({
   }, [mode, kgText, months]);
   const plan = useMemo(() => (ask ? targetPlanOf(analysis, ask) : null), [analysis, ask]);
   const same = mode === 'kg' && ask && !plan;
+
+  // 고른 뒤 무게 · 기간을 바꾸면 고른 것도 따라간다 — 화면엔 새 목표가 '선택됨'인데 시작 버튼은 옛 목표로 가던 문제(11/27 밤 점검)
+  const cb = useRef({ onPick, onClear });
+  cb.current = { onPick, onClear };
+  const selRef = useRef(selected);
+  selRef.current = selected;
+  useEffect(() => {
+    if (!selRef.current) return;
+    if (plan && ask) cb.current.onPick(plan, ask);
+    else cb.current.onClear?.();
+  }, [plan, ask]);
 
   if (!open) {
     return (

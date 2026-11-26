@@ -181,7 +181,8 @@ export default function ProjectsScreen() {
         </View>
         {!running ? (
           <TargetPanel analysis={a} selected={targetOn} width={Math.min(width, 520) - 36}
-            onPick={(plan, ask) => { setTarget({ plan, ask }); setPicked('target'); }} />
+            onPick={(plan, ask) => { setTarget({ plan, ask }); setPicked('target'); }}
+            onClear={() => { setTarget(null); setPicked(null); }} />
         ) : null}
         <Text style={s.practice}>{practiceLine(curCard.nutrition, a.input.days)} · {splitName} · 첫 달 기준</Text>
 
@@ -191,7 +192,8 @@ export default function ProjectsScreen() {
           return (
             <View style={{ marginTop: 16 }}>
               <ChangePreview
-                key={cur.id}
+                // 내 목표 카드는 id 가 방식(cut_fast 등)이라 위 카드와 같다 — 이름 · 기간까지 키에 넣어 달 막대가 새 기간으로 다시 잡히게
+                key={`${cur.id}:${cur.name}:${cur.months}`}
                 sex={a.input.sex}
                 title={cur.name}
                 months={cur.months}

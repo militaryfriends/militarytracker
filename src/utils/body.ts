@@ -129,6 +129,23 @@ export function validateWaist(v: string, heightCm: number): string | null {
   return null;
 }
 
+/**
+ * 허리 · 체중이 서로 안 맞을 때 한 번 확인(막지는 않는다) — 11/27 밤 전수 점검: BMI 30 이상인데 허리가 가늘게 들어가
+ * 체지방 10%대(F1~F2)로 계산되는 조합이 864건. 대개 바지 사이즈를 cm 로 바꿔 넣었거나 배꼽이 아닌 가장 가는 곳을 잰 경우다.
+ * 허리 공식(RFM)과 키 · 체중 공식(Deurenberg)이 12%p 넘게 벌어지거나, 비만 BMI 가 저체지방으로 나오면 안내한다.
+ */
+export function waistMismatch(sex: 'male' | 'female', age: number, heightCm: number, weightKg: number, waistCm: number): string | null {
+  if (!(heightCm > 0 && weightKg > 0 && waistCm > 0 && age > 0)) return null;
+  const bmi = weightKg / (heightCm / 100) ** 2;
+  const rfm = (sex === 'male' ? 64 : 76) - (20 * heightCm) / waistCm;
+  const deu = 1.2 * bmi + 0.23 * age - 10.8 * (sex === 'male' ? 1 : 0) - 5.4;
+  const lowCut = sex === 'male' ? 15 : 24.5;
+  if (deu - rfm >= 12 || (bmi >= 30 && rfm <= lowCut)) {
+    return '체중에 비해 허리가 많이 가늘게 계산돼요. 배꼽 높이에서 줄자로 잰 둘레가 맞는지 한 번만 확인해 주세요. 맞다면 그대로 진행해도 돼요.';
+  }
+  return null;
+}
+
 export function validateBodyFat(v: string): string | null {
   const n = parseNum(v);
   return Number.isFinite(n) && n >= 3 && n <= 60 ? null : '체지방률은 3~60% 사이로 입력해주세요';

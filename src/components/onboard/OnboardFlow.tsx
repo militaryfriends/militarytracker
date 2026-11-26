@@ -21,7 +21,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useAppStore } from '../../stores/appStore';
 import { useOnboardDraft, DEFAULT_PROFILE, type StepKey } from '../../stores/onboardDraft';
 import { validateField, validateProfile } from '../../utils/body';
-import { draftAccuracy, validateBodyDraft } from './draftInput';
+import { draftAccuracy, validateBodyDraft, waistWarn } from './draftInput';
 import { StepFood } from './basicSteps';
 import { StepDays, StepEquip, StepFocus, StepLevel, StepNumber, StepPlace, StepSex } from './questionSteps';
 import { StepBody, type BodyErrors } from './StepBody';
@@ -173,6 +173,7 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
               inbody={d.inbody}
               accuracy={accuracy}
               errors={bodyErr}
+              mismatch={waistWarn(d)}
               onWaist={(v) => { d.patch({ waist: v }); setBodyErr({}); }}
               onInbody={(v) => { d.patch({ inbody: v }); setBodyErr({}); }}
             />

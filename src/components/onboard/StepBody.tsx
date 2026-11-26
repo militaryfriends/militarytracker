@@ -64,11 +64,13 @@ function Bar({ on }: { on: boolean }) {
 }
 
 export function StepBody({
-  num, total, waist, inbody, accuracy, errors, onWaist, onInbody,
+  num, total, waist, inbody, accuracy, errors, onWaist, onInbody, mismatch,
 }: {
   num: number;
   total: number;
   waist: string;
+  /** 허리 · 체중이 서로 안 맞을 때 확인 안내(막지 않는다) */
+  mismatch?: string | null;
   inbody: InbodyDraft;
   accuracy: Accuracy;
   errors: BodyErrors;
@@ -97,6 +99,7 @@ export function StepBody({
         value={waist} onChangeText={onWaist} accessibilityLabel="허리둘레 (cm)"
       />
       {errors.waist ? <Text style={o.err}>{errors.waist}</Text> : <Text style={s.hint}>배꼽 높이에서, 숨을 내쉬고, 줄자가 파고들지 않게 재요. 바지 사이즈와 달라요.</Text>}
+      {!errors.waist && mismatch ? <Text style={o.warn} accessibilityLiveRegion="polite">{mismatch}</Text> : null}
       {/* 11/23 체형 추정 오차 보완 2 — 허리가 없으면 키 · 체중만으로 추정해 근육형 · 복부형 오차가 커진다 */}
       {!errors.waist && !waist.trim() && !inbody.on ? (
         <Text style={o.warn}>허리를 비우면 키·체중만으로 추정해요. 근육이 많은 몸은 체지방이 높게, 배가 나온 몸은 낮게 나올 수 있어요.</Text>
