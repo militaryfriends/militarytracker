@@ -11,7 +11,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale } from '../../ui';
-import { nffmiOf } from '../../utils/bodyComp';
+import { nffmiOf, toCell } from '../../utils/bodyComp';
 import { buildCards, STRATEGY, type CardProject } from '../../utils/projection';
 import type { BodyProject } from '../../types';
 import { AvatarView } from './AvatarView';
@@ -28,9 +28,18 @@ export function nextCardOf(project: BodyProject): CardProject | null {
   const start = { bfPct: bf, fmKg: fm, ffmKg: ffm, nffmi: nffmiOf(ffm, i.heightCm), src: project.baseline.src, accuracy: project.baseline.accuracy };
   const cards = buildCards({ sex: i.sex, age: i.age, heightCm: i.heightCm, level: i.level, days: i.days, start, waistCm: undefined });
   const wasCut = project.strategy ? STRATEGY[project.strategy].phase === 'cut' : project.phases.some((p) => p.phase === 'cut');
-  // 감량을 끝낸 몸은 근육을 채울 차례 — 증량 카드 중 지금 몸에 맞는 것, 둘 다 맞으면 추천을 따른다
-  const pool = wasCut ? cards.filter((c) => STRATEGY[c.strategy].phase === 'gain' && c.fit.ok) : cards.filter((c) => c.fit.ok);
-  return pool.find((c) => c.recommended) ?? pool[0] ?? cards.find((c) => c.recommended) ?? null;
+  // 감량을 끝낸 몸은 근육을 채울 차례 — 증량 카드 중 지금 몸에 맞는 것, 둘 다 맞으면 추천을 따른다.
+  // 단 '다음 몸'은 눈에 보이게 달라야 의미가 있다 — 끝 몸의 칸이 지금과 같으면(예: 상급 여성 린매스업 12개월 +0.8kg) 칸이 바뀌는 카드를 먼저(11/27 밤 점검)
+  const startCell = toCell(i.sex, bf, start.nffmi);
+  const visible = (c: CardProject) => c.end.cell !== startCell;
+  const recFirst = (xs: CardProject[]) => xs.find((c) => c.recommended) ?? xs[0];
+  const ok = cards.filter((c) => c.fit.ok);
+  const gainOk = ok.filter((c) => STRATEGY[c.strategy].phase === 'gain');
+  const order = wasCut
+    ? [gainOk.filter(visible), ok.filter(visible), gainOk, ok]
+    : [ok.filter(visible), ok];
+  for (const xs of order) if (xs.length) return recFirst(xs);
+  return cards.find((c) => c.recommended) ?? null;
 }
 
 export function NextBody({ project, monthIndex, width }: { project: BodyProject; monthIndex: number; width: number }) {
