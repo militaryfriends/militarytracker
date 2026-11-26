@@ -26,6 +26,8 @@ export const o = themed(() => StyleSheet.create({
   input: {
     backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line2,
     borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, color: colors.ink,
+    // 웹: <input> 은 글자 크기만큼 기본 폭이 있어서 줄(row) 안 flex:1 이어도 화면 밖으로 밀어낸다 → 단위가 잘리고 화면이 옆으로 밀림
+    minWidth: 0,
   },
   inputErr: { borderColor: colors.wrongLine },
   err: { fontSize: 12, color: colors.wrong, marginTop: 6, lineHeight: 17 },
