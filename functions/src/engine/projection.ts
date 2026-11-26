@@ -545,7 +545,11 @@ export function planTarget(ctx: ProjectCtx, ask: TargetAsk): TargetPlan | null {
   if (dir === 'same') return null;
   const strategy: Strategy = dir === 'cut' ? (STRATEGY[rec].phase === 'cut' ? rec : 'cut') : (rec === 'bulk' ? 'bulk' : 'leanmass');
   const st = STRATEGY[strategy];
-  const floorBf = g.bfMin + 1;
+  // 무게를 정했으면 체지방 하한까지 갈 수 있다. 날짜만 정했으면 '최대 감량' 카드와 같은 목표(F2 칸 가운데, 남 13% · 여 22%)에서 멈춘다
+  // — 날짜만으로 하한(남 9%)까지 내려가면 비만 입문자가 6개월 만에 대회 직전 몸이 되는 숫자가 나왔다(11/27 밤 점검)
+  const cur = parseCell(toCell(ctx.sex, ctx.start.bfPct, ctx.start.nffmi));
+  const cardCut = cur.f >= 3 ? g.fat[1] : cur.f === 2 ? g.fat[0] : g.bfMin + 1;
+  const floorBf = askKg !== null ? g.bfMin + 1 : Math.max(g.bfMin + 1, cardCut);
   // 1) 하한까지 가는 전체 트랙 — 무게에 처음 닿는 달을 찾는다
   const full = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, strategy, TARGET_MAX_MONTHS, dir === 'cut' ? floorBf : undefined);
   const within = full.slice(0, limitM + 1);

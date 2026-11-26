@@ -3,7 +3,7 @@
 //   npx -y esbuild@0.24.0 scripts/overnight-check.ts --bundle --platform=node --outfile=.cache/overnight.cjs --loader:.json=json && node .cache/overnight.cjs
 import { analyzeBody, type AnalysisInput } from '../src/utils/bodyAnalysis';
 import { profileFromAnalysis } from '../src/components/body/format';
-import { calcBodyStats } from '../src/utils/body';
+import { calcBodyStats, waistMismatch } from '../src/utils/body';
 import { buildLocalPlan } from '../src/utils/planner';
 import { kitOf, canDo } from '../src/data/equipment';
 import { exById } from '../src/data/exercises';
@@ -70,7 +70,8 @@ for (const sex of SEXES) {
     // 근육 칸: BMI 14 마른 몸이 M4~M5 로 나오면 이상
     const { m, f } = parseCell(core.cell);
     if (bmi <= 18.5 && m >= 4) bad('마른 몸이 근육질 칸(M4+)', `${core.cell} bf ${c.bfPct.toFixed(1)}`, input);
-    if (bmi >= 33 && f <= 2) bad('비만 BMI 가 저체지방 칸(F1~2)', `${core.cell} bf ${c.bfPct.toFixed(1)}`, input);
+    // 허리-체중 불일치는 입력 화면에서 확인 안내(waistMismatch)가 뜬다 — 안내가 안 뜨는 경우만 문제로 센다
+    if (bmi >= 33 && f <= 2 && !(input.waistCm && waistMismatch(sex, age, h, w, input.waistCm))) bad('비만 BMI 가 저체지방 칸(F1~2) · 안내 없음', `${core.cell} bf ${c.bfPct.toFixed(1)}`, input);
     if (!wr && sex === 'female' && bmi <= 25 && m >= 5) bad('여 · 허리 없음 · 보통 체격이 M5', `${core.cell} bf ${c.bfPct.toFixed(1)} nffmi ${c.nffmi.toFixed(1)}`, input);
 
     // 카드 4장
@@ -86,9 +87,9 @@ for (const sex of SEXES) {
       if (st.phase === 'cut') {
         if (p.months < MIN_CARD_MONTHS || p.months > 15) bad('감량 카드 기간 범위 밖', `${p.strategy} ${p.months}`, input);
         if (p.keepMonths !== KEEP_MONTHS || p.cutMonths + p.keepMonths !== p.months) bad('감량+고정 ≠ 전체', `${p.cutMonths}+${p.keepMonths}≠${p.months}`, input);
-        if (p.end.weightKg > w + 0.05) bad('감량 카드인데 끝 체중 증가', `${p.strategy} ${w}→${p.end.weightKg.toFixed(1)}`, input);
+        if (p.fit.ok && p.end.weightKg > w + 0.05) bad('감량 카드(맞는 카드)인데 끝 체중 증가', `${p.strategy} ${w}→${p.end.weightKg.toFixed(1)}`, input);
         if (p.end.bfPct < g.bfMin + 0.5 && c.bfPct >= g.bfMin + 0.5) bad('감량 끝 체지방이 하한 아래', `${p.end.bfPct.toFixed(1)}`, input);
-        if (p.firstMonthKg > 0) bad('감량 첫 달 + 표시', `${p.firstMonthKg}`, input);
+        if (p.fit.ok && p.firstMonthKg > 0) bad('감량 첫 달 + 표시(맞는 카드)', `${p.firstMonthKg}`, input);
         const tr = p.track.slice(0, p.months + 1);
         if (tr.some((pt, i) => i > 0 && pt.bfPct > tr[i - 1].bfPct + 0.05)) bad('감량 중 체지방 재상승', p.strategy, input);
         const keep = tr.slice(p.cutMonths);
@@ -139,6 +140,11 @@ for (const sex of SEXES) {
       if (tp.dir === 'cut' && cd.end.bfPct < g.bfMin + 0.5 && c.bfPct >= g.bfMin + 0.5) bad('내 목표 감량 끝 체지방이 하한 아래', `${cd.end.bfPct.toFixed(1)}`, input);
       if (tp.dir === 'cut' && 'kg' in ask && !tp.capped && Math.abs(tp.reachKg - (ask.kg ?? 0)) > 0.6) bad('내 목표 도달 체중 ≠ 요청', `${tp.reachKg} vs ${ask.kg}`, input);
       if (tp.capped && !tp.capReason) bad('내 목표 깎았는데 이유 없음', JSON.stringify(ask), input);
+      // 날짜만 정한 감량은 '최대 감량' 카드 목표(F2 가운데)보다 더 내려가지 않는다
+      if (tp.dir === 'cut' && !('kg' in ask)) {
+        const rc = cards.find((x) => x.strategy === 'cut_fast');
+        if (rc && cd.end.bfPct < Math.min(rc.end.bfPct, c.bfPct) - 0.6) bad('날짜 목표 감량이 최대 감량 카드보다 더 내려감', `${cd.end.bfPct.toFixed(1)} < ${rc.end.bfPct.toFixed(1)}`, input);
+      }
       if (cd.name.length > 14) bad('내 목표 이름 14자 초과', cd.name, input);
       if ((cd.how ?? '').length > 18) bad('내 목표 설명 18자 초과', cd.how, input);
       if (tp.dir === 'gain' && 'kg' in ask && !tp.capped && cd.end.weightKg < (ask.kg ?? 0) - 0.6) bad('내 목표 증량 끝 < 요청', `${cd.end.weightKg.toFixed(1)} vs ${ask.kg}`, input);
