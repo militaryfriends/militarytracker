@@ -200,7 +200,7 @@ service cloud.firestore {
         && d.engineVersion is string && d.engineVersion.size() <= 20
         && d.input is map
         && d.track is list && d.track.size() <= 25
-        && d.projects is list && d.projects.size() <= 2
+        && d.projects is list && d.projects.size() <= 4
         && isIso(d.createdAt);
     }
 
