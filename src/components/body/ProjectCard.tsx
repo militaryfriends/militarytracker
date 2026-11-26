@@ -143,9 +143,9 @@ export function ProjectGridCard({
         <Text style={g.name} numberOfLines={1}>{p.name}</Text>
         <Text style={g.months}>{p.months}개월 · {kg(p.end.weightKg)}kg</Text>
         <Text style={g.kcal}>하루 {p.nutrition.kcal.toLocaleString('ko-KR')}kcal</Text>
-        {p.how ? <Text style={g.how} numberOfLines={1}>{p.how}</Text> : null}
+        {p.how ? <Text style={g.how} numberOfLines={2}>{p.how}</Text> : null}
       </View>
-      {dim && p.fit?.reason ? <Text style={g.reason} numberOfLines={2}>{p.fit.reason}</Text> : null}
+      {dim && p.fit?.reason ? <Text style={g.reason} numberOfLines={3}>{p.fit.reason}</Text> : null}
       {p.recommended ? (
         <View style={g.rec}><Text style={g.recTxt}>추천</Text></View>
       ) : null}
