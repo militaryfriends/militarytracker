@@ -107,7 +107,9 @@ export function estimateBodyComp(i: BodyInput): BodyComp {
     src = 'bmi';
     accuracy = 'basic';
   }
-  bfPct = Math.min(60, Math.max(3, bfPct));
+  // 생리적 하한(필수 지방) — 키 · 체중 공식은 아주 마른 몸에서 3%대까지 내려가 근육질 몸으로 그려졌다(11/27 전수 점검)
+  // (인바디 측정값은 그대로 받는다 — 3% · 60% 극단도 측정이면 믿는다)
+  bfPct = Math.min(60, Math.max(src === 'inbody' ? 3 : i.sex === 'male' ? 5 : 12, bfPct));
   const fmKg = (i.weightKg * bfPct) / 100;
   const ffmKg = i.weightKg - fmKg;
   return { bfPct, fmKg, ffmKg, nffmi: nffmiOf(ffmKg, i.heightCm), src, accuracy };

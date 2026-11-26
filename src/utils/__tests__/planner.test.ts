@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildLocalPlan, conformToTemplates, planFromAI, FOCUS_EXTRA } from '../planner';
+import { buildLocalPlan, conformToTemplates, planFromAI, FOCUS_EXTRA, BW_FILL, BW_FULL_DAY } from '../planner';
 import { allSlotIds, DANGER } from '../../data/planTemplates';
 import { canDo, kitOf } from '../../data/equipment';
 import { exById } from '../../data/exercises';
@@ -25,6 +25,8 @@ const FOCUS = ['chest', 'back', 'shoulders', 'arms', 'abs', 'legs'] as const;
 function allowedFor(env: 'gym' | 'home'): Set<string> {
   const s = new Set(allSlotIds(env));
   for (const f of FOCUS) for (const id of FOCUS_EXTRA[f][env]) s.add(id);
+  // 맨몸만 홈트에서 빈 날을 채우는 맨몸 종목(11/27) — 기구가 없어 슬롯이 비었을 때만 들어간다
+  if (env === 'home') for (const id of [...BW_FILL, ...BW_FULL_DAY]) s.add(id);
   return s;
 }
 

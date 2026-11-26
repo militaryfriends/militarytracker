@@ -135,12 +135,14 @@ export function phaseNutrition(phase: Phase, c: NutritionCtx, strategy?: Strateg
   const bmr = 10 * c.weightKg + 6.25 * c.heightCm - 5 * c.age + (c.sex === 'male' ? 5 : -161);
   const tdee = Math.round(bmr * activityFactorOf(c.days));
   let kcal = tdee;
-  let protein = c.weightKg * 1.8;
+  // 단백질은 체중 × 1.8~2.0 — 단, BMI 27 을 넘는 몸무게는 지방이라 그 위로는 늘리지 않는다(11/27 전수 점검: 155kg → 311g)
+  const proteinKg = Math.min(c.weightKg, 27 * (c.heightCm / 100) ** 2);
+  let protein = proteinKg * 1.8;
   const st = strategy ? STRATEGY[strategy] : null;
   if (phase === 'cut') {
     kcal = tdee - (c.weightKg * (st?.cutRate ?? CUT_RATE) * 7700) / 7;
     kcal = Math.max(kcal, KCAL_FLOOR[c.sex], Math.round(bmr));
-    protein = c.weightKg * 2.0;
+    protein = proteinKg * 2.0;
   } else if (phase === 'gain') {
     kcal = tdee + (strategy && st?.phase === 'gain' ? gainSurplus(c.sex, c.level as Level, strategy) : (c.level === 1 ? 250 : 150));
   }
@@ -396,6 +398,13 @@ export const KEEP_MONTHS = 3;
 /** 모든 카드의 최소 기간 — 증량도 근육 한 단계는 6개월 아래로는 안 보인다 */
 export const MIN_CARD_MONTHS = 6;
 
+/** m 개월째 몸에서 멈춘다 — 그 뒤 달은 같은 몸 · 'keep'(고정). 감량 목표에 다 못 가도 정한 달에서 감량을 끝내고 붙잡는다 */
+export function freezeAfter(track: MonthPoint[], m: number): MonthPoint[] {
+  if (m < 0 || m >= track.length - 1) return track;
+  const at = track[m];
+  return track.map((pt, i) => (i <= m ? pt : { ...at, m: i, phase: 'keep' as Phase }));
+}
+
 export interface CardFit {
   /** 지금 몸에 맞는지 — 아니면 흐리게 + 이유 (숨기지 않는다) */
   ok: boolean;
@@ -448,10 +457,12 @@ export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string):
   const musTarget = cur.m < 5 ? g.mus[cur.m] : ctx.start.nffmi + 0.5;
   return STRATEGIES.map((sId) => {
     const st = STRATEGY[sId];
-    const track = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, sId, 18, st.phase === 'cut' ? cutTarget : undefined);
-    const hitIdx = track.findIndex((pt) => (st.phase === 'cut' ? pt.bfPct <= Math.max(cutTarget, g.bfMin + 1) + 0.3 : pt.nffmi >= musTarget - 0.05));
+    const raw = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, sId, 18, st.phase === 'cut' ? cutTarget : undefined);
+    const hitIdx = raw.findIndex((pt) => (st.phase === 'cut' ? pt.bfPct <= Math.max(cutTarget, g.bfMin + 1) + 0.3 : pt.nffmi >= musTarget - 0.05));
     const reach = cardMonths(hitIdx < 0 ? null : hitIdx);
     const isCut = st.phase === 'cut';
+    // 감량 카드: 감량 n개월 뒤는 고정(체중 그대로) — 목표 근처에서 조금씩 더 빠지거나, 목표에 못 가 계속 빠지는 일이 없게
+    const track = isCut ? freezeAfter(raw, reach) : raw;
     const months = isCut ? reach + KEEP_MONTHS : Math.max(MIN_CARD_MONTHS, reach);
     const pt = track[months];
     const first = track[0];
@@ -553,10 +564,12 @@ export function planTarget(ctx: ProjectCtx, ask: TargetAsk): TargetPlan | null {
       track = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, strategy, TARGET_MAX_MONTHS, Math.max(floorBf, stopBf));
     }
     endM = ask.months ? limitM : (dir === 'cut' ? Math.min(TARGET_MAX_MONTHS, hit + KEEP_MONTHS) : Math.max(MIN_CARD_MONTHS, hit));
+    if (dir === 'cut') track = freezeAfter(track, hit);
   } else {
     // 못 닿는다 — 날짜 안(또는 24개월)의 가장 가까운 몸. 감량은 하한에 닿는 달(그 뒤는 고정)
     const kIdx = dir === 'cut' ? within.findIndex((p) => p.phase === 'keep') : -1;
     reachM = kIdx > 0 ? kIdx : limitM;
+    if (dir === 'cut' && !ask.months) track = freezeAfter(track, reachM);
     endM = ask.months ? limitM : (dir === 'cut' ? Math.min(TARGET_MAX_MONTHS, reachM + KEEP_MONTHS) : limitM);
   }
   endM = Math.max(1, Math.min(TARGET_MAX_MONTHS, endM));

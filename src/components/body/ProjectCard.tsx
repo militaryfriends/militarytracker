@@ -145,7 +145,8 @@ export function ProjectGridCard({
         <Text style={g.kcal}>하루 {p.nutrition.kcal.toLocaleString('ko-KR')}kcal</Text>
         {p.how ? <Text style={g.how} numberOfLines={2}>{p.how}</Text> : null}
         {/* 빠른 첫 승리 — 6개월 뒤 몸(큰 변신) 아래에 4주 뒤 변화(당장 손에 잡히는 보상) */}
-        {typeof p.firstMonthKg === 'number' && p.firstMonthKg !== 0 ? (
+        {typeof p.firstMonthKg === 'number' && Math.abs(p.firstMonthKg) >= 0.2
+          && (p.strategy?.startsWith('cut') ? p.firstMonthKg < 0 : p.firstMonthKg > 0) ? (
           <Text style={g.first} numberOfLines={1}>첫 달 {p.firstMonthKg > 0 ? '+' : '−'}{Math.abs(p.firstMonthKg).toFixed(1)}kg</Text>
         ) : null}
       </View>

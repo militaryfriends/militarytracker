@@ -88,9 +88,25 @@ export function planFromTemplates(
       if (LUMBAR.has(pick)) lumbar = true;
       if (WEEKLY_ONCE.has(pick)) weekly.add(pick);
     }
+    // 맨몸만(기구 없음) 홈트: 풀 · 이두 슬롯이 전부 비어 하루가 통째로 빠지거나 2종목만 남았다(11/27 전수 점검 —
+    // 주 3일을 골랐는데 2일만 나옴). 맨몸 종목으로 채우고, 원래 종목이 하나도 없던 날은 '맨몸 전신' 날로 바꾼다.
+    if (o.place === 'home' && ids.length < 3) {
+      const empty = ids.length === 0;
+      const fill = (empty ? BW_FULL_DAY : BW_FILL).filter((id) => !ids.includes(id) && (!o.kit || canDo(id, o.kit)) && !(LUMBAR.has(id) && lumbar));
+      for (const id of fill) {
+        if (ids.length >= Math.min(o.perDay, empty ? 5 : 4)) break;
+        ids.push(id);
+        if (LUMBAR.has(id)) lumbar = true;
+      }
+      if (empty) return { id: `${t.id}Bw`, name: '홈 전신 (맨몸)', focus: '전신 · 코어', ids };
+    }
     return { id: t.id, name: t.name, focus: t.focus, ids };
   }).filter((d) => d.ids.length > 0);
 }
+
+/** 맨몸 홈트 보충 — 기구 없이 되는 종목만(백익스텐션은 바닥에서) */
+export const BW_FILL = ['backext', 'pikepushupsh', 'diamondpushuptri', 'widepushup', 'plank', 'deadbug'];
+export const BW_FULL_DAY = ['widepushup', 'bwsquat', 'backext', 'reverselunge', 'pikepushupsh', 'glutebridge', 'plank'];
 
 /** 신경 쓰이는 부위 → 그 부위가 있는 첫 데이에 더할 보조 종목(앞이 우선, 이미 있으면 다음) */
 export const FOCUS_EXTRA: Record<FocusPart, { parts: string[]; gym: string[]; home: string[] }> = {
@@ -162,7 +178,9 @@ export function conformToTemplates(ai: Plan, p: UserProfile): Plan {
   const base = planFromTemplates(templates, { level, place: p.env, perDay, kit });
   const weekly = new Set<string>();
   const days: PlanDay[] = base.map((bd, di) => {
-    const t = templates.find((x) => x.id === bd.id)!;
+    const t = templates.find((x) => x.id === bd.id);
+    // 맨몸 전신 날(기구가 없어 원래 슬롯이 다 빈 날)은 템플릿이 없다 — 정석 그대로 둔다
+    if (!t) return bd;
     const aiIds = new Set(ai.days[di]?.ids ?? []);
     const slots = t.slots.filter((sl) => !sl.optional || perDay > 5).slice(0, perDay);
     let lumbar = false;
