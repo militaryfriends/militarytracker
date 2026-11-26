@@ -21,6 +21,7 @@ import { has3D } from './avatar3d/Avatar3D';
 import { coordOf } from './avatar3d/morph';
 import { projectNow } from './progress';
 import { kg, pct0 } from './format';
+import { NextBody } from './NextBody';
 
 type View3 = 'now' | 'both' | 'goal';
 const VIEWS = [
@@ -139,6 +140,11 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
           <Btn title="체크인" sub={now.dueIn <= 0 ? '오늘' : `D-${now.dueIn}`} onPress={() => router.push('/project/checkin')} />
           <Btn title="체중 기록" sub={weighDue ? '이번 주 아직' : '오늘 몸무게'} onPress={onWeigh} />
         </View>
+        {/* 다음 몸 — 프로젝트가 끝나는 날이 구독이 끝나는 날이 되지 않게(11/27) */}
+        {!stopped ? (
+          <NextBody project={project} width={inner}
+            monthIndex={Math.floor((Date.now() - Date.parse(project.startedAt)) / (30.44 * 86_400_000))} />
+        ) : null}
       </View>
     );
   }

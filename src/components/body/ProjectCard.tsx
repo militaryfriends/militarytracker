@@ -144,6 +144,10 @@ export function ProjectGridCard({
         <Text style={g.months}>{p.months}개월 · {kg(p.end.weightKg)}kg</Text>
         <Text style={g.kcal}>하루 {p.nutrition.kcal.toLocaleString('ko-KR')}kcal</Text>
         {p.how ? <Text style={g.how} numberOfLines={2}>{p.how}</Text> : null}
+        {/* 빠른 첫 승리 — 6개월 뒤 몸(큰 변신) 아래에 4주 뒤 변화(당장 손에 잡히는 보상) */}
+        {typeof p.firstMonthKg === 'number' && p.firstMonthKg !== 0 ? (
+          <Text style={g.first} numberOfLines={1}>첫 달 {p.firstMonthKg > 0 ? '+' : '−'}{Math.abs(p.firstMonthKg).toFixed(1)}kg</Text>
+        ) : null}
       </View>
       {dim && p.fit?.reason ? <Text style={g.reason} numberOfLines={3}>{p.fit.reason}</Text> : null}
       {p.recommended ? (
@@ -165,6 +169,7 @@ const g = themed(() => StyleSheet.create({
   months: { fontSize: 13, fontWeight: '700', color: colors.ink, marginTop: 4 },
   kcal: { fontSize: 12.5, color: colors.mid, marginTop: 2, fontWeight: '600' },
   how: { fontSize: 11, color: colors.muted, marginTop: 2 },
+  first: { fontSize: 11.5, color: colors.redText, marginTop: 3, fontWeight: '700' },
   reason: { fontSize: 11.5, color: colors.mid, marginTop: 6, lineHeight: 16, fontWeight: '600' },
   rec: {
     position: 'absolute', top: 10, right: 10, backgroundColor: colors.ink, borderRadius: 8,

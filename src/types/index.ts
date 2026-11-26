@@ -243,7 +243,7 @@ export type PartVolume = Record<Part, number>;
 export type AnalysisDecision = 'pending' | 'started' | 'declined';
 
 /** 저장용 프로젝트 — 트랙은 빼고(같은 입력으로 다시 계산된다) */
-export type StoredProject = Omit<Project, 'track'> & Partial<Pick<CardProject, 'strategy' | 'fit' | 'how'>>;
+export type StoredProject = Omit<Project, 'track'> & Partial<Pick<CardProject, 'strategy' | 'fit' | 'how' | 'cutMonths' | 'keepMonths' | 'firstMonthKg'>>;
 
 /** bodyAnalyses/{id} — 온보딩 O6 결과. 재분석할 때마다 새 문서. 본인이 쓴다 */
 export interface BodyAnalysis {

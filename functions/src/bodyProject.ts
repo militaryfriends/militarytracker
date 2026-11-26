@@ -79,7 +79,7 @@ export interface BodyReportDoc {
   judged: Judgement;
 }
 
-export const PHASE_LABEL: Record<Phase, string> = { cut: '감량', gain: '린매스업', keep: '유지' };
+export const PHASE_LABEL: Record<Phase, string> = { cut: '감량', gain: '린매스업', keep: '고정' };
 export const LEVEL_LABEL: Record<number, string> = { 1: '입문', 2: '중급', 3: '상급' };
 export const FOOD_LABEL: Record<AnalysisInput['food'], string> = {
   convenience: '편의점', self: '자취 요리', family: '집밥', out: '외식',

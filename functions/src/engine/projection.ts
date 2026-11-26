@@ -387,8 +387,15 @@ export function simulateStrategy(
   return track;
 }
 
-/** 카드 기간: 목표에 처음 닿는 달을 3개월 단위로 올림, 최소 3 · 최대 12 */
+/** 목표에 처음 닿는 달을 3개월 단위로 올림, 최소 3 · 최대 12 */
 const cardMonths = (hit: number | null): number => (hit === null ? 12 : Math.min(12, Math.max(3, Math.ceil(hit / 3) * 3)));
+/**
+ * 감량이 끝난 뒤 '고정' 기간(2026-11-27 대표 결정) — 감량 직후가 요요가 가장 많이 오는 구간이라
+ * 칼로리를 유지 수준으로 천천히 올리며 체중을 붙잡는다. 감량 카드 = 감량 n개월 + 고정 3개월(최소 6개월).
+ */
+export const KEEP_MONTHS = 3;
+/** 모든 카드의 최소 기간 — 증량도 근육 한 단계는 6개월 아래로는 안 보인다 */
+export const MIN_CARD_MONTHS = 6;
 
 export interface CardFit {
   /** 지금 몸에 맞는지 — 아니면 흐리게 + 이유 (숨기지 않는다) */
@@ -420,13 +427,19 @@ export function strategyFit(sex: Sex, start: BodyComp, s: Strategy): CardFit {
 export interface CardProject extends Project {
   strategy: Strategy;
   fit: CardFit;
-  /** 카드 아래 한 줄 — "주 체중의 약 1% 감량" */
+  /** 카드 아래 한 줄 — 감량: "감량 3개월 → 고정 3개월", 증량: "천천히 증량 · 지방 적게" */
   how: string;
+  /** 감량 카드만 — 감량 · 고정 개월 수 (증량은 0 · 0) */
+  cutMonths: number;
+  keepMonths: number;
+  /** 첫 달 체중 변화(kg, 감량은 음수) — "첫 달 −2.1kg" */
+  firstMonthKg: number;
 }
 
 /**
  * 카드 4장. 감량 카드의 목표 = F2 칸 가운데(남 13% · 여 22%; 이미 F2 면 F1, F1 이면 하한 + 1) — 닿으면 거기서 멈춘다,
  * 증량 카드의 목표 = 근육 한 단계 위 칸 가운데(M5 면 +0.5). 그 목표에 처음 닿는 달(3개월 단위, 최대 12개월)의 몸이 카드의 예상 몸이다.
+ * 감량 카드는 그 뒤에 고정 3개월이 붙고(체중 그대로), 증량 카드는 최소 6개월이다.
  */
 export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string): CardProject[] {
   const g = GRID[ctx.sex];
@@ -438,7 +451,9 @@ export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string):
     const st = STRATEGY[sId];
     const track = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, sId, 18, st.phase === 'cut' ? cutTarget : undefined);
     const hitIdx = track.findIndex((pt) => (st.phase === 'cut' ? pt.bfPct <= Math.max(cutTarget, g.bfMin + 1) + 0.3 : pt.nffmi >= musTarget - 0.05));
-    const months = cardMonths(hitIdx < 0 ? null : hitIdx);
+    const reach = cardMonths(hitIdx < 0 ? null : hitIdx);
+    const isCut = st.phase === 'cut';
+    const months = isCut ? reach + KEEP_MONTHS : Math.max(MIN_CARD_MONTHS, reach);
     const pt = track[months];
     const first = track[0];
     const goal: GoalSpec = {
@@ -450,7 +465,10 @@ export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string):
       id: sId,
       strategy: sId,
       name: st.name,
-      how: st.how,
+      how: isCut ? `감량 ${reach}개월 → 고정 ${KEEP_MONTHS}개월` : st.how,
+      cutMonths: isCut ? reach : 0,
+      keepMonths: isCut ? KEEP_MONTHS : 0,
+      firstMonthKg: Math.round((track[1].weightKg - first.weightKg) * 10) / 10,
       months,
       kind: 'complete' as ProjectKind,
       goal,
@@ -467,6 +485,124 @@ export function buildCards(ctx: ProjectCtx, nameFor?: (cell: string) => string):
       reachedAt: hitIdx < 0 ? null : hitIdx,
     };
   });
+}
+
+// ─── 내 목표로 (2026-11-27) ─────────────────────────────────────────────────
+/**
+ * "10kg 빼고 싶어요" · "결혼식(날짜)까지" — 사용자가 도착점을 정하면 엔진이 현실적인 길을 낸다.
+ * 무리한 목표는 깎아서 정직하게 말한다: 감량은 체지방 하한(남 9% · 여 17%) 밑으로, 증량은 24개월 안에 못 가는 무게는 잡지 않는다.
+ * 감량 목표에도 고정 3개월이 붙는다(요요 구간). 날짜 목표는 그 날짜까지의 몸이 끝 — 고정은 그 뒤 '다음 몸'에서.
+ */
+export interface TargetAsk {
+  /** 목표 체중(kg) — 무게 목표 */
+  kg?: number;
+  /** 남은 개월(1~24) — 날짜 목표. 둘 다 있으면 날짜 안에서 무게까지 */
+  months?: number;
+}
+
+export interface TargetPlan {
+  dir: 'cut' | 'gain' | 'same';
+  /** 이 목표에 쓰는 방식(감량은 지금 몸에 맞는 감량 카드 방식, 증량은 린매스업) */
+  strategy: Strategy;
+  /** 사용자가 원한 체중 (날짜만 고르면 null) */
+  askKg: number | null;
+  /** 실제로 닿는 체중 */
+  reachKg: number;
+  /** 원한 만큼 못 가면 true — 이유는 capReason */
+  capped: boolean;
+  capReason?: string;
+  /** 목표 체중에 닿는 달(1~24) — 못 닿으면 null */
+  hitMonth: number | null;
+  card: CardProject;
+}
+
+export const TARGET_MAX_MONTHS = 24;
+
+export function planTarget(ctx: ProjectCtx, ask: TargetAsk): TargetPlan | null {
+  const g = GRID[ctx.sex];
+  const w0 = ctx.start.fmKg + ctx.start.ffmKg;
+  const limitM = ask.months ? Math.max(1, Math.min(TARGET_MAX_MONTHS, Math.round(ask.months))) : TARGET_MAX_MONTHS;
+  const askKg = typeof ask.kg === 'number' && ask.kg > 0 ? ask.kg : null;
+  const rec = recommendedStrategy(ctx.sex, ctx.start);
+  // 방향: 무게를 줬으면 무게로, 날짜만이면 지금 몸의 추천 방향
+  const dir: 'cut' | 'gain' | 'same' = askKg !== null
+    ? (Math.abs(askKg - w0) < 0.5 ? 'same' : askKg < w0 ? 'cut' : 'gain')
+    : (STRATEGY[rec].phase === 'cut' ? 'cut' : 'gain');
+  if (dir === 'same') return null;
+  const strategy: Strategy = dir === 'cut' ? (STRATEGY[rec].phase === 'cut' ? rec : 'cut') : (rec === 'bulk' ? 'bulk' : 'leanmass');
+  const st = STRATEGY[strategy];
+  const floorBf = g.bfMin + 1;
+  // 1) 하한까지 가는 전체 트랙 — 무게에 처음 닿는 달을 찾는다
+  const full = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, strategy, TARGET_MAX_MONTHS, dir === 'cut' ? floorBf : undefined);
+  const within = full.slice(0, limitM + 1);
+  let hit: number | null = null;
+  if (askKg !== null) {
+    const idx = within.findIndex((pt, m) => m > 0 && (dir === 'cut' ? pt.weightKg <= askKg + 0.25 : pt.weightKg >= askKg - 0.25));
+    hit = idx < 0 ? null : idx;
+  }
+  // 2) 끝 달 · 끝 몸
+  let track = full;
+  let endM: number;
+  let reachM: number;
+  if (hit !== null) {
+    reachM = hit;
+    if (dir === 'cut') {
+      // 목표 무게에서 멈추게 그 달 체지방에서 다시 돌린다 → 그 뒤는 고정(체중 그대로)
+      // 멈출 체지방 = 그 달의 제지방으로 목표 무게가 되는 체지방 (달 단위로 넘어가 버리지 않게)
+      const ffmHit = full[hit].weightKg * (1 - full[hit].bfPct / 100);
+      const stopBf = ((askKg! - ffmHit) / askKg!) * 100;
+      track = simulateStrategy(ctx.sex, ctx.heightCm, ctx.level, ctx.start, strategy, TARGET_MAX_MONTHS, Math.max(floorBf, stopBf));
+    }
+    endM = ask.months ? limitM : (dir === 'cut' ? Math.min(TARGET_MAX_MONTHS, hit + KEEP_MONTHS) : Math.max(MIN_CARD_MONTHS, hit));
+  } else {
+    // 못 닿는다 — 날짜 안(또는 24개월)의 가장 가까운 몸. 감량은 하한에 닿는 달(그 뒤는 고정)
+    const kIdx = dir === 'cut' ? within.findIndex((p) => p.phase === 'keep') : -1;
+    reachM = kIdx > 0 ? kIdx : limitM;
+    endM = ask.months ? limitM : (dir === 'cut' ? Math.min(TARGET_MAX_MONTHS, reachM + KEEP_MONTHS) : limitM);
+  }
+  endM = Math.max(1, Math.min(TARGET_MAX_MONTHS, endM));
+  const pt = track[endM];
+  const reachKg = Math.round(track[Math.min(reachM, endM)].weightKg * 10) / 10;
+  const capped = askKg !== null && hit === null;
+  let capReason: string | undefined;
+  if (capped) {
+    const atFloor = dir === 'cut' && within.some((p) => p.phase === 'keep');
+    capReason = dir === 'cut'
+      ? (atFloor
+        ? `지방만으로 건강하게 뺄 수 있는 건 약 ${reachKg}kg(체지방 ${Math.round(floorBf)}%)까지예요`
+        : `${limitM}개월 안에 현실적으로 갈 수 있는 건 약 ${reachKg}kg이에요`)
+      : `${limitM}개월 안에 근육 위주로 늘릴 수 있는 건 약 ${reachKg}kg이에요`;
+  }
+  const first = track[0];
+  const kRound = (v: number) => Math.round(v * 10) / 10;
+  const cutM = dir === 'cut' ? Math.min(endM, reachM) : 0;
+  const name = askKg !== null ? `${kRound(capped ? reachKg : askKg)}kg 만들기` : `${endM}개월 안에`;
+  const card: CardProject = {
+    id: strategy,
+    strategy,
+    name,
+    how: dir === 'cut'
+      ? (endM > cutM ? `감량 ${cutM}개월 → 고정 ${endM - cutM}개월` : `감량 ${cutM}개월`)
+      : st.how,
+    cutMonths: cutM,
+    keepMonths: dir === 'cut' ? Math.max(0, endM - cutM) : 0,
+    firstMonthKg: kRound(track[1].weightKg - first.weightKg),
+    months: endM,
+    kind: 'complete',
+    goal: { archetypeId: `target:${strategy}`, name, cell: pt.cell, bfPct: pt.bfPct, nffmi: pt.nffmi },
+    end: endOf(ctx, pt),
+    reachesGoal: !capped,
+    progressPct: 100,
+    recommended: false,
+    fit: strategyFit(ctx.sex, ctx.start, strategy),
+    nutrition: phaseNutrition(st.phase, {
+      sex: ctx.sex, age: ctx.age, heightCm: ctx.heightCm, weightKg: first.weightKg, days: ctx.days, level: ctx.level,
+    }, strategy),
+    phases: phaseSpans(track, endM),
+    track,
+    reachedAt: hit,
+  };
+  return { dir, strategy, askKg, reachKg, capped, capReason, hitMonth: hit, card };
 }
 
 /** 프로필 목표(카드를 고르기 전 · 습관 경로) → 같은 계산기의 방식 */

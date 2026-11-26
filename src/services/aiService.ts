@@ -344,11 +344,11 @@ export async function askCoach(
  * (AI 호출 · 한도 없음). 같은 분석 · 같은 프로젝트로 다시 불러도 진행 중인 것 하나를 돌려준다.
  * 구독 없음은 SubscriptionRequired, 그 밖의 실패는 화면에 보여 줄 문장의 Error.
  */
-export async function startProject(analysisId: string, projectId: string): Promise<BodyProject> {
+export async function startProject(analysisId: string, projectId: string, target?: { kg?: number; months?: number }): Promise<BodyProject> {
   try {
     // 배포 이름 bodyProjectStart = 명세의 projectStart (functions/src/index.ts 주석)
     const call = httpsCallable(functions, 'bodyProjectStart', { timeout: CALL_TIMEOUT_MS });
-    const res = await call({ analysisId, projectId });
+    const res = await call(target ? { analysisId, projectId, target } : { analysisId, projectId });
     const d = res.data as BodyProject | null;
     if (!d || typeof d.id !== 'string' || !Array.isArray(d.track)) {
       throw new Error('프로젝트를 시작하지 못했습니다. 잠시 후 다시 시도해주세요.');

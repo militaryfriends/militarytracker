@@ -41,7 +41,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export default function ProjectStartScreen() {
   useThemeMode();
   const router = useRouter();
-  const { project: projectRef } = useLocalSearchParams<{ project?: string }>();
+  const { project: projectRef, tkg, tm } = useLocalSearchParams<{ project?: string; tkg?: string; tm?: string }>();
   const user = useAuthStore((st) => st.user);
   const patchUser = useAuthStore((st) => st.patchUser);
   const [step, setStep] = useState(0);
@@ -86,7 +86,9 @@ export default function ProjectStartScreen() {
       setStep(1);
 
       // 2) 프로젝트 — 서버가 엔진으로 다시 계산한 값
-      const proj: BodyProject = await timed(() => startProject(a.id, ref));
+      // 내 목표(무게 · 기간) — 서버가 같은 엔진(planTarget)으로 다시 계산한다
+      const target = tkg || tm ? { ...(tkg ? { kg: Number(tkg) } : {}), ...(tm ? { months: Number(tm) } : {}) } : undefined;
+      const proj: BodyProject = await timed(() => startProject(a.id, ref, target));
       st.setProject(proj);
       st.setAnalysis({ ...useAppStore.getState().analysis!, decision: 'started' });
       haptic.tap();
@@ -148,7 +150,7 @@ export default function ProjectStartScreen() {
       haptic.error();
       setError(e instanceof Error && e.message ? e.message : '프로젝트를 시작하지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
-  }, [user, projectRef, router, patchUser]);
+  }, [user, projectRef, tkg, tm, router, patchUser]);
 
   useEffect(() => {
     run();

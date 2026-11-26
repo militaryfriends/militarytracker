@@ -159,7 +159,7 @@ export function activityFactor(days: number): number {
 
 
 /** 단계 이름 — 칼로리 줄에 붙인다 */
-const PHASE_WORD = { cut: '감량', gain: '린매스업', keep: '유지' } as const;
+const PHASE_WORD = { cut: '감량', gain: '린매스업', keep: '고정' } as const;
 
 /**
  * project: 진행 중인 내 변화 프로젝트가 있으면 목표 ± 고정값 대신 지금 단계(감량 · 린매스업 · 유지)의 칼로리 ·

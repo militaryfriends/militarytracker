@@ -26,7 +26,8 @@ import { showAlert } from '../../src/utils/alert';
 import { ProjectGridCard } from '../../src/components/body/ProjectCard';
 import { ChangePreview } from '../../src/components/body/ChangePreview';
 import { analyzeBody } from '../../src/utils/bodyAnalysis';
-import type { CardProject } from '../../src/utils/projection';
+import type { CardProject, TargetAsk, TargetPlan } from '../../src/utils/projection';
+import { TargetPanel } from '../../src/components/body/TargetPanel';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
 import { practiceLine, profileFromAnalysis } from '../../src/components/body/format';
 import { EmptyState, useSafeBack } from '../../src/components/ui';
@@ -52,6 +53,8 @@ export default function ProjectsScreen() {
   const { setAnalysis, setPlan, setProfile } = useAppStore();
   const { pro, sub } = useEntitlement();
   const [picked, setPicked] = useState<string | null>(null);
+  // 5번째 선택지 — 내 목표로 정하기(무게 · 기간)
+  const [target, setTarget] = useState<{ plan: TargetPlan; ask: TargetAsk } | null>(null);
   const [busy, setBusy] = useState(false);
   const { width } = useWindowDimensions();
 
@@ -75,7 +78,9 @@ export default function ProjectsScreen() {
   }
 
   const sel = picked ?? cards.find((p) => p.recommended)?.id ?? cards[0].id;
-  const selName = (cards.find((p) => p.id === sel) ?? cards[0]).name;
+  const targetOn = sel === 'target' && !!target;
+  const curCard: CardProject = targetOn ? target!.plan.card : (cards.find((p) => p.id === sel) ?? cards[0]);
+  const selName = curCard.name;
   const splitName = splitLabel(a.input.env, a.input.days as 2 | 3 | 4 | 5 | 6, a.input.level as 1 | 2 | 3);
   const colW = Math.floor((Math.min(width, 520) - 36 - 10) / 2);
   const running = !!project && project.analysisId === a.id && project.status === 'active';
@@ -99,8 +104,12 @@ export default function ProjectsScreen() {
 
   function start() {
     if (!a) return;
-    if (pro) router.push(`/project/start?project=${sel}`);
-    else router.push(`/subscribe?f=body_project&project=${sel}`);
+    // 내 목표 — 방식(감량 · 증량 카드 방식) + 목표(무게 · 기간)를 함께 넘긴다
+    const q = targetOn
+      ? `project=${target!.plan.strategy}${target!.ask.kg ? `&tkg=${target!.ask.kg}` : ''}${target!.ask.months ? `&tm=${target!.ask.months}` : ''}`
+      : `project=${sel}`;
+    if (pro) router.push(`/project/start?${q}`);
+    else router.push(`/subscribe?f=body_project&${q}`);
   }
 
   // "아니에요, 괜찮아요 운동 자세만 볼래요" — 시작 버튼 바로 아래라 잘못 눌리기 쉬워 한 번 확인한다(10/31 피드백 7-5)
@@ -119,7 +128,7 @@ export default function ProjectsScreen() {
     try {
       const d = useOnboardDraft.getState();
       // 고르고 있던 카드(없으면 추천)를 프로필에 — 프로젝트 없이도 식단 숫자가 그 카드와 같다
-      const pickedCard = cards?.find((c) => c.id === sel) ?? cards?.[0];
+      const pickedCard = targetOn ? target!.plan.card : (cards?.find((c) => c.id === sel) ?? cards?.[0]);
       const profile = profileFromAnalysis(a, d.seeded ? d.profile : useAppStore.getState().profile, pickedCard?.strategy);
       // 처음 가입 · "온보딩 처음부터 다시 하기" → 루틴도 새 입력으로. 홈에서 다시 분석 → 프로필만
       if (!user.onboardingDone || d.restart) {
@@ -170,14 +179,15 @@ export default function ProjectsScreen() {
             />
           ))}
         </View>
-        {(() => {
-          const cur = cards.find((p) => p.id === sel) ?? cards[0];
-          return <Text style={s.practice}>{practiceLine(cur.nutrition, a.input.days)} · {splitName} · 첫 달 기준</Text>;
-        })()}
+        {!running ? (
+          <TargetPanel analysis={a} selected={targetOn} width={Math.min(width, 520) - 36}
+            onPick={(plan, ask) => { setTarget({ plan, ask }); setPicked('target'); }} />
+        ) : null}
+        <Text style={s.practice}>{practiceLine(curCard.nutrition, a.input.days)} · {splitName} · 첫 달 기준</Text>
 
         {/* 고른 카드의 달마다 몸 — 크게, 막대로 달을 바꿔 본다 */}
         {(() => {
-          const cur = cards.find((p) => p.id === sel) ?? cards[0];
+          const cur = curCard;
           return (
             <View style={{ marginTop: 16 }}>
               <ChangePreview

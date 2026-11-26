@@ -4,6 +4,7 @@ import {
   View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking, useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { targetPlanOf } from '../src/components/body/TargetPanel';
 import { colors, themed, useThemeMode } from '../src/theme';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, useSafeBack } from '../src/components/ui';
 import { showAlert } from '../src/utils/alert';
@@ -39,18 +40,24 @@ export default function SubscribeScreen() {
   useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
-  const { f, project } = useLocalSearchParams<{ f?: string; project?: string }>();
+  const { f, project, tkg, tm } = useLocalSearchParams<{ f?: string; project?: string; tkg?: string; tm?: string }>();
   const analysis = useAppStore((st) => st.analysis);
   // O8 에서 고른 프로젝트 — 위에 요약을 보여 주고, 구독이 되면 바로 프로젝트를 시작한다
   // 카드는 입력으로 다시 계산한다(프로젝트 화면 · 서버와 같은 값) — 저장된 옛 분석에도 카드 4장이 있다
   const chosen = useMemo(() => {
     if (f !== 'body_project' || !project || !analysis) return null;
     try {
+      // 내 목표(무게 · 기간)로 고른 경우 — 같은 엔진으로 그 목표 카드를 다시 만든다
+      if (tkg || tm) {
+        const plan = targetPlanOf(analysis, { ...(tkg ? { kg: Number(tkg) } : {}), ...(tm ? { months: Number(tm) } : {}) });
+        if (plan) return plan.card;
+      }
       return analyzeBody(analysis.input).projects.find((p) => p.id === project) ?? null;
     } catch {
       return null;
     }
-  }, [f, project, analysis]);
+  }, [f, project, tkg, tm, analysis]);
+  const startQ = `project=${chosen?.id ?? ''}${tkg ? `&tkg=${tkg}` : ''}${tm ? `&tm=${tm}` : ''}`;
   // 위 3D · 한 줄에 쓸 목표 — 고른 카드 → 진행 중 프로젝트 → 내가 고른(추천) 카드 순(검수 3-1)
   const profile = useAppStore((st) => st.profile);
   const weights = useAppStore((st) => st.weights);
@@ -125,7 +132,7 @@ export default function SubscribeScreen() {
         patchUser({ sub: next });
         if (chosen) {
           // 결제(체험)되면 바로 맞춤형 프로젝트 진행
-          router.replace(`/project/start?project=${chosen.id}`);
+          router.replace(`/project/start?${startQ}`);
           return;
         }
         showAlert('완료', done, [{ text: '확인', onPress: () => router.back() }]);
@@ -156,7 +163,7 @@ export default function SubscribeScreen() {
           <Text style={s.headSub}>{target.name} · {target.months}개월 · {kg(now.weightKg)}kg → {kg(target.end.weightKg)}kg</Text>
         ) : null}
         {chosen && pro ? (
-          <PrimaryBtn label="맞춤형 프로젝트 바로 시작하기" onPress={() => router.replace(`/project/start?project=${chosen.id}`)} style={{ marginTop: 14 }} />
+          <PrimaryBtn label="맞춤형 프로젝트 바로 시작하기" onPress={() => router.replace(`/project/start?${startQ}`)} style={{ marginTop: 14 }} />
         ) : null}
 
         <View style={s.pitch}>

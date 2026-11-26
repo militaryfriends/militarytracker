@@ -18,7 +18,7 @@ import { Avatar3DLive, Avatar3DStill, has3D } from './avatar3d/Avatar3D';
 import { cellCoord, shapeAt, type Shape } from './avatar3d/morph';
 import { useAppStore } from '../../stores/appStore';
 
-export type AvatarBadge = '지금' | '예상' | '목표' | '시작';
+export type AvatarBadge = '지금' | '예상' | '목표' | '시작' | '다음';
 
 const FADE_MS = 600;
 

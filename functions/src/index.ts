@@ -25,8 +25,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { analyzeBody } from './engine/bodyAnalysis';
 import { cellWithHysteresis, targetBody, toCell, toCoord, updateComp } from './engine/bodyComp';
 import {
-  STATUS_TEXT, STRATEGIES, checkinStatus, expectedPoint, muscleLabel, phaseNutrition, progressPct, recalcFrom,
-  type Strategy,
+  STATUS_TEXT, STRATEGIES, checkinStatus, expectedPoint, muscleLabel, phaseNutrition, planTarget, progressPct, recalcFrom,
+  type Strategy, type TargetAsk,
 } from './engine/projection';
 import {
   BodyProjectDoc, BodyReportDoc, FOOD_LABEL, Judgement, LEVEL_LABEL, MealTarget, PHASE_LABEL, ReportBody,
@@ -645,6 +645,17 @@ interface ProjectStartReq {
   analysisId: string;
   /** 카드 방식(엔진 2.0) — cut_fast · cut · leanmass · bulk. 옛 앱의 p1 · p2 는 추천 카드로 받는다 */
   projectId: Strategy | 'p1' | 'p2';
+  /** 내 목표(2026-11-27) — 목표 체중 · 남은 개월. 있으면 카드 대신 같은 엔진(planTarget)으로 그 목표 프로젝트를 만든다 */
+  target?: { kg?: number; months?: number };
+}
+
+/** 내 목표 입력 검사 — 숫자 범위 밖이면 버린다(없는 것으로) */
+function sanitizeTarget(raw: unknown): TargetAsk | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const kg = typeof r.kg === 'number' && Number.isFinite(r.kg) && r.kg >= 30 && r.kg <= 250 ? Math.round(r.kg * 10) / 10 : undefined;
+  const months = typeof r.months === 'number' && Number.isInteger(r.months) && r.months >= 1 && r.months <= 24 ? r.months : undefined;
+  return kg !== undefined || months !== undefined ? { ...(kg !== undefined ? { kg } : {}), ...(months !== undefined ? { months } : {}) } : null;
 }
 
 /**
@@ -680,7 +691,11 @@ export const bodyProjectStart = onCall(
     const input = sanitizeInput(a.input);
     // 카드 4장은 입력만으로 정해진다 — 앱이 보낸 숫자는 쓰지 않는다
     const core = analyzeBody(input);
-    const p = legacy ? core.projects.find((x) => x.recommended) : core.projects.find((x) => x.id === raw);
+    const ask = legacy ? null : sanitizeTarget(req.data?.target);
+    const plan = ask
+      ? planTarget({ sex: input.sex, age: input.age, heightCm: input.heightCm, level: input.level, days: input.days, start: core.comp, waistCm: input.waistCm }, ask)
+      : null;
+    const p = plan ? plan.card : legacy ? core.projects.find((x) => x.recommended) : core.projects.find((x) => x.id === raw);
     if (!p) throw new HttpsError('not-found', '프로젝트를 찾을 수 없습니다.');
     const projectId = p.id;
 
