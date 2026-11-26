@@ -1,0 +1,36 @@
+name: 웹 미리보기 배포
+
+# 본 사이트(military-tracker-96bdd.web.app)는 건드리지 않고
+# 임시 주소(미리보기 채널)에만 올린다. 14일 뒤 자동 삭제.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "미리보기 채널 이름 (영문·숫자·하이픈)"
+        required: false
+        default: "preview"
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx expo export --platform web
+
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_PREVIEW_KEY }}
+          projectId: military-tracker-96bdd
+          channelId: ${{ inputs.channel || 'preview' }}
+          expires: 14d
