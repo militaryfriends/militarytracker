@@ -14,6 +14,7 @@ import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref
 import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
 import { webSwitch } from '../../src/ui/webSwitch';
+import { NudgeSettings } from '../../src/components/NudgeSettings';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { PART_LABEL, PART_ORDER } from '../../src/data/exercises';
@@ -422,6 +423,10 @@ export default function MyScreen() {
             </PressableScale>
           </>
         ) : null}
+
+        {/* 결석 알림 — 쉴수록 세지는 알림(11/27) */}
+        <Text style={s.sectionLabel}>알림</Text>
+        <NudgeSettings />
 
         {/* 화면 · 진동 */}
         <Text style={s.sectionLabel}>화면</Text>

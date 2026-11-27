@@ -7,7 +7,8 @@ import { useAppStore } from '../../src/stores/appStore';
 import SessionPlayer from '../../src/components/SessionPlayer';
 import SessionSummary from '../../src/components/SessionSummary';
 import { useEffect } from 'react';
-import { scheduleComeback } from '../../src/services/reminders';
+import { scheduleComeback, useNudgePrefs } from '../../src/services/reminders';
+import { nextDayIdx } from '../../src/utils/stats';
 
 export default function TabLayout() {
   useThemeMode();
@@ -18,9 +19,12 @@ export default function TabLayout() {
   const overlay = !!session || !!summary;
   // 마지막 운동이 바뀔 때마다 "다시 시작" 알림을 다시 예약 (첫 운동을 마친 뒤 권한을 묻는다)
   const lastAt = useAppStore((s) => s.logs[0]?.createdAt ?? null);
+  // 세기 · 시간을 바꿔도 다시 예약한다. 첫 알림에는 다음에 할 운동 이름을 넣는다
+  const nudge = useNudgePrefs();
+  const nextName = useAppStore((s) => (s.plan ? s.plan.days[nextDayIdx(s.logs, s.plan)]?.name : undefined));
   useEffect(() => {
-    if (lastAt) void scheduleComeback(lastAt, true);
-  }, [lastAt]);
+    if (lastAt) void scheduleComeback(lastAt, true, nextName);
+  }, [lastAt, nudge.level, nudge.hour, nextName]);
   const kbOpen = useKeyboardOpen();
 
   return (

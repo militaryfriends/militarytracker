@@ -9,6 +9,7 @@ import { startSession, signedOut, endSession, resumeSession } from '../src/servi
 import { useAuthStore } from '../src/stores/authStore';
 import { useMediaStore } from '../src/stores/mediaStore';
 import { ThemeProvider, colors, restoreThemePref, useThemeMode } from '../src/theme';
+import { restoreNudgePrefs } from '../src/services/reminders';
 import { ConfettiLayer, FONT_ASSETS, restoreHaptics, PressableScale } from '../src/ui';
 import MobileFrame from '../src/components/MobileFrame';
 import { BootCurtain } from '../src/components/brand/BootCurtain';
@@ -67,7 +68,7 @@ export default function RootLayout() {
   const ready = isInitialized && prefsReady;
 
   useEffect(() => {
-    Promise.allSettled([restoreThemePref(), restoreHaptics()]).finally(() => setPrefsReady(true));
+    Promise.allSettled([restoreThemePref(), restoreHaptics(), restoreNudgePrefs()]).finally(() => setPrefsReady(true));
     // 숫자 글꼴 — 기다리지 않는다 (불러오기 전엔 시스템 글꼴). 파일 맨 위에서 부르면 웹 정적 렌더링이 깨진다
     Font.loadAsync(FONT_ASSETS).catch(() => {});
   }, []);
