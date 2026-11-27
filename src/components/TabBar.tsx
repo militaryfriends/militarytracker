@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TabGlyph, type TabIconName } from './TabIcons';
 import type { Tabs } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
@@ -52,6 +53,21 @@ function TabIcon({ on, name }: { on: boolean; name: TabIconName }) {
 export function useTabSpace(): number {
   const insets = useSafeAreaInsets();
   return BAR_H + GAP + Math.max(insets.bottom, 12);
+}
+
+/**
+ * 떠 있는 탭(과 그 위 고정 버튼) 밑으로 지나가는 내용을 바탕색으로 서서히 가린다.
+ * 탭 화면의 스크롤 뒤 · 고정 버튼 앞에 둔다. extra = 탭 위에 떠 있는 버튼이 차지하는 높이.
+ * (11/27 화면 점검 — 운동 탭에서 '운동 시작' 버튼이 아래 버튼 · 안내문 글자와 겹쳐 보였다)
+ */
+export function TabFade({ extra = 0 }: { extra?: number }) {
+  useThemeMode();
+  const tabSpace = useTabSpace();
+  return (
+    <View pointerEvents="none" style={[s.fade, { height: tabSpace + 40 + extra }]}>
+      <LinearGradient colors={[`${colors.bg}00`, `${colors.bg}D9`, colors.bg]} locations={[0, 0.4, 1]} style={s.fadeFill} />
+    </View>
+  );
 }
 
 export function FloatingTabBar({ state, navigateToTab, hidden }: TabBarProps & { hidden?: boolean }) {
@@ -124,4 +140,6 @@ const s = themed(() => StyleSheet.create({
   blob: { position: 'absolute', left: PAD, top: PAD, bottom: PAD, borderRadius: 25, backgroundColor: colors.panel3 },
   label: { fontSize: 10.5, fontWeight: '600', color: colors.mid },
   labelOn: { color: colors.ink, fontWeight: '700' },
+  fade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  fadeFill: { flex: 1 },
 }));

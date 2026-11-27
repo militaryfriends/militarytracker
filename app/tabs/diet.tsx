@@ -14,6 +14,7 @@ import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProLock, ProBadge } from '../../src/components/ProLock';
 import { saveProfile } from '../../src/services/authService';
 import { localDate } from '../../src/services/workoutService';
+import { TabFade } from '../../src/components/TabBar';
 
 /** 이 일수가 지나면 식단을 다시 구성하도록 권유한다 */
 const DIET_STALE_DAYS = 7;
@@ -235,6 +236,7 @@ export default function DietScreen() {
 
         <Text style={s.notice}>일반적 영양 가이드이며 의학적 조언이 아닙니다.</Text>
       </ScrollView>
+      <TabFade />
     </SafeAreaView>
   );
 }

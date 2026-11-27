@@ -24,15 +24,20 @@ import { kg, pct1 } from './format';
 const ACC: Record<Accuracy, string> = { high: '높음', good: '좋음', basic: '기본' };
 const signed = (v: number, d = 1) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`;
 
-function Row({ label, value, unit, delta }: { label: string; value: string; unit: string; delta?: string }) {
+/** 시작 대비 변화 — 숫자만 있으면 무엇과 견준 값인지 알 수 없어 말을 붙인다(11/27 배치 점검) */
+const fromStart = (v: number, unit: string) => (Math.abs(v) < 0.05 ? '시작과 같음' : `시작 대비 ${signed(v)}${unit}`);
+
+function Row({ label, value, unit, note }: { label: string; value: string; unit: string; note?: string }) {
   useThemeMode();
   return (
     <View style={s.row}>
-      <Text style={s.rowK}>{label}</Text>
+      <View style={s.rowL}>
+        <Text style={s.rowK}>{label}</Text>
+        {note ? <Text style={s.rowNote} numberOfLines={1}>{note}</Text> : null}
+      </View>
       <View style={s.rowV}>
         <Text style={s.rowNum}>{value}</Text>
         <Text style={s.rowUnit}>{unit}</Text>
-        {delta ? <Text style={s.rowDelta}>{delta}</Text> : null}
       </View>
     </View>
   );
@@ -112,8 +117,8 @@ export function HomeHero({ avatarW }: { avatarW: number }) {
               : `${prog.week}주차 / ${prog.totalWeeks}주${diff === 0 ? '' : ` · 예상보다 ${Math.abs(diff)}%p ${diff > 0 ? '앞' : '뒤'}`}`}
           </Text>
           <View style={s.rows}>
-            <Row label="체중" value={kg(now.weightKg)} unit="kg" delta={signed(now.weightKg - project.input.weightKg)} />
-            <Row label="체지방" value={pct1(now.bfPct)} unit="%" delta={signed(now.bfPct - startBf)} />
+            <Row label="체중" value={kg(now.weightKg)} unit="kg" note={fromStart(now.weightKg - project.input.weightKg, 'kg')} />
+            <Row label="체지방" value={pct1(now.bfPct)} unit="%" note={fromStart(now.bfPct - startBf, '%p')} />
           </View>
           <PressableScale style={s.link} onPress={() => router.push('/project/checkin')}
             accessibilityLabel={prog.dueIn <= 0 ? '체크인하기' : `진행률 보기, 다음 체크인 ${prog.dueIn}일 뒤`}>
@@ -167,13 +172,14 @@ const s = themed(() => StyleSheet.create({
   note: { fontSize: 12, lineHeight: 18, color: colors.mid, marginTop: 9 },
   rows: { marginTop: 10 },
   row: {
-    height: 44, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    minHeight: 48, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   rowK: { fontSize: 12, fontWeight: '600', color: colors.muted },
   rowV: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
   rowNum: { fontFamily: FONT.num, fontSize: 24, color: colors.ink },
   rowUnit: { fontSize: 12, color: colors.mid },
-  rowDelta: { fontFamily: FONT.num, fontSize: 15, color: colors.mid, marginLeft: 6 },
+  rowL: { flexShrink: 1, minWidth: 0, paddingRight: 6 },
+  rowNote: { fontSize: 11, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
   link: {
     minHeight: 44, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },

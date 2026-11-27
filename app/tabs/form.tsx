@@ -13,6 +13,7 @@ import { formByExId } from '../../src/data/formCheck';
 import { useMediaItems, useMediaEntry } from '../../src/stores/mediaStore';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { PressableScale, PRESS_SCALE } from '../../src/ui';
+import { TabFade } from '../../src/components/TabBar';
 
 type Filter = Part | '전체' | '영상';
 
@@ -110,6 +111,7 @@ export default function FormScreen() {
         ListEmptyComponent={<Text style={s.empty}>검색 결과가 없습니다.</Text>}
         renderItem={({ item }) => <Card ex={item} onPress={open} />}
       />
+      <TabFade />
     </SafeAreaView>
   );
 }

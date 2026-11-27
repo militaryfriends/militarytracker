@@ -20,6 +20,7 @@ import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { calcBodyStats } from '../../src/utils/body';
 import { localDate } from '../../src/services/workoutService';
 import { useScreenSize } from '../../src/ui/screenSize';
+import { TabFade } from '../../src/components/TabBar';
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -125,33 +126,44 @@ export default function HomeScreen() {
             <Text style={s.sheetTitle} accessibilityRole="header">오늘 할 일</Text>
             <Text style={s.sheetMeta}><Text style={s.sheetNum}>{doneCount}</Text> / 2 완료</Text>
           </View>
-          <View style={s.mainRow}>
-            <PressableScale onPress={() => router.push(`/exercise/${day.ids[0]}`)} accessibilityLabel="첫 종목 자세 보기">
-              <ExerciseMedia exId={day.ids[0]} rounded={13} style={s.mainThumb} dim={0.2} />
-            </PressableScale>
-            <View style={s.mainTxt}>
-              {/* 끝낸 날은 '오늘 한 운동'을 보여 준다 — 예전엔 다음 날 루틴 이름 아래에 '오늘 3세트 완료'가 붙어 무엇을 끝냈는지 헷갈렸다 */}
-              <Text style={s.mainName} numberOfLines={1}>{workoutDone && doneName ? doneName : day.name}</Text>
-              <Text style={s.mainSub} numberOfLines={1}>
-                {workoutDone ? `오늘 ${todaySets}세트 완료` : `${day.ids.length}종목 ${daySets}세트 · 약 ${dayMin}분`}
-              </Text>
+          {/* 운동 칸 — 썸네일 · 이름 · 버튼, 그 아래에 몇 일차 · 부위를 같은 칸 안에 둔다(칸 밖에 떠 있던 한 줄, 11/27 배치 점검) */}
+          <View style={s.mainBox}>
+            <View style={s.mainRow}>
+              <PressableScale onPress={() => router.push(`/exercise/${day.ids[0]}`)} accessibilityLabel="첫 종목 자세 보기">
+                <ExerciseMedia exId={day.ids[0]} rounded={13} style={s.mainThumb} dim={0.2} />
+                {workoutDone ? (
+                  <View style={[s.tick, s.tickOn, s.thumbTick]}>
+                    <Ionicons name="checkmark" size={13} color={colors.bg} />
+                  </View>
+                ) : null}
+              </PressableScale>
+              <View style={s.mainTxt}>
+                {/* 끝낸 날은 '오늘 한 운동'을 보여 준다 — 예전엔 다음 날 루틴 이름 아래에 '오늘 3세트 완료'가 붙어 무엇을 끝냈는지 헷갈렸다 */}
+                <Text style={s.mainName} numberOfLines={1}>{workoutDone && doneName ? doneName : day.name}</Text>
+                <Text style={s.mainSub} numberOfLines={1}>
+                  {workoutDone ? `오늘 ${todaySets}세트 완료` : `${day.ids.length}종목 ${daySets}세트 · 약 ${dayMin}분`}
+                </Text>
+              </View>
+              <PressableScale
+                style={[s.go, workoutDone && s.goDone]}
+                onPress={() => startSession(dayIdx)}
+                accessibilityLabel={workoutDone ? `다음 운동 ${day.name} 미리 하기` : `${day.name} 운동 시작`}
+              >
+                {workoutDone ? null : <Ionicons name="play" size={15} color={colors.onRed} />}
+                <Text style={[s.goTxt, workoutDone && s.goDoneTxt]}>{workoutDone ? '다음 운동' : '시작'}</Text>
+              </PressableScale>
             </View>
-            <PressableScale
-              style={[s.go, workoutDone && s.goDone]}
-              onPress={() => startSession(dayIdx)}
-              accessibilityLabel={workoutDone ? `다음 운동 ${day.name} 미리 하기` : `${day.name} 운동 시작`}
-            >
-              {workoutDone ? null : <Ionicons name="play" size={15} color={colors.onRed} />}
-              <Text style={[s.goTxt, workoutDone && s.goDoneTxt]}>{workoutDone ? '다음 운동' : '시작'}</Text>
-            </PressableScale>
+            <Text style={s.focus} numberOfLines={1}>
+              {workoutDone ? `다음 차례 · ${day.name} · ${day.focus}` : `${dayIdx + 1}일차 / ${plan.days.length}일 · ${day.focus}`}
+            </Text>
           </View>
-          <Text style={s.focus} numberOfLines={1}>{workoutDone ? `다음 · ${day.name} · ` : ''}{dayIdx + 1}일차 / {plan.days.length}일 · {day.focus}</Text>
 
-          <TodayRow done={false} title="오늘 식단" onPress={() => router.push('/tabs/diet')}
-            sub={stats ? `하루 ${stats.kcal.toLocaleString()}kcal · 단백질 ${stats.protein}g` : '끼니별 식단 보기'} />
-          <View style={s.sep} />
+          {/* 체크되는 일(운동 · 체중)을 먼저, 식단은 체크가 아니라 보러 가는 줄이라 아이콘으로 구분한다 — '2 / 2 완료'인데 빈 동그라미가 남던 문제 */}
           <TodayRow done={weighed} title="체중 기록" onPress={() => router.push('/tabs/my?weigh=1')}
             sub={lastW ? `최근 ${lastW.kg}kg · ${lastW.date.slice(5).replace('-', '월 ')}일` : '기록하면 지금 몸이 바로 바뀌어요'} />
+          <View style={s.sep} />
+          <TodayRow icon="restaurant-outline" title="오늘 식단" onPress={() => router.push('/tabs/diet')}
+            sub={stats ? `하루 ${stats.kcal.toLocaleString()}kcal · 단백질 ${stats.protein}g` : '끼니별 식단 보기'} />
         </View>
 
         {/* 이번 주 — 탭하면 운동 기록으로 */}
@@ -210,19 +222,26 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
-
+      <TabFade />
     </SafeAreaView>
   );
 }
 
-function TodayRow({ done, title, sub, onPress }: { done: boolean; title: string; sub: string; onPress: () => void }) {
+/** done = 체크되는 일, icon = 체크가 아니라 보러 가는 줄 */
+function TodayRow({ done = false, icon, title, sub, onPress }: {
+  done?: boolean; icon?: keyof typeof Ionicons.glyphMap; title: string; sub: string; onPress: () => void;
+}) {
   useThemeMode();
   return (
     <PressableScale scaleTo={PRESS_SCALE.card} style={s.todayRow} onPress={onPress} accessibilityRole="button"
       accessibilityLabel={`${title}, ${sub}${done ? ', 완료' : ''}`}>
-      <View style={[s.tick, done && s.tickOn]}>
-        {done ? <Ionicons name="checkmark" size={15} color={colors.bg} /> : null}
-      </View>
+      {icon ? (
+        <View style={s.rowIcon}><Ionicons name={icon} size={19} color={colors.mid} /></View>
+      ) : (
+        <View style={[s.tick, done && s.tickOn]}>
+          {done ? <Ionicons name="checkmark" size={15} color={colors.bg} /> : null}
+        </View>
+      )}
       <View style={{ flex: 1 }}>
         <Text style={s.todayTitle}>{title}</Text>
         <Text style={s.todaySub} numberOfLines={1}>{sub}</Text>
@@ -260,10 +279,12 @@ const s = themed(() => StyleSheet.create({
   sheetTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
   sheetMeta: { fontSize: 13, color: colors.mid },
   sheetNum: { fontFamily: FONT.num, fontSize: 18, color: colors.ink },
-  mainRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 76, paddingHorizontal: 12, paddingVertical: 12,
+  mainBox: {
+    paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10, marginBottom: 4,
     borderRadius: 20, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line,
   },
+  mainRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
+  thumbTick: { position: 'absolute', right: -6, bottom: -6, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.panel2 },
   mainThumb: { width: 52, height: 52 },
   mainTxt: { flex: 1, minWidth: 0 },
   mainName: { fontSize: 17, fontWeight: '700', color: colors.ink },
@@ -275,10 +296,11 @@ const s = themed(() => StyleSheet.create({
   goTxt: { fontSize: 15, fontWeight: '700', color: colors.onRed },
   goDone: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line2 },
   goDoneTxt: { color: colors.ink },
-  focus: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 2, paddingHorizontal: 4 },
+  focus: { fontSize: 12, color: colors.mid, marginTop: 11, paddingTop: 9, borderTopWidth: 1, borderTopColor: colors.line },
   todayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 54, paddingLeft: 4, paddingRight: 2 },
   tick: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.line2, alignItems: 'center', justifyContent: 'center' },
   tickOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  rowIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   todayTitle: { fontSize: 15, fontWeight: '600', color: colors.ink },
   todaySub: { fontSize: 12, color: colors.mid, marginTop: 1 },
   sep: { height: 1, marginLeft: 40, backgroundColor: colors.line },

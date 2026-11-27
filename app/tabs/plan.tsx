@@ -21,7 +21,7 @@ import { buildLocalPlan } from '../../src/utils/planner';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { GhostBtn, Notice } from '../../src/components/ui';
 import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
-import { useTabSpace } from '../../src/components/TabBar';
+import { TabFade, useTabSpace } from '../../src/components/TabBar';
 import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -173,7 +173,7 @@ export default function PlanScreen() {
         ))}
       </View>
 
-      <ScrollView style={s.scroll} contentContainerStyle={[s.scrollInner, { paddingBottom: tabSpace + 8 + 54 + 28 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.scrollInner, { paddingBottom: tabSpace + 8 + 54 + 36 }]} showsVerticalScrollIndicator={false}>
         <View style={s.dayHeader}>
           <View style={{ flex: 1 }}>
             <Text style={s.dayKicker}>{dayIdx + 1}일차 / {plan.days.length}일</Text>
@@ -204,6 +204,7 @@ export default function PlanScreen() {
           );
         })}
 
+        <Text style={s.regenLabel}>루틴 바꾸기</Text>
         <View style={s.regenRow}>
           <GhostBtn
             label={canAI ? 'AI로 다시 구성' : 'AI로 다시 구성 · PRO'}
@@ -225,6 +226,8 @@ export default function PlanScreen() {
         <Notice>일반적인 운동 가이드입니다. 통증이나 질환이 있다면 전문가와 상담하세요.</Notice>
       </ScrollView>
 
+      {/* 버튼 밑으로 지나가는 목록은 바탕색으로 서서히 가린다 — 버튼과 글자가 겹쳐 보이지 않게 */}
+      <TabFade extra={8 + 54} />
       {/* 지금 할 한 가지 — 떠 있는 탭 바로 위 */}
       <View style={[s.goWrap, { bottom: tabSpace + 8 }]} pointerEvents="box-none">
         <PressableScale style={s.go} onPress={() => startSession(dayIdx)} accessibilityLabel={`${day.name} 운동 시작`}>
@@ -288,5 +291,6 @@ const s = themed(() => StyleSheet.create({
   },
   goTxt: { fontSize: 16, fontWeight: '700', color: colors.onRed },
 
-  regenRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  regenLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, marginTop: 26, paddingHorizontal: 4 },
+  regenRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
 }));
