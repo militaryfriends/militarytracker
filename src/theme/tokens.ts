@@ -26,8 +26,35 @@ export type ThemePref = 'system' | ThemeMode;
 export type ColorToken = keyof typeof PALETTE.dark;
 export type Palette = Record<ColorToken, string>;
 
+/**
+ * 미리보기 전용 — 포인트 색 비교(2026-11-27, 대표 결정 대기: 라벤더 vs 흰색).
+ * 미리보기 주소에 ?accent=white 를 붙이면 주 버튼이 흰색(모노)으로, ?accent=lavender 면 원래대로 돌아온다.
+ * 고른 값은 그 탭을 닫을 때까지 기억한다(sessionStorage). 운영 주소 · 앱(iOS · Android)에서는 동작하지 않는다.
+ * 결정되면 이 블록을 지우고 palette.json 값을 확정한다.
+ */
+const MONO_ACCENT: Record<ThemeMode, Partial<Palette>> = {
+  dark: { red: '#F4F4F5', onRed: '#09090A', redText: '#F4F4F5', redSoft: 'rgba(244,244,245,0.12)', redLine: 'rgba(244,244,245,0.45)' },
+  light: { red: '#09090B', onRed: '#F4F4F5', redText: '#09090B', redSoft: 'rgba(9,9,11,0.08)', redLine: 'rgba(9,9,11,0.4)' },
+};
+function previewAccentWhite(): boolean {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  try {
+    const host = window.location.hostname;
+    // Firebase 미리보기 채널(프로젝트--채널-해시.web.app)과 로컬 개발에서만
+    if (!(host.includes('--') || host === 'localhost')) return false;
+    const q = new URLSearchParams(window.location.search).get('accent');
+    if (q === 'white' || q === 'lavender') window.sessionStorage.setItem('mt-accent', q);
+    return window.sessionStorage.getItem('mt-accent') === 'white';
+  } catch {
+    return false;
+  }
+}
+
 // 두 모드의 키가 다르면 여기서 타입 오류가 난다
-const TABLE: Record<ThemeMode, Palette> = PALETTE;
+const BASE: Record<ThemeMode, Palette> = PALETTE;
+const TABLE: Record<ThemeMode, Palette> = previewAccentWhite()
+  ? { dark: { ...BASE.dark, ...MONO_ACCENT.dark }, light: { ...BASE.light, ...MONO_ACCENT.light } }
+  : BASE;
 
 export const THEME_STORAGE_KEY = 'mt-theme';
 
