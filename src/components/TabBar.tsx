@@ -55,6 +55,9 @@ export function useTabSpace(): number {
   return BAR_H + GAP + Math.max(insets.bottom, 12);
 }
 
+/** TabFade 가 탭 · 버튼 위로 올라오는 높이 — 스크롤 끝 여백을 이만큼 더 둔다 */
+export const FADE_RISE = 44;
+
 /**
  * 떠 있는 탭(과 그 위 고정 버튼) 밑으로 지나가는 내용을 바탕색으로 서서히 가린다.
  * 탭 화면의 스크롤 뒤 · 고정 버튼 앞에 둔다. extra = 탭 위에 떠 있는 버튼이 차지하는 높이.
@@ -63,9 +66,11 @@ export function useTabSpace(): number {
 export function TabFade({ extra = 0 }: { extra?: number }) {
   useThemeMode();
   const tabSpace = useTabSpace();
+  // 탭(또는 그 위 버튼)의 윗선에 닿기 전 FADE_RISE 만큼에서 거의 다 가린다 — 버튼 뒤로 윤곽이 비치지 않게
+  const h = tabSpace + FADE_RISE + extra;
   return (
-    <View pointerEvents="none" style={[s.fade, { height: tabSpace + 40 + extra }]}>
-      <LinearGradient colors={[`${colors.bg}00`, `${colors.bg}D9`, colors.bg]} locations={[0, 0.4, 1]} style={s.fadeFill} />
+    <View pointerEvents="none" style={[s.fade, { height: h }]}>
+      <LinearGradient colors={[`${colors.bg}00`, `${colors.bg}F2`, colors.bg]} locations={[0, FADE_RISE / h, 1]} style={s.fadeFill} />
     </View>
   );
 }

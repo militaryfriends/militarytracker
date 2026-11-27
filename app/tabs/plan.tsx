@@ -21,7 +21,7 @@ import { buildLocalPlan } from '../../src/utils/planner';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { GhostBtn, Notice } from '../../src/components/ui';
 import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
-import { TabFade, useTabSpace } from '../../src/components/TabBar';
+import { FADE_RISE, TabFade, useTabSpace } from '../../src/components/TabBar';
 import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -173,7 +173,7 @@ export default function PlanScreen() {
         ))}
       </View>
 
-      <ScrollView style={s.scroll} contentContainerStyle={[s.scrollInner, { paddingBottom: tabSpace + 8 + 54 + 36 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} contentContainerStyle={[s.scrollInner, { paddingBottom: tabSpace + 8 + 54 + FADE_RISE + 8 }]} showsVerticalScrollIndicator={false}>
         <View style={s.dayHeader}>
           <View style={{ flex: 1 }}>
             <Text style={s.dayKicker}>{dayIdx + 1}일차 / {plan.days.length}일</Text>

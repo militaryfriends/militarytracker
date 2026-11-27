@@ -241,7 +241,9 @@ export default function SettingsScreen() {
 function AiConsentRow() {
   useThemeMode();
   const [on, setOn] = useState(false);
-  useEffect(() => { hasAiConsent().then(setOn); }, []);
+  // 로그인 복원이 끝난 뒤에 다시 읽는다 — 이 화면을 바로 열면(웹 새로고침) 계정을 알기 전이라 꺼진 것으로 보였다
+  const uid = useAuthStore((st) => st.user?.uid);
+  useEffect(() => { hasAiConsent().then(setOn); }, [uid]);
   return (
     <View style={s.consentRow}>
       <View style={{ flex: 1 }}>
