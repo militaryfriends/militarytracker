@@ -4,7 +4,7 @@
  * 목표 몸 비교는 다음 화면 카드 4장이 맡는다(여기서 목표 몸을 하나로 못 박지 않는다).
  */
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -18,13 +18,14 @@ import { AccuracyMeter } from '../../src/components/onboard/StepBody';
 import { kg, muscleAmountOf, pct0 } from '../../src/components/body/format';
 import { EmptyState } from '../../src/components/ui';
 import { analyzeBody } from '../../src/utils/bodyAnalysis';
+import { useScreenSize } from '../../src/ui/screenSize';
 
 export default function CompareScreen() {
   useThemeMode();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { redo } = useLocalSearchParams<{ redo?: string }>();
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useScreenSize();
   const a = useAppStore((st) => st.analysis);
   // 카드 4장은 저장된 입력으로 다시 계산(엔진 결정론적) — 옛 분석 문서에도 같은 추천이 나온다
   const rec = useMemo(() => {

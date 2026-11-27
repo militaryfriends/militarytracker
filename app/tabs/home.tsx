@@ -3,7 +3,7 @@ import { LoadingSkeleton } from '../../src/components/LoadingSkeleton';
 import { hasHydrated } from '../../src/stores/appStore';
 import { RemeasureNote } from '../../src/components/body/RemeasureNote';
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator, useWindowDimensions,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import { HomeHero } from '../../src/components/body/HomeHero';
 import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { calcBodyStats } from '../../src/utils/body';
 import { localDate } from '../../src/services/workoutService';
+import { useScreenSize } from '../../src/ui/screenSize';
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -30,7 +31,7 @@ export default function HomeScreen() {
   const logs = useAppStore((s) => s.logs);
   const weights = useAppStore((s) => s.weights);
   const project = useAppStore((s) => s.project);
-  const { width } = useWindowDimensions();
+  const { width } = useScreenSize();
   const startSession = useAppStore((s) => s.startSession);
   const hydrating = useAuthStore((s) => s.hydrating);
 

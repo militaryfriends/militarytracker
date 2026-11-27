@@ -1,7 +1,7 @@
 import { analyzeBody } from '../src/utils/bodyAnalysis';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking, useWindowDimensions,
+  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { targetPlanOf } from '../src/components/body/TargetPanel';
@@ -25,6 +25,7 @@ import { useNowBody } from '../src/components/body/nowBody';
 import { kg } from '../src/components/body/format';
 import { calcBodyStats } from '../src/utils/body';
 import { PressableScale, PRESS_SCALE } from '../src/ui';
+import { useScreenSize } from '../src/ui/screenSize';
 
 type Busy = null | 'buy' | 'trial' | 'promo' | 'restore';
 
@@ -84,7 +85,7 @@ export default function SubscribeScreen() {
   // 결제 SDK 연결 전엔 가격표·구매·복원·코드 입력을 숨긴다 (심사 거절 사유)
   const storeReady = STORE_BILLING_READY && Platform.OS !== 'web';
 
-  const { width } = useWindowDimensions();
+  const { width } = useScreenSize();
   const avW = Math.round(Math.min(150, (Math.min(width, 480) - 48) / 2));
   // 요금제는 월간 하나(₩9,900). 스토어 가격을 받으면 그 값으로 바꿔 보여 준다
   const [products, setProducts] = useState(PRODUCTS);

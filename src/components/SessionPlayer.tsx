@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, FlatList,
-  Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Keyboard, PanResponder,
+  Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, Keyboard, PanResponder,
 } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import { useCountdown, useElapsed } from '../hooks/useCountdown';
 import { fmtClock, fmtSetDetail, lastSetsOf, prIdsIn } from '../utils/stats';
 import ExerciseMedia from './ExerciseMedia';
 import { ProgressRing } from '../ui/ProgressRing';
+import { useScreenSize } from '../ui/screenSize';
 
 /** 휴식 종료 알림 — 네이티브는 진동, 웹은 지원 브라우저에서만 */
 function buzz() {
@@ -77,7 +78,7 @@ function SetCheck({ done, now, label, onPress, onLongPress }: {
 export default function SessionPlayer() {
   useThemeMode();
   const insets = useSafeAreaInsets();
-  const { width: winW, height: winH } = useWindowDimensions();
+  const { width: winW, height: winH } = useScreenSize();
   const user = useAuthStore((s) => s.user);
   const session = useAppStore((s) => s.session);
   const profile = useAppStore((s) => s.profile);

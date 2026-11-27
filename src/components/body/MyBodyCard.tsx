@@ -6,7 +6,7 @@
  * "지금" 몸은 마지막 체크인(또는 계산) 뒤의 체중 기록으로 바뀐다(홈 카드와 같은 규칙).
  */
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale, Segmented } from '../../ui';
@@ -22,6 +22,7 @@ import { coordOf } from './avatar3d/morph';
 import { projectNow } from './progress';
 import { kg, pct0 } from './format';
 import { NextBody } from './NextBody';
+import { useScreenSize } from '../../ui/screenSize';
 
 type View3 = 'now' | 'both' | 'goal';
 const VIEWS = [
@@ -33,7 +34,7 @@ const VIEWS = [
 export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
   useThemeMode();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width } = useScreenSize();
   const analysis = useAppStore((st) => st.analysis);
   const project = useAppStore((st) => st.project);
   const checkins = useAppStore((st) => st.checkins);

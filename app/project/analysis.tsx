@@ -8,7 +8,7 @@
  * 온보딩에서는 AI 를 부르지 않는다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, BackHandler, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +28,7 @@ import { kg, kcal, pct0, profileFromAnalysis, signedKg } from '../../src/compone
 import { AvatarView } from '../../src/components/body/AvatarView';
 import { has3D } from '../../src/components/body/avatar3d/Avatar3D';
 import { coordOf } from '../../src/components/body/avatar3d/morph';
+import { useScreenSize } from '../../src/ui/screenSize';
 
 /** [문구, 최소 표시 ms] — 명세 O6 표 */
 const STEPS: [string, number][] = [
@@ -166,7 +167,7 @@ export default function AnalysisScreen() {
   }, [elapsed, router, redo]);
 
   // 3D 몸 — 현재 체형 계산이 끝나면 지금 몸, 시뮬레이션 단계 동안 추천 프로젝트 기간만큼 달마다 변한다
-  const { height: winH } = useWindowDimensions();
+  const { height: winH } = useScreenSize();
   const body = useMemo(() => {
     if (!work) return null;
     const core = work.core;

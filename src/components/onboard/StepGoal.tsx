@@ -4,7 +4,7 @@
  * 아래 텍스트 버튼: "잘 모르겠어요, 추천해주세요"(목표 미정 → 엔진이 정한다) · "체형보다 운동 습관이 먼저예요"(습관 경로).
  */
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale, haptic } from '../../ui';
@@ -15,6 +15,7 @@ import type { Sex } from '../../utils/bodyComp';
 import { AvatarView } from '../body/AvatarView';
 import { StepHead } from './basicSteps';
 import { o } from './styles';
+import { useScreenSize } from '../../ui/screenSize';
 
 export function StepGoal({
   sex, pick, num, total, onPick, onAuto, onHabit,
@@ -29,7 +30,7 @@ export function StepGoal({
   onHabit?: () => void;
 }) {
   useThemeMode();
-  const { width } = useWindowDimensions();
+  const { width } = useScreenSize();
   const [preview, setPreview] = useState<Archetype | null>(null);
   const cards = archetypesFor(sex);
   const colW = (Math.min(width, 480) - 44 - 10) / 2;

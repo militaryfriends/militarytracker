@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions,
+  ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Switch, Text, TextInput, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -34,12 +34,13 @@ import { localDate, saveWeight } from '../../src/services/workoutService';
 import { requestCheckinReport, SubscriptionRequired } from '../../src/services/aiService';
 import { showAlert } from '../../src/utils/alert';
 import type { BodyReportBody, Checkin, CheckinResult } from '../../src/types';
+import { useScreenSize } from '../../src/ui/screenSize';
 
 export default function CheckinScreen() {
   useThemeMode();
   const router = useRouter();
   const goBack = useSafeBack();
-  const { width } = useWindowDimensions();
+  const { width } = useScreenSize();
   const user = useAuthStore((st) => st.user);
   const project = useAppStore((st) => st.project);
   const checkins = useAppStore((st) => st.checkins);

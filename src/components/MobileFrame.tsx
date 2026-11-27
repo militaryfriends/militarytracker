@@ -1,7 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { Platform, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../theme';
+import { FrameSizeContext } from '../ui/screenSize';
 
 /**
  * 프레임 안에서 쓸 가짜 세이프에리어. 웹은 env(safe-area-inset-*) 가 0 이라
@@ -21,12 +22,13 @@ const BREAKPOINT = 700;
 export default function MobileFrame({ children }: { children: ReactNode }) {
   useThemeMode();
   const { width, height } = useWindowDimensions();
+  const frameH = Math.min(FRAME_H, height - 48);
+  // 테두리(6px × 2) 안쪽이 앱 화면 — 화면 크기로 배치하는 곳(useScreenSize)이 창이 아니라 이 크기를 쓴다
+  const inner = useMemo(() => ({ width: FRAME_W - 12, height: frameH - 12 }), [frameH]);
 
   if (Platform.OS !== 'web' || width < BREAKPOINT) {
     return <>{children}</>;
   }
-
-  const frameH = Math.min(FRAME_H, height - 48);
 
   return (
     <View style={s.page}>
@@ -44,7 +46,9 @@ export default function MobileFrame({ children }: { children: ReactNode }) {
       <View style={[s.frame, { width: FRAME_W, height: frameH }]}>
         <View style={s.notch} />
         <SafeAreaInsetsContext.Provider value={FRAME_INSETS}>
-          <View style={s.screen}>{children}</View>
+          <FrameSizeContext.Provider value={inner}>
+            <View style={s.screen}>{children}</View>
+          </FrameSizeContext.Provider>
         </SafeAreaInsetsContext.Provider>
         <View style={s.homeBar} />
       </View>

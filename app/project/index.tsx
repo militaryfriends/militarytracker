@@ -7,7 +7,7 @@
  * 거절해도 분석은 저장되고 홈의 "내 변화 프로젝트" 카드에서 이 화면으로 다시 온다.
  */
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ import { TargetPanel } from '../../src/components/body/TargetPanel';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
 import { practiceLine, profileFromAnalysis } from '../../src/components/body/format';
 import { EmptyState, useSafeBack } from '../../src/components/ui';
+import { useScreenSize } from '../../src/ui/screenSize';
 
 /** 이 몸을 만드는 도구 — 프로 혜택 (서버 한도와 같은 값: 코치 하루 10회 = functions/src/quota.ts) */
 const TOOLS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
@@ -56,7 +57,7 @@ export default function ProjectsScreen() {
   // 5번째 선택지 — 내 목표로 정하기(무게 · 기간)
   const [target, setTarget] = useState<{ plan: TargetPlan; ask: TargetAsk } | null>(null);
   const [busy, setBusy] = useState(false);
-  const { width } = useWindowDimensions();
+  const { width } = useScreenSize();
 
   // 카드 4장은 저장된 값이 아니라 입력으로 다시 계산한다(결정론적) — 옛 엔진으로 저장된 분석도 지금 카드로 보인다.
   // 서버(bodyProjectStart)도 같은 입력으로 다시 계산해 고른 카드를 만든다.

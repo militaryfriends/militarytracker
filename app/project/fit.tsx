@@ -7,7 +7,7 @@
  * 고르는 즉시 위의 3D 몸이 바뀐다(저장 전 미리보기). MY 탭 '내 몸' 카드에서 연다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../../src/theme';
@@ -25,6 +25,7 @@ import { DEFAULT_YAW, joinYawGroup } from '../../src/components/body/avatar3d/st
 import { useNowBody } from '../../src/components/body/nowBody';
 import { kg, pct0 } from '../../src/components/body/format';
 import type { BodyShape, UserProfile } from '../../src/types';
+import { useScreenSize } from '../../src/ui/screenSize';
 
 type Key = keyof BodyShape;
 interface Group { key: Key; title: string; hint: string; options: readonly { label: string; v: number }[] }
@@ -82,7 +83,7 @@ export default function FitScreen() {
   const router = useRouter();
   const back = useSafeBack('/tabs/my');
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { width, height } = useScreenSize();
   const user = useAuthStore((st) => st.user);
   const patchUser = useAuthStore((st) => st.patchUser);
   const profile = useAppStore((st) => st.profile);

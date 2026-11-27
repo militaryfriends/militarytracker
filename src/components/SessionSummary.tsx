@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { CountUpText, DURATION, EASE, FONT, PressableScale, celebrate } from '..
 import { useAppStore } from '../stores/appStore';
 import { exForLog, PART_LABEL } from '../data/exercises';
 import { fmtDuration, fmtVolume, fmtSetDetail } from '../utils/stats';
+import { useScreenSize } from '../ui/screenSize';
 
 /** 운동 완료 직후 오버레이 — 그날의 결과와 기록 갱신을 보여준다 */
 export default function SessionSummary() {
@@ -20,7 +21,7 @@ function SummaryBody() {
   useThemeMode();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { width: winW } = useWindowDimensions();
+  const { width: winW } = useScreenSize();
   const { summary, setSummary } = useAppStore();
   // 등장: 바탕이 먼저 덮이고, 내용이 아래에서 살짝 올라온다. 저장됐으면 제목 근처에서 폭죽(+ success 진동)
   const bg = useSharedValue(0);
