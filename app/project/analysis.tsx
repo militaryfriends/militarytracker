@@ -39,6 +39,8 @@ const STEPS: [string, number][] = [
   ['달마다 몸이 어떻게 변할지 계산하고 있어요', 1300],
   ['프로젝트 4가지를 준비하고 있어요', 700],
 ];
+/** 끝난 단계는 끝난 말로 — 체크가 붙었는데도 '…하고 있어요'로 남아 있었다(11/27 화면 점검) */
+const doneOf = (t: string) => t.replace('짜고 있어요', '짰어요').replace('하고 있어요', '했어요');
 const ENDS = STEPS.reduce<number[]>((acc, [, ms]) => [...acc, (acc[acc.length - 1] ?? 0) + ms], []);
 const TOTAL = ENDS[ENDS.length - 1];
 /** "계산이 끝났어요" 를 보여 주는 시간 */
@@ -230,7 +232,7 @@ export default function AnalysisScreen() {
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.stepTxt, state === 'now' && s.stepNow, state === 'wait' && s.stepWait]}>{title}</Text>
+                  <Text style={[s.stepTxt, state === 'now' && s.stepNow, state === 'wait' && s.stepWait]}>{state === 'done' ? doneOf(title) : title}</Text>
                   {state === 'done' ? (
                     <Animated.Text entering={FadeInDown.duration(220)} style={s.sub}>{work.lines[i]}</Animated.Text>
                   ) : null}

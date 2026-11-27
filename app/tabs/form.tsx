@@ -9,8 +9,8 @@ import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
 import {
   EX, Exercise, Part, PART_LABEL, PART_ORDER, EQUIP_LABEL, LEVEL_LABEL,
 } from '../../src/data/exercises';
-import { formByExId, FORM_COUNT } from '../../src/data/formCheck';
-import { useMediaItems, useMediaEntry, useVideoCount } from '../../src/stores/mediaStore';
+import { formByExId } from '../../src/data/formCheck';
+import { useMediaItems, useMediaEntry } from '../../src/stores/mediaStore';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
@@ -29,7 +29,6 @@ export default function FormScreen() {
   const [q, setQ] = useState('');
   // 영상 목록은 버킷 매니페스트에서 온다 — 앱 실행 중에 갱신될 수 있다
   const media = useMediaItems();
-  const videoCount = useVideoCount();
 
   const list = useMemo(() => {
     // 공백을 무시하고 비교 — "벤치 프레스" 로 "벤치프레스" 를 찾는다
@@ -58,7 +57,6 @@ export default function FormScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.topbar}>
         <Text style={s.title} accessibilityRole="header">운동</Text>
-        <Text style={s.meta}>자세 {FORM_COUNT} · 영상 {videoCount}</Text>
       </View>
       <WorkoutSwitch value="form" />
 

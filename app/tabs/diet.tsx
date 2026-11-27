@@ -159,7 +159,7 @@ export default function DietScreen() {
           <View style={s.calcCell}><Text style={[s.calcNum, s.calcHi]}>{st.kcal.toLocaleString()}</Text><Text style={s.calcLabel}>하루 목표</Text></View>
         </View>
         <Text style={s.tdeeTxt}>
-          유지 칼로리(TDEE) 약 {st.tdee}kcal · Mifflin-St Jeor × 활동계수 {st.activityFactor}(주 {profile.days}일) · BMI {st.bmi} ({st.bodyType})
+          유지 칼로리(TDEE) 약 {Number(st.tdee).toLocaleString('ko-KR')}kcal · Mifflin-St Jeor × 활동계수 {st.activityFactor}(주 {profile.days}일) · BMI {st.bmi} ({st.bodyType})
         </Text>
 
         <View style={s.sectionRow}>

@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { webSwitch } from '../../ui/webSwitch';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../../theme';
 import { SPRING, haptic, PressableScale } from '../../ui';
@@ -84,7 +85,7 @@ export function StepBody({
 
   return (
     <View>
-      <StepHead num={num} total={total} q="지금 몸을 조금 더 정확하게 알려주세요" />
+      <StepHead num={num} total={total} q={'지금 몸을 조금 더\n정확하게 알려주세요'} />
       <AccuracyMeter accuracy={accuracy} />
 
       <View style={s.labelRow}>
@@ -115,6 +116,7 @@ export function StepBody({
           onValueChange={(v) => { haptic.select(); onInbody({ ...inbody, on: v }); }}
           trackColor={{ false: colors.line2, true: colors.ink }}
           thumbColor={inbody.on ? colors.bg : colors.mid}
+          {...webSwitch(colors.bg)}
           accessibilityLabel="인바디 결과가 있어요"
         />
       </View>

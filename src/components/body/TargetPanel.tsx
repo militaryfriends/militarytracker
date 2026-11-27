@@ -119,6 +119,13 @@ export function TargetPanel({
       {plan ? (
         <>
           {plan.capReason ? <Text style={s.cap}>{plan.capReason}. 그 몸으로 계산했어요.</Text> : null}
+          {/* '3개월'을 골랐는데 카드에 '6개월'이 떠서 헷갈린다 — 감량 뒤에 고정 기간이 붙는다는 걸 숫자로 먼저 말한다(11/27 화면 점검) */}
+          {plan.dir === 'cut' && plan.card.keepMonths > 0 && plan.card.track[plan.card.cutMonths] ? (
+            <Text style={s.note}>
+              감량은 {plan.card.cutMonths}개월 — 그때 예상 {kg(plan.card.track[plan.card.cutMonths].weightKg)}kg이에요.{'\n'}
+              그 뒤 {plan.card.keepMonths}개월은 뺀 체중을 지키는 고정 기간이라, 프로젝트는 모두 {plan.card.months}개월이에요.
+            </Text>
+          ) : null}
           <View style={{ marginTop: 10, alignItems: 'center' }}>
             <ProjectGridCard sex={analysis.input.sex} project={plan.card} selected={selected} width={Math.min(width, 260)}
               onPress={disabled ? undefined : () => onPick(plan, ask!)} />
@@ -163,6 +170,7 @@ const s = themed(() => StyleSheet.create({
   chipTxt: { fontSize: 13, fontWeight: '700', color: colors.mid },
   chipTxtOn: { color: colors.bg },
   cap: { fontSize: 12.5, color: colors.ink, marginTop: 10, lineHeight: 18, fontWeight: '600' },
+  note: { fontSize: 12, color: colors.mid, marginTop: 10, lineHeight: 18 },
   pick: { marginTop: 10, alignSelf: 'center', paddingHorizontal: 16, minHeight: 40, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.ink },
   pickTxt: { fontSize: 13, fontWeight: '800', color: colors.ink },
 }));

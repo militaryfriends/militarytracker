@@ -19,6 +19,7 @@ import { Screen, TopBar, Body, SectionLabel, EmptyState, useSafeBack } from '../
 import { useAuthStore } from '../../src/stores/authStore';
 import { useAppStore } from '../../src/stores/appStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
+import { webSwitch } from '../../src/ui/webSwitch';
 import { AvatarView } from '../../src/components/body/AvatarView';
 import { kg, pct1 } from '../../src/components/body/format';
 import { ProgressChart } from '../../src/components/body/ProgressChart';
@@ -209,7 +210,7 @@ export default function CheckinScreen() {
               <View style={s.toggle}>
                 <Text style={s.toggleTxt}>인바디 결과가 있어요</Text>
                 <Switch value={ib.on} onValueChange={(v) => setIb({ ...ib, on: v })}
-                  trackColor={{ false: colors.line2, true: colors.ink }} thumbColor={ib.on ? colors.bg : colors.mid} />
+                  trackColor={{ false: colors.line2, true: colors.ink }} thumbColor={ib.on ? colors.bg : colors.mid} {...webSwitch(colors.bg)} />
               </View>
               {ib.on ? (
                 <View style={s.row2}>

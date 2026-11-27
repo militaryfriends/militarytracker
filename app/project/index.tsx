@@ -108,8 +108,24 @@ export default function ProjectsScreen() {
     const q = targetOn
       ? `project=${target!.plan.strategy}${target!.ask.kg ? `&tkg=${target!.ask.kg}` : ''}${target!.ask.months ? `&tm=${target!.ask.months}` : ''}`
       : `project=${sel}`;
-    if (pro) router.push(`/project/start?${q}`);
-    else router.push(`/subscribe?f=body_project&${q}`);
+    const go = () => {
+      if (pro) router.push(`/project/start?${q}`);
+      else router.push(`/subscribe?f=body_project&${q}`);
+    };
+    // 진행 중인 다른 프로젝트가 있으면 한 번 묻는다 — 서버는 새로 시작하면 이전 프로젝트를 '그만둠'으로 바꾼다(되돌릴 수 없다).
+    // 예전엔 '바로 시작하기' 한 번에 진행 중이던 프로젝트가 말없이 끝났다(11/27 화면 점검)
+    if (project && project.status === 'active' && !running) {
+      showAlert(
+        '진행 중인 프로젝트가 있어요',
+        `새로 시작하면 지금 하던 '${project.name} · ${project.months}개월'은 끝나고, 진행률은 처음부터 다시 세요.`,
+        [
+          { text: '돌아가기', style: 'cancel' },
+          { text: '새로 시작하기', onPress: go },
+        ],
+      );
+      return;
+    }
+    go();
   }
 
   // "아니에요, 괜찮아요 운동 자세만 볼래요" — 시작 버튼 바로 아래라 잘못 눌리기 쉬워 한 번 확인한다(10/31 피드백 7-5)
@@ -179,12 +195,17 @@ export default function ProjectsScreen() {
             />
           ))}
         </View>
+        {/* '고정'이 무슨 뜻인지 어디에도 없었다 — 감량 카드에 전부 나오는 말이라 한 번 풀어 둔다(11/27 화면 점검) */}
+        {cards.some((c) => c.keepMonths > 0) ? (
+          <Text style={s.term}>고정 = 뺀 체중을 그대로 지키는 기간이에요.</Text>
+        ) : null}
         {!running ? (
           <TargetPanel analysis={a} selected={targetOn} width={Math.min(width, 520) - 36}
             onPick={(plan, ask) => { setTarget({ plan, ask }); setPicked('target'); }}
             onClear={() => { setTarget(null); setPicked(null); }} />
         ) : null}
-        <Text style={s.practice}>{practiceLine(curCard.nutrition, a.input.days)} · {splitName} · 첫 달 기준</Text>
+        {/* 한 줄에 다 넣으면 좁은 화면에서 마지막 글자만 다음 줄로 떨어진다("첫 달 기\n준") — 뜻이 끊기는 자리에서 두 줄로 */}
+        <Text style={s.practice}>{practiceLine(curCard.nutrition, a.input.days)}{'\n'}{splitName} · 첫 달 기준</Text>
 
         {/* 고른 카드의 달마다 몸 — 크게, 막대로 달을 바꿔 본다 */}
         {(() => {
@@ -271,7 +292,8 @@ const s = themed(() => StyleSheet.create({
   acc: { marginTop: 2, marginBottom: 14 },
   accWarn: { fontSize: 12.5, color: colors.ink, fontWeight: '700', lineHeight: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
-  practice: { fontSize: 12, color: colors.mid, textAlign: 'center', marginTop: 10, fontWeight: '600' },
+  term: { fontSize: 11.5, color: colors.muted, marginTop: 8, lineHeight: 17 },
+  practice: { fontSize: 12, color: colors.mid, textAlign: 'center', marginTop: 10, fontWeight: '600', lineHeight: 18 },
   again: { alignItems: 'center', paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
   againTxt: { fontSize: 12.5, color: colors.mid, fontWeight: '600', textDecorationLine: 'underline' },
   foot: {

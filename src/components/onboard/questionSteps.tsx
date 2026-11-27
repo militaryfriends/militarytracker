@@ -65,10 +65,10 @@ export function StepLevel({ p, update, num, total }: { p: UserProfile; update: U
   useThemeMode();
   return (
     <View>
-      <StepHead num={num} total={total} q={'운동 경력이\n어느 정도인가요?'} desc="종목은 같고, 세트 · 강도가 경력에 맞춰져요." />
-      <Opt label="입문" sub="3개월 미만 · 머신과 기본 동작부터" on={p.level === 1} onPress={() => update('level', 1)} />
-      <Opt label="중급" sub="분할 운동 경험 있음" on={p.level === 2} onPress={() => update('level', 2)} />
-      <Opt label="상급" sub="프리웨이트가 메인" on={p.level === 3} onPress={() => update('level', 3)} />
+      <StepHead num={num} total={total} q={'운동 경력이\n어느 정도인가요?'} desc="경력에 맞춰 세트 수와 강도가 달라져요." />
+      <Opt label="입문" sub="운동을 시작한 지 3개월이 안 됐어요" on={p.level === 1} onPress={() => update('level', 1)} />
+      <Opt label="중급" sub="부위를 나눠서 꾸준히 해 봤어요" on={p.level === 2} onPress={() => update('level', 2)} />
+      <Opt label="상급" sub="바벨 · 덤벨 운동이 중심이에요" on={p.level === 3} onPress={() => update('level', 3)} />
     </View>
   );
 }
@@ -108,9 +108,10 @@ export function StepDays({ p, update, num, total }: { p: UserProfile; update: Up
   return (
     <View>
       <StepHead num={num} total={total} q={'일주일에 며칠\n운동할 수 있나요?'} desc="무리 없이 지킬 수 있는 날짜로 골라 주세요." />
-      <View style={o.chipRow}>
+      {/* 5칸을 한 줄에 — 예전엔 4칸 + '주 6일' 혼자 둘째 줄로 떨어졌다(11/27 화면 점검) */}
+      <View style={[o.chipRow, { flexWrap: 'nowrap' }]}>
         {([2, 3, 4, 5, 6] as const).map((d) => (
-          <PressableScale haptic="select" key={d} style={[o.chip, { minWidth: 72, alignItems: 'center' }, p.days === d && o.chipOn]} onPress={() => update('days', d)}
+          <PressableScale haptic="select" key={d} style={[o.chip, { flex: 1, paddingHorizontal: 0, alignItems: 'center' }, p.days === d && o.chipOn]} onPress={() => update('days', d)}
             accessibilityRole="radio" accessibilityState={{ selected: p.days === d }}>
             <Text style={[o.chipTxt, p.days === d && o.chipOnTxt]}>주 {d}일</Text>
           </PressableScale>

@@ -32,12 +32,12 @@ interface Group { key: Key; title: string; hint: string; options: readonly { lab
 /** 고르는 칸 — 값은 모프 세기(morph.ts Shape). 가운데 '보통'이 0 */
 const GROUPS: readonly Group[] = [
   {
-    key: 'belly', title: '배', hint: '옆에서 본 모습으로 고르세요',
-    options: [{ label: '납작', v: -0.4 }, { label: '보통', v: 0 }, { label: '조금', v: 0.35 }, { label: '나옴', v: 0.7 }, { label: '많이', v: 1 }],
+    key: 'belly', title: '배', hint: '옆에서 봤을 때 나온 정도',
+    options: [{ label: '납작', v: -0.4 }, { label: '보통', v: 0 }, { label: '살짝', v: 0.35 }, { label: '나옴', v: 0.7 }, { label: '많이', v: 1 }],
   },
   {
-    key: 'lower', title: '엉덩이 · 허벅지', hint: '상체에 비해',
-    options: [{ label: '가늘게', v: -0.4 }, { label: '보통', v: 0 }, { label: '조금', v: 0.5 }, { label: '많이', v: 1 }],
+    key: 'lower', title: '엉덩이 · 허벅지', hint: '상체에 비해 굵은 정도',
+    options: [{ label: '가는 편', v: -0.4 }, { label: '보통', v: 0 }, { label: '굵은 편', v: 0.5 }, { label: '많이', v: 1 }],
   },
   {
     key: 'musBias', title: '근육이 붙은 곳', hint: '',

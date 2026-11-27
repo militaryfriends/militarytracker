@@ -105,7 +105,7 @@ export function StepFood({ p, update, num, total }: { p: UserProfile; update: Up
   useThemeMode();
   return (
     <View>
-      <StepHead num={num} total={total} q={'식사 환경을\n알려주세요'} desc="목표 몸까지 현실적인 식단을 구성합니다." />
+      <StepHead num={num} total={total} q={'식사 환경을\n알려주세요'} desc="먹는 환경에 맞춰 식단을 짜요." />
       <Opt label="편의점 위주" on={p.food === 'convenience'} onPress={() => update('food', 'convenience')} />
       <Opt label="자취 · 직접 요리" on={p.food === 'self'} onPress={() => update('food', 'self')} />
       <Opt label="집밥" on={p.food === 'family'} onPress={() => update('food', 'family')} />

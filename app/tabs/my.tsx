@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref } from '../../src/theme';
 import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { showAlert } from '../../src/utils/alert';
+import { webSwitch } from '../../src/ui/webSwitch';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { PART_LABEL, PART_ORDER } from '../../src/data/exercises';
@@ -449,6 +450,7 @@ export default function MyScreen() {
               // 모노: 켜면 글자색 판 위에 바탕색 손잡이 (iOS 기본 흰 손잡이는 다크에서 흰 판에 묻힌다)
               trackColor={{ false: colors.panel3, true: colors.ink }}
               thumbColor={hapticsOn ? colors.bg : '#FFFFFF'}
+              {...webSwitch(colors.bg)}
               ios_backgroundColor={colors.panel3}
               {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bg } as object) : null)}
               accessibilityLabel="누를 때 진동"
@@ -502,6 +504,7 @@ function AiConsentRow() {
         }}
         trackColor={{ false: colors.panel3, true: colors.ink }}
         thumbColor={on ? colors.bg : '#FFFFFF'}
+        {...webSwitch(colors.bg)}
         ios_backgroundColor={colors.panel3}
         {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bg } as object) : null)}
         accessibilityLabel="AI 기능 데이터 전송 동의"

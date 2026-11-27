@@ -170,7 +170,7 @@ const g = themed(() => StyleSheet.create({
   months: { fontSize: 13, fontWeight: '700', color: colors.ink, marginTop: 4 },
   kcal: { fontSize: 12.5, color: colors.mid, marginTop: 2, fontWeight: '600' },
   how: { fontSize: 11, color: colors.muted, marginTop: 2 },
-  first: { fontSize: 11.5, color: colors.redText, marginTop: 3, fontWeight: '700' },
+  first: { fontSize: 11.5, color: colors.ink, marginTop: 3, fontWeight: '800' },
   reason: { fontSize: 11.5, color: colors.mid, marginTop: 6, lineHeight: 16, fontWeight: '600' },
   rec: {
     position: 'absolute', top: 10, right: 10, backgroundColor: colors.ink, borderRadius: 8,

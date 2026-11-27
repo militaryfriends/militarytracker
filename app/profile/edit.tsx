@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -32,10 +32,14 @@ export default function ProfileEditScreen() {
   const setPlan = useAppStore((s) => s.setPlan);
   const [p, setP] = useState<UserProfile | null>(profile);
   const [saving, setSaving] = useState(false);
+  // 사용자가 손댄 뒤에만 '바뀜'으로 본다 — 화면을 연 뒤 서버 프로필이 늦게 도착하면 아무것도 안 건드렸는데
+  // '변경사항 저장'이 켜지고 오류 문구가 뜨던 문제(11/27 화면 점검)
+  const touched = useRef(false);
+  const editP: typeof setP = (v) => { touched.current = true; setP(v); };
 
-  // 하이드레이션이 늦게 끝나면 마운트 시점에는 profile 이 없다
+  // 하이드레이션이 늦게 끝나면 마운트 시점에는 profile 이 없다. 손대기 전이면 늦게 온 프로필을 그대로 따라간다
   useEffect(() => {
-    if (profile && !p) setP(profile);
+    if (profile && (!p || !touched.current)) setP(profile);
   }, [profile]);
 
   if (!p) {
@@ -50,10 +54,10 @@ export default function ProfileEditScreen() {
   // Firestore 는 undefined 값을 못 받는다 — 키 자체를 뺀다
   const withoutShape = ({ bodyShape: _drop, ...rest }: UserProfile): UserProfile => rest;
   const update = <K extends keyof UserProfile>(k: K, v: UserProfile[K]) =>
-    setP((prev) => (prev ? { ...prev, [k]: v } : prev));
+    editP((prev) => (prev ? { ...prev, [k]: v } : prev));
 
   // 장소를 바꾸면 기구 목록도 새 장소 기본값으로
-  const pickEnv = (env: 'gym' | 'home') => setP((prev) => {
+  const pickEnv = (env: 'gym' | 'home') => editP((prev) => {
     if (!prev || prev.env === env) return prev;
     return { ...prev, env, equip: defaultEquip(env) };
   });
@@ -62,9 +66,10 @@ export default function ProfileEditScreen() {
   const eff = effectiveWeight(p, weights);
   const changed = JSON.stringify(p) !== JSON.stringify(profile);
   // 홈트로 바꿨는데 기구를 아직 안 골랐으면 저장하지 않는다(맨몸만도 하나의 선택)
-  const validationError = validateProfile(p)
-    ?? (p.env === 'home' && !equipFits('home', p.equip) ? '집에 있는 기구를 골라 주세요(없으면 맨몸만).' : null);
-  const valid = !validationError;
+  // 오류는 그 칸 바로 아래에 보인다 — 예전엔 기구 오류가 나이 · 키 칸 밑에 떠서 무엇을 고치라는지 알 수 없었다
+  const fieldError = validateProfile(p);
+  const equipError = p.env === 'home' && !equipFits('home', p.equip) ? '집에 있는 기구를 하나 이상 골라 주세요. 없으면 맨몸만을 고르면 돼요.' : null;
+  const valid = !fieldError && !equipError;
 
   function handleBack() {
     if (!changed) { router.back(); return; }
@@ -88,7 +93,8 @@ export default function ProfileEditScreen() {
 
   async function handleSave() {
     if (!user || !p) return;
-    if (validationError) { showAlert('입력 확인', validationError); return; }
+    const problem = fieldError ?? equipError;
+    if (problem) { showAlert('입력 확인', problem); return; }
     setSaving(true);
     try {
       await saveProfile(user.uid, p);
@@ -135,8 +141,8 @@ export default function ProfileEditScreen() {
           <SectionLabel>신체 정보</SectionLabel>
           <View style={s.grid2}>
             {/* 성별을 바꾸면 맞춘 체형(어깨 · 골반 …)은 버린다 — 다른 성별 몸에 얹으면 어색해진다 */}
-            <Opt label="남성" on={p.sex === 'male'} onPress={() => setP((prev) => (prev && prev.sex !== 'male' ? { ...withoutShape(prev), sex: 'male' } : prev))} />
-            <Opt label="여성" on={p.sex === 'female'} onPress={() => setP((prev) => (prev && prev.sex !== 'female' ? { ...withoutShape(prev), sex: 'female' } : prev))} />
+            <Opt label="남성" on={p.sex === 'male'} onPress={() => editP((prev) => (prev && prev.sex !== 'male' ? { ...withoutShape(prev), sex: 'male' } : prev))} />
+            <Opt label="여성" on={p.sex === 'female'} onPress={() => editP((prev) => (prev && prev.sex !== 'female' ? { ...withoutShape(prev), sex: 'female' } : prev))} />
           </View>
 
           <View style={s.grid3}>
@@ -144,12 +150,12 @@ export default function ProfileEditScreen() {
             <Field label="키 (cm)" value={p.height} onChange={(v) => update('height', v)} kb="decimal-pad" placeholder="175" />
             <Field label="몸무게 (kg)" value={p.weight} onChange={(v) => update('weight', v)} kb="decimal-pad" placeholder="70" />
           </View>
-          {validationError && changed ? <Text style={s.errTxt}>{validationError}</Text> : null}
+          {fieldError && changed ? <Text style={s.errTxt}>{fieldError}</Text> : null}
 
           {st && (
             <View style={s.calcBox}>
               <Text style={s.calcTxt}>
-                BMI {st.bmi} · {st.bodyType} · 목표 {st.kcal}kcal · 단백질 {st.protein}g
+                BMI {st.bmi} · {st.bodyType} · 목표 {Number(st.kcal).toLocaleString('ko-KR')}kcal · 단백질 {st.protein}g
               </Text>
               <Text style={s.calcSub}>
                 {eff?.src === 'trend'
@@ -165,11 +171,11 @@ export default function ProfileEditScreen() {
             const cur = p.strategy ?? strategyOfGoal(p.goal);
             return (
               <Opt key={sid} label={STRATEGY[sid].name} sub={STRATEGY[sid].how} on={p.goal !== 'habit' && cur === sid}
-                onPress={() => setP((prev) => (prev ? { ...prev, strategy: sid, goal: legacyGoalOf(sid) } : prev))} />
+                onPress={() => editP((prev) => (prev ? { ...prev, strategy: sid, goal: legacyGoalOf(sid) } : prev))} />
             );
           })}
           <Opt label="운동 습관 만들기" sub="유지 칼로리 · 짧은 루틴 · 꾸준함 우선" on={p.goal === 'habit'}
-            onPress={() => setP((prev) => {
+            onPress={() => editP((prev) => {
               if (!prev) return prev;
               const { strategy: _s, ...rest } = prev;
               return { ...rest, goal: 'habit' };
@@ -195,6 +201,7 @@ export default function ProfileEditScreen() {
           </View>
           <Text style={s.label}>{p.env === 'gym' ? '헬스장 기구' : '집에 있는 기구'}</Text>
           <EquipPicker key={p.env} env={p.env} equip={p.equip} onChange={(v) => update('equip', v)} />
+          {equipError && changed ? <Text style={s.errTxt}>{equipError}</Text> : null}
 
           <Text style={s.label}>주당 운동 일수</Text>
           <View style={s.chipRow}>
