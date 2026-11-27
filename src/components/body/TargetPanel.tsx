@@ -120,7 +120,8 @@ export function TargetPanel({
         <>
           {plan.capReason ? <Text style={s.cap}>{plan.capReason}. 그 몸으로 계산했어요.</Text> : null}
           {/* '3개월'을 골랐는데 카드에 '6개월'이 떠서 헷갈린다 — 감량 뒤에 고정 기간이 붙는다는 걸 숫자로 먼저 말한다(11/27 화면 점검) */}
-          {plan.dir === 'cut' && plan.card.keepMonths > 0 && plan.card.track[plan.card.cutMonths] ? (
+          {plan.dir === 'cut' && plan.card.keepMonths > 0 && plan.card.track[plan.card.cutMonths]
+            && plan.card.track[0].weightKg - plan.card.track[plan.card.cutMonths].weightKg >= 0.5 ? (
             <Text style={s.note}>
               감량은 {plan.card.cutMonths}개월 — 그때 예상 {kg(plan.card.track[plan.card.cutMonths].weightKg)}kg이에요.{'\n'}
               그 뒤 {plan.card.keepMonths}개월은 뺀 체중을 지키는 고정 기간이라, 프로젝트는 모두 {plan.card.months}개월이에요.

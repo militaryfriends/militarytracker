@@ -149,7 +149,6 @@ const s = themed(() => StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8,
   },
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
-  meta: { fontSize: 10, color: colors.muted, letterSpacing: 0.8 },
   metaLine: { fontSize: 11, color: colors.muted },
 
   searchWrap: { paddingHorizontal: 16, paddingBottom: 10, justifyContent: 'center' },

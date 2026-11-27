@@ -35,7 +35,12 @@ export default function ProfileEditScreen() {
   // 사용자가 손댄 뒤에만 '바뀜'으로 본다 — 화면을 연 뒤 서버 프로필이 늦게 도착하면 아무것도 안 건드렸는데
   // '변경사항 저장'이 켜지고 오류 문구가 뜨던 문제(11/27 화면 점검)
   const touched = useRef(false);
-  const editP: typeof setP = (v) => { touched.current = true; setP(v); };
+  // 이미 고른 칸을 다시 누른 것(값이 그대로)은 손댄 것으로 치지 않는다
+  const editP = (fn: (prev: UserProfile | null) => UserProfile | null) => setP((prev) => {
+    const next = fn(prev);
+    if (next !== prev) touched.current = true;
+    return next;
+  });
 
   // 하이드레이션이 늦게 끝나면 마운트 시점에는 profile 이 없다. 손대기 전이면 늦게 온 프로필을 그대로 따라간다
   useEffect(() => {
@@ -54,7 +59,7 @@ export default function ProfileEditScreen() {
   // Firestore 는 undefined 값을 못 받는다 — 키 자체를 뺀다
   const withoutShape = ({ bodyShape: _drop, ...rest }: UserProfile): UserProfile => rest;
   const update = <K extends keyof UserProfile>(k: K, v: UserProfile[K]) =>
-    editP((prev) => (prev ? { ...prev, [k]: v } : prev));
+    editP((prev) => (prev && prev[k] !== v ? { ...prev, [k]: v } : prev));
 
   // 장소를 바꾸면 기구 목록도 새 장소 기본값으로
   const pickEnv = (env: 'gym' | 'home') => editP((prev) => {
@@ -87,7 +92,7 @@ export default function ProfileEditScreen() {
     if (!changed) { go(); return; }
     showAlert('변경사항이 있습니다', '저장하지 않고 허리 · 인바디를 다시 넣을까요?', [
       { text: '계속 수정', style: 'cancel' },
-      { text: '저장 없이 이동', onPress: go },
+      { text: '저장 없이 이동', onPress: () => { touched.current = false; go(); } },
     ]);
   }
 
@@ -100,6 +105,7 @@ export default function ProfileEditScreen() {
       await saveProfile(user.uid, p);
       setProfile(p);
       patchUser({ profile: p });
+      touched.current = false;
       // 장소 · 기구가 바뀌었으면 지금 루틴을 새 기구에 맞출지 묻는다(없는 기구 종목이 루틴에 남지 않게)
       const kitChanged = profile && (profile.env !== p.env || kitSummary(profile) !== kitSummary(p));
       if (kitChanged && plan) {
@@ -204,10 +210,10 @@ export default function ProfileEditScreen() {
           {equipError && changed ? <Text style={s.errTxt}>{equipError}</Text> : null}
 
           <Text style={s.label}>주당 운동 일수</Text>
-          <View style={s.chipRow}>
+          <View style={[s.chipRow, { flexWrap: 'nowrap' }]}>
             {([2, 3, 4, 5, 6] as const).map((d) => (
-              <PressableScale haptic="select" key={d} style={[s.chip, p.days === d && s.chipOn]} onPress={() => update('days', d)}>
-                <Text style={[s.chipTxt, p.days === d && s.chipOnTxt]}>주 {d}일</Text>
+              <PressableScale haptic="select" key={d} style={[s.chip, { flex: 1, paddingHorizontal: 0, alignItems: 'center' }, p.days === d && s.chipOn]} onPress={() => update('days', d)}>
+                <Text style={[s.chipTxt, p.days === d && s.chipOnTxt]} numberOfLines={1} maxFontSizeMultiplier={1.2}>주 {d}일</Text>
               </PressableScale>
             ))}
           </View>

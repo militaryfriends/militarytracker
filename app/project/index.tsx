@@ -114,13 +114,13 @@ export default function ProjectsScreen() {
     };
     // 진행 중인 다른 프로젝트가 있으면 한 번 묻는다 — 서버는 새로 시작하면 이전 프로젝트를 '그만둠'으로 바꾼다(되돌릴 수 없다).
     // 예전엔 '바로 시작하기' 한 번에 진행 중이던 프로젝트가 말없이 끝났다(11/27 화면 점검)
-    if (project && project.status === 'active' && !running) {
+    if (project && (project.status === 'active' || project.status === 'paused') && project.analysisId !== a.id) {
       showAlert(
         '진행 중인 프로젝트가 있어요',
-        `새로 시작하면 지금 하던 '${project.name} · ${project.months}개월'은 끝나고, 진행률은 처음부터 다시 세요.`,
+        `새로 시작하면 지금 하던 '${project.name} · ${project.months}개월'은 끝나고 되돌릴 수 없어요. 새 프로젝트는 처음부터 시작해요.`,
         [
           { text: '돌아가기', style: 'cancel' },
-          { text: '새로 시작하기', onPress: go },
+          { text: '새로 시작하기', style: 'destructive', onPress: go },
         ],
       );
       return;

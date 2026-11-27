@@ -452,7 +452,6 @@ export default function MyScreen() {
               thumbColor={hapticsOn ? colors.bg : '#FFFFFF'}
               {...webSwitch(colors.bg)}
               ios_backgroundColor={colors.panel3}
-              {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bg } as object) : null)}
               accessibilityLabel="누를 때 진동"
             />
           </View>
@@ -506,7 +505,6 @@ function AiConsentRow() {
         thumbColor={on ? colors.bg : '#FFFFFF'}
         {...webSwitch(colors.bg)}
         ios_backgroundColor={colors.panel3}
-        {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.bg } as object) : null)}
         accessibilityLabel="AI 기능 데이터 전송 동의"
       />
     </View>

@@ -5,4 +5,4 @@ import { Platform } from 'react-native';
  * 안 주면 기본 청록(#009688)이 나와 모노 화면에 색이 하나 더 생긴다(11/27 화면 점검). 앱(iOS · Android)에는 없는 속성이라 웹에서만 넣는다.
  *   <Switch thumbColor={on ? colors.bg : colors.mid} {...webSwitch(colors.bg)} />
  */
-export const webSwitch = (onThumb: string): object => (Platform.OS === 'web' ? { activeThumbColor: onThumb } : {});
+export const webSwitch = (onThumb: string): { activeThumbColor?: string } => (Platform.OS === 'web' ? { activeThumbColor: onThumb } : {});

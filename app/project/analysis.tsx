@@ -219,7 +219,7 @@ export default function AnalysisScreen() {
           {STEPS.map(([title], i) => {
             const state = i < current ? 'done' : i === current ? 'now' : 'wait';
             return (
-              <View key={title} style={s.row} accessibilityLabel={`${title}${state === 'done' ? `, 완료, ${work.lines[i]}` : ''}`}>
+              <View key={title} style={s.row} accessibilityLabel={state === 'done' ? `${doneOf(title)}, ${work.lines[i]}` : title}>
                 <View style={s.icon}>
                   {state === 'done' ? (
                     <Animated.View entering={FadeIn.duration(180)}>

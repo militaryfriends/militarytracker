@@ -113,7 +113,7 @@ export function StepDays({ p, update, num, total }: { p: UserProfile; update: Up
         {([2, 3, 4, 5, 6] as const).map((d) => (
           <PressableScale haptic="select" key={d} style={[o.chip, { flex: 1, paddingHorizontal: 0, alignItems: 'center' }, p.days === d && o.chipOn]} onPress={() => update('days', d)}
             accessibilityRole="radio" accessibilityState={{ selected: p.days === d }}>
-            <Text style={[o.chipTxt, p.days === d && o.chipOnTxt]}>주 {d}일</Text>
+            <Text style={[o.chipTxt, p.days === d && o.chipOnTxt]} numberOfLines={1} maxFontSizeMultiplier={1.2}>주 {d}일</Text>
           </PressableScale>
         ))}
       </View>
