@@ -74,6 +74,8 @@ function VideoMedia({
         style={s.fill}
         contentFit="cover"
         nativeControls={false}
+        // 아이폰 웹(사파리 · 인앱 브라우저)은 playsinline 이 없으면 자동 재생을 막거나 전체 화면으로 띄운다
+        playsInline
         onFirstFrameRender={() => setReady(true)}
       />
       {!ready && poster && <Image source={poster} style={s.fill} resizeMode="cover" />}
