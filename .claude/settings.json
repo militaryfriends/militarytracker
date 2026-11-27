@@ -1,0 +1,57 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test*)",
+      "Bash(npm run engine:sync*)",
+      "Bash(npm run check:*)",
+      "Bash(npm run typecheck*)",
+      "Bash(npm ci)",
+      "Bash(npm --prefix functions run build*)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(npx expo export*)",
+      "Bash(npx -y esbuild@0.24.0 *)",
+      "Bash(node scripts/*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(git push origin claude/*)",
+      "Bash(gh workflow run preview.yml*)",
+      "Bash(gh run *)"
+    ],
+    "ask": [
+      "Bash(firebase deploy*)",
+      "Bash(npx firebase deploy*)",
+      "Bash(npx firebase-tools deploy*)",
+      "Bash(npx -y firebase-tools* deploy*)",
+      "Bash(npm run deploy*)",
+      "Bash(eas update*)",
+      "Bash(npx eas-cli update*)",
+      "Bash(eas build*)",
+      "Bash(npx eas-cli build*)",
+      "Bash(eas submit*)",
+      "Bash(npx eas-cli submit*)",
+      "Bash(git push * main)",
+      "Bash(git push *:main)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "PowerShell(firebase deploy*)",
+      "PowerShell(npx firebase deploy*)",
+      "PowerShell(npx firebase-tools deploy*)",
+      "PowerShell(npm run deploy*)",
+      "PowerShell(eas update*)",
+      "PowerShell(npx eas-cli update*)",
+      "PowerShell(eas build*)",
+      "PowerShell(eas submit*)",
+      "PowerShell(git push * main)",
+      "PowerShell(git push --force*)"
+    ],
+    "deny": [
+      "Bash(firebase firestore:delete*)",
+      "Bash(npx firebase-tools firestore:delete*)",
+      "PowerShell(firebase firestore:delete*)",
+      "Read(./.secret.local)",
+      "Read(./.env*.local)"
+    ]
+  }
+}

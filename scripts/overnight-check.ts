@@ -29,8 +29,8 @@ const SEXES = ['male', 'female'] as const;
 const AGES = [15, 18, 25, 40, 60, 75];
 const HEIGHTS = { male: [155, 165, 172, 180, 190, 200], female: [145, 152, 160, 168, 176, 185] };
 const BMIS_ALL = [14, 16, 18.5, 21, 23, 25, 27.5, 30, 33, 37, 42, 48];
-// OVERNIGHT_REAL=1 이면 저체중 극단(BMI 18.5 미만)을 뺀 현실 범위만 센다
-const BMIS = process.env.OVERNIGHT_REAL ? BMIS_ALL.filter((b) => b >= 18.5) : BMIS_ALL;
+// --real(또는 OVERNIGHT_REAL=1) 이면 저체중 극단(BMI 18.5 미만)을 뺀 현실 범위만 센다
+const BMIS = process.env.OVERNIGHT_REAL || process.argv.includes('--real') ? BMIS_ALL.filter((b) => b >= 18.5) : BMIS_ALL;
 const WAIST_R = [null, 0.38, 0.42, 0.46, 0.5, 0.55, 0.62, 0.72, 0.84];
 const LEVELS = [1, 2, 3] as const;
 const DAYS = [2, 3, 4, 5, 6];

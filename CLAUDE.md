@@ -1,5 +1,24 @@
 # MilitaryTracker — 작업 메모
 
+## Claude 작업 규칙 (대표 지시 · 2026-11-27) — 아래 내용보다 우선
+
+**먼저 읽을 것: `docs/claude-handoff.md`** (지금 브랜치 상태 · 다음 할 일 · 검증 루틴).
+
+대표와 일하는 법
+- 대표는 김민규(규케터) — 비전공자. 보고는 **반말 · 짧게 · 결론 먼저**, 기술 용어는 비유로 푼다. 질문엔 판단 기준부터 말하고 답한다. 좋은 척하지 말고 문제는 먼저 말한다.
+- 시키면 바로 한다. 되돌리기 어렵거나 실사용자에게 나가는 것만 먼저 묻는다.
+
+절대 규칙
+- **운영 반영은 대표 OK 후에만**: `firebase deploy`(함수 · 규칙 · 본 사이트 hosting), `eas update` production · `eas build` · `eas submit`, `git push … main`. (`.claude/settings.json` 이 이 명령들은 항상 묻게 해 둠.) 미리보기 채널 · `claude/*` 브랜치 push 는 괜찮다.
+- 브랜드 = "데이터 기반 정직함" — 확인할 수 없는 숫자 · 과장 · 인과 주장 금지. 화면 글자는 전부 한국어(브랜드명 · AI 코치 WARNING 예외). '분석 · 스캔' 금지 → '계산'(앱은 몸을 스캔하지 않는다).
+- 엔진은 두 벌(`src/utils` = `functions/src/engine`) — 고치면 `npm run engine:sync`. 서버는 입력으로 다시 계산하므로 엔진 변경은 **함수 배포 + OTA 를 같은 날** 내야 화면과 실제 프로젝트가 맞는다.
+- 엔진 · 카드 화면을 건드리면 검증 루틴(`docs/claude-handoff.md` 4절)을 돌리고 결과 숫자를 보고에 적는다. `npm run check:overnight:real` 의 건수가 늘면 회귀다.
+- 비밀번호 · 키 · 토큰은 입력하지 않는다(로그인은 대표가). 서비스 계정 키 · `.secret.local` 내용은 출력하지 않는다.
+- 작업 단위마다 커밋하고 `claude/*` 브랜치에 push 해 둔다(작업 환경이 날아간 적이 있다).
+
+색 메모: 아래 'B3 디자인'의 "레드 포인트"는 11/26 부터 **라벤더**다 — `palette.json` 의 `red*` 토큰 값만 라벤더(#C9C9F0 · 라이트 #4B4BA8)로 바꿨고 토큰 이름은 그대로다. 규칙(한 화면에 포인트 하나)은 같다.
+
+
 Expo SDK 58 · React Native 0.88 · expo-router · TypeScript(strict) · Zustand · Firebase
 
 ## 검증

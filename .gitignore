@@ -75,3 +75,6 @@ scripts/avatar-review/out/
 
 # 비밀 파일 (Bitwarden: npm run secrets:push / pull)
 /.secrets/
+
+# Claude Code 개인 설정(커밋 금지)
+.claude/settings.local.json
