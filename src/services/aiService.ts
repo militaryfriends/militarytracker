@@ -26,13 +26,20 @@ const MEAL_SPLIT = [
  * 연결 실패 때의 예시 식단 — 끼니별 숫자는 내 하루 목표(엔진 값)를 나눈 것(10/31 피드백 "숫자는 한 곳에서만":
  * 예전엔 목표와 상관없이 늘 1,950kcal 였다). 메뉴는 예시라 양은 목표에 맞춰 조절하라고 쓴다.
  */
-export function fallbackDiet(kcal?: number, protein?: number): DietPlan {
+export function fallbackDiet(kcal?: number, protein?: number, why: 'offline' | 'noConsent' = 'offline'): DietPlan {
+  // 왜 예시 메뉴인지 사실대로 — AI 동의를 안 한 사람에게도 '연결에 실패해'라고 나왔다(11/27 화면 점검)
+  const lead = why === 'noConsent'
+    ? 'AI 데이터 전송에 동의하지 않아 기본 예시 메뉴를 보여 드려요.'
+    : '연결에 실패해 예시 메뉴를 보여 드려요.';
+  const tail = why === 'noConsent'
+    ? '내 몸 › 설정에서 동의하면 조건에 맞게 새로 구성해요.'
+    : '다시 시도하면 조건에 맞게 새로 구성합니다.';
   return {
     meals: MEAL_SPLIT.map(({ t, r, m }) => ({
       t, m,
       k: kcal && protein ? `약 ${Math.round((kcal * r) / 10) * 10}kcal · 단백질 ${Math.round(protein * r)}g` : '',
     })),
-    tip: '연결에 실패해 예시 메뉴를 보여 드려요. 끼니별 숫자는 내 하루 목표를 나눈 값이라, 양을 그만큼 맞춰 드세요. 다시 시도하면 조건에 맞게 새로 구성합니다.',
+    tip: `${lead} 끼니별 숫자는 내 하루 목표를 나눈 값이라, 양을 그만큼 맞춰 드세요. ${tail}`,
     src: 'LOCAL',
   };
 }
@@ -199,7 +206,7 @@ export async function generateDiet(
   // 실패 때 보여 줄 예시도 같은 하루 목표로(프로젝트면 호출 측 stats 가 프로젝트 단계 값)
   const target = stats ?? st;
   if (!projectId && !st) return FALLBACK_DIET;
-  if (!(await askAiConsent())) return fallbackDiet(target?.kcal, target?.protein);
+  if (!(await askAiConsent())) return fallbackDiet(target?.kcal, target?.protein, 'noConsent');
   try {
     const call = httpsCallable(functions, 'aiDiet', { timeout: CALL_TIMEOUT_MS });
     const res = await call(

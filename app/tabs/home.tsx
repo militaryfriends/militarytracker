@@ -77,7 +77,10 @@ export default function HomeScreen() {
   const lastLog = logs[0];
   const comment = lastLog && lastLog.totalSets > 0
     // '최근'이 언제인지 날짜를 붙인다 — 바로 위 이번 주 0세트와 어긋나 보이지 않게(검수 5)
-    ? `${Number(lastLog.date.slice(5, 7))}/${Number(lastLog.date.slice(8, 10))} ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 오늘은 ${day.name} 차례예요.`
+    // 오늘 이미 운동했으면 '오늘은 ○○ 차례'라고 또 시키지 않는다 — 방금 끝냈는데 다음 날 루틴을 오늘 하라고 읽혔다(11/27 화면 점검)
+    ? lastLog.date === todayStr
+      ? `오늘 ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 다음 운동은 ${day.name}이에요.`
+      : `${Number(lastLog.date.slice(5, 7))}/${Number(lastLog.date.slice(8, 10))} ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 오늘은 ${day.name} 차례예요.`
     : (() => {
       const first = day.ids.map((id) => exById(id)).find(Boolean);
       const rx = first ? prescription(first, (profile?.level ?? 2) as 1 | 2 | 3) : null;
@@ -91,6 +94,7 @@ export default function HomeScreen() {
   const daySets = day.ids.reduce((a, id) => { const e = exById(id); return a + (e ? prescription(e, lv).sets : 0); }, 0);
   const dayMin = Math.max(10, Math.round((daySets * 2.4) / 5) * 5);
   const workoutDone = todaySets > 0;
+  const doneName = logs.find((l) => l.date === todayStr && l.totalSets > 0)?.dayName;
   const weekAgo = localDate(new Date(Date.now() - 6 * 86_400_000));
   const lastW = weights.reduce<(typeof weights)[number] | null>((a, w) => (!a || w.date > a.date ? w : a), null);
   const weighed = !!lastW && lastW.date >= weekAgo;
@@ -126,7 +130,8 @@ export default function HomeScreen() {
               <ExerciseMedia exId={day.ids[0]} rounded={13} style={s.mainThumb} dim={0.2} />
             </PressableScale>
             <View style={s.mainTxt}>
-              <Text style={s.mainName} numberOfLines={1}>{day.name}</Text>
+              {/* 끝낸 날은 '오늘 한 운동'을 보여 준다 — 예전엔 다음 날 루틴 이름 아래에 '오늘 3세트 완료'가 붙어 무엇을 끝냈는지 헷갈렸다 */}
+              <Text style={s.mainName} numberOfLines={1}>{workoutDone && doneName ? doneName : day.name}</Text>
               <Text style={s.mainSub} numberOfLines={1}>
                 {workoutDone ? `오늘 ${todaySets}세트 완료` : `${day.ids.length}종목 ${daySets}세트 · 약 ${dayMin}분`}
               </Text>
@@ -134,13 +139,13 @@ export default function HomeScreen() {
             <PressableScale
               style={[s.go, workoutDone && s.goDone]}
               onPress={() => startSession(dayIdx)}
-              accessibilityLabel={`${day.name} 운동 ${workoutDone ? '한 번 더' : '시작'}`}
+              accessibilityLabel={workoutDone ? `다음 운동 ${day.name} 미리 하기` : `${day.name} 운동 시작`}
             >
               {workoutDone ? null : <Ionicons name="play" size={15} color={colors.onRed} />}
-              <Text style={[s.goTxt, workoutDone && s.goDoneTxt]}>{workoutDone ? '한 번 더' : '시작'}</Text>
+              <Text style={[s.goTxt, workoutDone && s.goDoneTxt]}>{workoutDone ? '다음 운동' : '시작'}</Text>
             </PressableScale>
           </View>
-          <Text style={s.focus} numberOfLines={1}>{dayIdx + 1}일차 / {plan.days.length}일 · {day.focus}</Text>
+          <Text style={s.focus} numberOfLines={1}>{workoutDone ? `다음 · ${day.name} · ` : ''}{dayIdx + 1}일차 / {plan.days.length}일 · {day.focus}</Text>
 
           <TodayRow done={false} title="오늘 식단" onPress={() => router.push('/tabs/diet')}
             sub={stats ? `하루 ${stats.kcal.toLocaleString()}kcal · 단백질 ${stats.protein}g` : '끼니별 식단 보기'} />

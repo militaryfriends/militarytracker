@@ -242,10 +242,16 @@ export default function SessionPlayer() {
     const st = cur.sets[si];
     if (!st.done) {
       const ref = last?.detail[si];
+      // 지난 기록이 없는 종목(처음 하는 종목)은 방금 끝낸 앞 세트 값을 이어받는다 — 세트마다 같은 숫자를 다시 치지 않게(11/27 화면 점검)
+      const prev = si > 0 && cur.sets[si - 1].done ? cur.sets[si - 1] : null;
       let w = st.w.trim();
       let r = st.r.trim();
       if (!w && ref && ref.w > 0) { w = String(ref.w); setVal(si, 'w', w); }
       if (!r && ref && ref.r > 0) { r = String(ref.r); setVal(si, 'r', r); }
+      if (!w && !r && prev) {
+        if (prev.w.trim()) { w = prev.w.trim(); setVal(si, 'w', w); }
+        if (prev.r.trim()) { r = prev.r.trim(); setVal(si, 'r', r); }
+      }
       if (!w && !r) {
         haptic.error();
         showAlert('세트 입력', '무게 또는 횟수를 입력한 뒤 완료할 수 있습니다.');
@@ -304,6 +310,16 @@ export default function SessionPlayer() {
     });
   }
 
+  // 맨 위 '완료'는 손이 쉽게 닿는 자리다 — 세트가 남았으면 한 번 묻는다(15세트 중 3세트만 하고 눌러도 바로 저장 · 종료됐다, 11/27 화면 점검)
+  function askFinish() {
+    const left = (session?.data ?? []).reduce((n, x) => n + x.sets.filter((t) => !t.done).length, 0);
+    if (left === 0) { void handleFinish(); return; }
+    showAlert('여기까지 하고 끝낼까요?', `아직 ${left}세트가 남았어요. 완료한 세트는 저장돼요.`, [
+      { text: '계속하기', style: 'cancel' },
+      { text: '저장하고 끝내기', onPress: () => { void handleFinish(); } },
+    ]);
+  }
+
   function handleClose() {
     if (!anyRecorded) {
       showAlert('운동 종료', '기록된 세트가 없습니다. 저장하지 않고 닫을까요?', [
@@ -341,7 +357,7 @@ export default function SessionPlayer() {
         {/* 마지막 종목이 아니어도 언제든 끝낼 수 있게 — 예전엔 ✕ 가 유일한 완료 경로였다 */}
         <PressableScale
           style={s.finishBtn}
-          onPress={handleFinish}
+          onPress={askFinish}
           disabled={!anyRecorded}
           hitSlop={8}
           accessibilityRole="button"
@@ -478,6 +494,8 @@ export default function SessionPlayer() {
           <Text style={s.sheetTitle}>세트 기록 · 체크를 길게 눌러 삭제</Text>
           {cur.sets.map((st, si) => {
             const ref = last?.detail[si];
+            // 지난 기록이 없으면 방금 끝낸 앞 세트 값을 흐리게 보여 준다(✓ 만 누르면 그 값으로 완료)
+            const carry = !ref && !st.done && si > 0 && cur.sets[si - 1].done ? cur.sets[si - 1] : null;
             // 지금 할 세트(아직 안 한 첫 줄) 하나만 빨강 — 끝낸 줄은 흰 체크
             const now = si === cur.sets.findIndex((x) => !x.done);
             const isLastRow = si === cur.sets.length - 1;
@@ -487,7 +505,7 @@ export default function SessionPlayer() {
                 <TextInput
                   ref={(r) => { inputRefs.current[`${si}-w`] = r; }}
                   style={[s.setInput, st.done && s.setInputDone]}
-                  placeholder={ref && ref.w > 0 ? String(ref.w) : 'kg'}
+                  placeholder={ref && ref.w > 0 ? String(ref.w) : carry?.w.trim() ? carry.w.trim() : 'kg'}
                   placeholderTextColor={colors.placeholder}
                   keyboardType="decimal-pad"
                   value={st.w}
@@ -502,7 +520,7 @@ export default function SessionPlayer() {
                 <TextInput
                   ref={(r) => { inputRefs.current[`${si}-r`] = r; }}
                   style={[s.setInput, st.done && s.setInputDone]}
-                  placeholder={ref ? String(ref.r) : '회'}
+                  placeholder={ref ? String(ref.r) : carry?.r.trim() ? carry.r.trim() : '회'}
                   placeholderTextColor={colors.placeholder}
                   keyboardType="numeric"
                   value={st.r}

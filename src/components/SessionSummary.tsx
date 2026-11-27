@@ -7,8 +7,11 @@ import { colors, themed, useThemeMode } from '../theme';
 import { CountUpText, DURATION, EASE, FONT, PressableScale, celebrate } from '../ui';
 import { useAppStore } from '../stores/appStore';
 import { exForLog, PART_LABEL } from '../data/exercises';
-import { fmtDuration, fmtVolume, fmtSetDetail } from '../utils/stats';
+import { fmtVolume, fmtSetDetail } from '../utils/stats';
 import { useScreenSize } from '../ui/screenSize';
+
+/** 큰 숫자 칸용 — '35분 12초'는 칸 폭을 넘어 두 줄로 꺾인다. 1분 넘으면 분만 */
+const fmtStatTime = (sec: number): string => (sec >= 60 ? `${Math.round(sec / 60)}분` : `${sec}초`);
 
 /** 운동 완료 직후 오버레이 — 그날의 결과와 기록 갱신을 보여준다 */
 export default function SessionSummary() {
@@ -64,12 +67,12 @@ function SummaryBody() {
         <View style={s.statRow}>
           <Stat value={summary.totalSets} format={String} unit="세트" />
           <Stat value={summary.totalVolume} format={fmtVolume} unit="총 볼륨" />
-          <Stat value={summary.durationSec} format={fmtDuration} unit="소요 시간" />
+          <Stat value={summary.durationSec} format={fmtStatTime} unit="소요 시간" />
         </View>
 
         {summary.prIds.length > 0 && (
           <View style={s.prBox}>
-            <Text style={s.prTitle}>개인 기록 갱신 {summary.prIds.length}건</Text>
+            <Text style={s.prTitle}>개인 최고 기록 {summary.prIds.length}건</Text>
             {summary.prIds.map((id) => {
               const ex = summary.exercises.find((x) => x.id === id);
               return (
@@ -91,11 +94,11 @@ function SummaryBody() {
               <View style={{ flex: 1 }}>
                 <Text style={s.exName}>
                   {e?.n ?? x.id}
-                  {isPr ? <Text style={s.prTag}>  PR</Text> : null}
+                  {isPr ? <Text style={s.prTag}>  최고</Text> : null}
                 </Text>
                 <Text style={s.exMeta}>
                   {e ? PART_LABEL[e.part] : ''} · {x.sets}세트
-                  {x.volume > 0 ? ` · ${fmtVolume(x.volume)}` : ''}
+                  {x.volume > 0 ? ` · 볼륨 ${fmtVolume(x.volume)}` : ''}
                 </Text>
               </View>
               <Text style={s.exSets} numberOfLines={2}>
@@ -170,12 +173,12 @@ const s = themed(() => StyleSheet.create({
   statUnit: { fontSize: 10, color: colors.muted, marginTop: 5 },
 
   prBox: {
-    backgroundColor: colors.goodBg, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: colors.goodLine, marginTop: 12,
+    backgroundColor: colors.panel2, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: colors.ink, marginTop: 12,
   },
-  prTitle: { fontSize: 12.5, fontWeight: '800', color: colors.good, marginBottom: 8, letterSpacing: 0.3 },
+  prTitle: { fontSize: 12.5, fontWeight: '800', color: colors.ink, marginBottom: 8, letterSpacing: 0.3 },
   prLine: { fontSize: 14, color: colors.ink, lineHeight: 23 },
-  prVal: { color: colors.good, fontWeight: '700' },
+  prVal: { color: colors.ink, fontWeight: '800' },
 
   section: {
     fontSize: 10, fontWeight: '800', color: colors.muted,
@@ -187,7 +190,7 @@ const s = themed(() => StyleSheet.create({
     borderWidth: 1, borderColor: colors.line, marginBottom: 8,
   },
   exName: { fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  prTag: { fontSize: 10, fontWeight: '800', color: colors.good },
+  prTag: { fontSize: 10, fontWeight: '800', color: colors.mid },
   exMeta: { fontSize: 11, color: colors.muted, marginTop: 3 },
   exSets: { fontSize: 11.5, color: colors.mid, textAlign: 'right', maxWidth: 130 },
   skipped: { fontSize: 12, color: colors.muted, marginTop: 6, textAlign: 'center' },

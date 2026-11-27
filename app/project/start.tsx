@@ -38,6 +38,9 @@ const MIN_MS = 700;
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** 끝난 단계는 끝난 말로 — 체크가 붙었는데도 '…하는 중입니다'로 남아 있었다(11/27 화면 점검) */
+const doneOf = (t: string) => t.replace('확인하는 중입니다', '확인했어요').replace('확정하는 중입니다', '확정했어요').replace('완성하는 중입니다', '완성했어요').replace('저장하는 중입니다', '저장했어요');
+
 export default function ProjectStartScreen() {
   useThemeMode();
   const router = useRouter();
@@ -179,7 +182,7 @@ export default function ProjectStartScreen() {
                     : <View style={s.ring} />}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.stepTxt, state === 'now' && s.stepNow, state === 'wait' && s.stepWait]}>{t}</Text>
+                  <Text style={[s.stepTxt, state === 'now' && s.stepNow, state === 'wait' && s.stepWait]}>{state === 'done' ? doneOf(t) : t}</Text>
                   {state === 'done' && lines[i] ? <Text style={s.sub}>{lines[i]}</Text> : null}
                 </View>
               </View>
