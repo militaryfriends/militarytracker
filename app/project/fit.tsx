@@ -88,7 +88,16 @@ export default function FitScreen() {
   const profile = useAppStore((st) => st.profile);
   const setProfile = useAppStore((st) => st.setProfile);
   const now = useNowBody();
-  const [sh, setSh] = useState<BodyShape>(profile?.bodyShape ?? {});
+  const [sh, setShRaw] = useState<BodyShape>(profile?.bodyShape ?? {});
+  // 화면을 새로 열면 저장소(프로필)가 한 박자 늦게 올라온다 — 그때 고른 칸이 '보통'으로 보이고 저장 버튼이 켜지던 문제(11/27).
+  // 손대기 전이면 프로필이 올라온 값을 따라간다
+  const touched = useRef(false);
+  const setSh: typeof setShRaw = (v) => { touched.current = true; setShRaw(v); };
+  const savedKey = JSON.stringify(profile?.bodyShape ?? {});
+  useEffect(() => {
+    if (!touched.current) setShRaw(profile?.bodyShape ?? {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey]);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<ViewKey>('q');
   // 뷰어와 같은 각도 묶음에 들어가 각도를 보낸다(손으로 돌리면 뷰어가 알아서 돈다 — 그때 버튼 표시는 그대로 둔다)
