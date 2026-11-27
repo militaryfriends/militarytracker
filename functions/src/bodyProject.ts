@@ -112,7 +112,7 @@ export function sanitizeInput(raw: unknown): AnalysisInput {
   const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const sex = d.sex === 'male' || d.sex === 'female' ? d.sex : null;
   if (!sex) throw bad('sex');
-  const age = num(d.age, 10, 100);
+  const age = num(d.age, 15, 100); // 앱과 같은 범위(15세 이상, src/utils/body.ts PROFILE_RANGE)
   if (age === null) throw bad('age');
   const heightCm = num(d.heightCm, 100, 250);
   if (heightCm === null) throw bad('heightCm');

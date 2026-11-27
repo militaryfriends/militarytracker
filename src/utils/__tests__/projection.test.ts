@@ -72,9 +72,11 @@ test('B 남 22·172·60·허리72·입문 → 린 머슬 (18개월 · 목표의 
 
 test('C 여 27·163·62·허리80·입문 → 탄탄 라인', () => {
   run({ sex: 'female', age: 27, heightCm: 163, weightKg: 62, waistCm: 80 }, 1, 3, 'f_toned', {
-    bf: 35.2, nffmi: 16.15, cell: 'F5M3', T: 7,
-    p1: { months: 6, w: 54.3, bf: 24.6, cell: 'F3M3' },
-    p2: { months: 9, w: 52.7, bf: 22.0, cell: 'F2M3', reached: true },
+    // 11/27 여성 근육 칸 보정(키 기준 1.65m = 칸 +0.9) 이후 값 — 참조 구현(engine.py)과 다르다. 보통 체격 여성이 M3 → M2 로 내려와
+    // 탄탄 라인(F2M3)까지 근육을 실제로 채워야 해서 7 → 12개월
+    bf: 35.2, nffmi: 16.15, cell: 'F5M2', T: 12,
+    p1: { months: 6, w: 54.3, bf: 24.3, cell: 'F2M2' },
+    p2: { months: 12, w: 55.3, bf: 22.5, cell: 'F2M3', reached: true },
   });
 });
 
@@ -177,7 +179,7 @@ test('analyzeBody — 다른 성별 카드나 추천받기는 auto 목표', () =
     { mode: 'pick', archetypeId: 'm_lean' },
   );
   assert.equal(a.goal.mode, 'auto');
-  assert.equal(a.goal.cell, 'F4M4');
+  assert.equal(a.goal.cell, 'F4M3'); // 11/27 여성 근육 칸 보정 전에는 F4M4
 });
 
 // ─── 체크인 ───────────────────────────────────────────────────────────────

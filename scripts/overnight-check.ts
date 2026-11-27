@@ -26,9 +26,11 @@ function bad(kind: string, detail: string, input: AnalysisInput | string) {
 const fin = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
 
 const SEXES = ['male', 'female'] as const;
-const AGES = [14, 18, 25, 40, 60, 75];
+const AGES = [15, 18, 25, 40, 60, 75];
 const HEIGHTS = { male: [155, 165, 172, 180, 190, 200], female: [145, 152, 160, 168, 176, 185] };
-const BMIS = [14, 16, 18.5, 21, 23, 25, 27.5, 30, 33, 37, 42, 48];
+const BMIS_ALL = [14, 16, 18.5, 21, 23, 25, 27.5, 30, 33, 37, 42, 48];
+// OVERNIGHT_REAL=1 이면 저체중 극단(BMI 18.5 미만)을 뺀 현실 범위만 센다
+const BMIS = process.env.OVERNIGHT_REAL ? BMIS_ALL.filter((b) => b >= 18.5) : BMIS_ALL;
 const WAIST_R = [null, 0.38, 0.42, 0.46, 0.5, 0.55, 0.62, 0.72, 0.84];
 const LEVELS = [1, 2, 3] as const;
 const DAYS = [2, 3, 4, 5, 6];
@@ -82,7 +84,14 @@ for (const sex of SEXES) {
       const lm = cards.find((p) => p.strategy === 'leanmass'); const bk = cards.find((p) => p.strategy === 'bulk');
       if (lm && bk && lm.nutrition.kcal >= bk.nutrition.kcal) bad('린매스업 칼로리 ≥ 벌크업', `${lm.nutrition.kcal} vs ${bk.nutrition.kcal}`, input);
       const cf = cards.find((p) => p.strategy === 'cut_fast'); const ct = cards.find((p) => p.strategy === 'cut');
-      if (cf && ct && cf.nutrition.kcal >= ct.nutrition.kcal) bad('최대 감량 칼로리 ≥ 근육 유지 감량', `${cf.nutrition.kcal} vs ${ct.nutrition.kcal}`, input);
+      if (cf && ct && cf.fit.ok && cf.nutrition.kcal >= ct.nutrition.kcal) bad('최대 감량(맞는 카드) 칼로리 ≥ 근육 유지 감량', `${cf.nutrition.kcal} vs ${ct.nutrition.kcal}`, input);
+      // 칼로리와 몸이 맞나 — 감량 카드 첫 달 체중 감소가 하루 적자(TDEE − 칼로리)로 낼 수 있는 양보다 많으면 안 된다
+      for (const p of cards.filter((x) => x.cutMonths > 0)) {
+        const loss = -(p.track[1].weightKg - p.track[0].weightKg);
+        const deficit = p.nutrition.tdee - p.nutrition.kcal;
+        const implied = (loss * 7700) / 30.44;
+        if (loss > 0.05 && implied > Math.max(0, deficit) * 1.25 + 60) bad('감량 속도가 칼로리 적자보다 빠름', `${p.strategy} 첫 달 −${loss.toFixed(1)}kg ≈ ${Math.round(implied)}kcal/일 > 적자 ${deficit}`, input);
+      }
       const minK = sex === 'male' ? 1500 : 1200;
       for (const p of cards) if (p.nutrition.kcal < minK) bad(`하루 칼로리 ${minK} 미만`, `${p.strategy} ${p.nutrition.kcal}`, input);
     }
@@ -150,7 +159,7 @@ for (const sex of SEXES) {
       if (tp.capped && !tp.capReason) bad('내 목표 깎았는데 이유 없음', JSON.stringify(ask), input);
       // 날짜만 정한 감량은 '최대 감량' 카드 목표(F2 가운데)보다 더 내려가지 않는다
       if (tp.dir === 'cut' && !('kg' in ask)) {
-        const rc = cards.find((x) => x.strategy === 'cut_fast');
+        const rc = cards.find((x) => x.strategy === tp.strategy);
         if (rc && cd.end.bfPct < Math.min(rc.end.bfPct, c.bfPct) - 0.6) bad('날짜 목표 감량이 최대 감량 카드보다 더 내려감', `${cd.end.bfPct.toFixed(1)} < ${rc.end.bfPct.toFixed(1)}`, input);
       }
       if (cd.name.length > 14) bad('내 목표 이름 14자 초과', cd.name, input);

@@ -47,6 +47,8 @@ export default function ProfileEditScreen() {
     );
   }
 
+  // Firestore 는 undefined 값을 못 받는다 — 키 자체를 뺀다
+  const withoutShape = ({ bodyShape: _drop, ...rest }: UserProfile): UserProfile => rest;
   const update = <K extends keyof UserProfile>(k: K, v: UserProfile[K]) =>
     setP((prev) => (prev ? { ...prev, [k]: v } : prev));
 
@@ -132,8 +134,9 @@ export default function ProfileEditScreen() {
         <Body>
           <SectionLabel>신체 정보</SectionLabel>
           <View style={s.grid2}>
-            <Opt label="남성" on={p.sex === 'male'} onPress={() => update('sex', 'male')} />
-            <Opt label="여성" on={p.sex === 'female'} onPress={() => update('sex', 'female')} />
+            {/* 성별을 바꾸면 맞춘 체형(어깨 · 골반 …)은 버린다 — 다른 성별 몸에 얹으면 어색해진다 */}
+            <Opt label="남성" on={p.sex === 'male'} onPress={() => setP((prev) => (prev && prev.sex !== 'male' ? { ...withoutShape(prev), sex: 'male' } : prev))} />
+            <Opt label="여성" on={p.sex === 'female'} onPress={() => setP((prev) => (prev && prev.sex !== 'female' ? { ...withoutShape(prev), sex: 'female' } : prev))} />
           </View>
 
           <View style={s.grid3}>

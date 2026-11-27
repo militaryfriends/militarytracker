@@ -2,7 +2,7 @@
  * 내 변화 프로젝트 화면의 숫자 표기 — 반올림은 표시할 때만(엔진은 반올림하지 않은 값을 들고 있다).
  * 반올림 규칙은 엔진의 roundTo(검산표와 같은 "딱 절반이면 짝수 쪽").
  */
-import { roundTo } from '../../utils/bodyComp';
+import { parseCell, roundTo } from '../../utils/bodyComp';
 import { legacyGoal, legacyGoalOf, muscleLabel, type Nutrition, type Phase, type Strategy } from '../../utils/projection';
 import type { BodyAnalysis, StoredProject, UserProfile } from '../../types';
 import type { AnalysisInput } from '../../utils/bodyAnalysis';
@@ -38,6 +38,13 @@ export const practiceLine = (n: Nutrition, days: number): string =>
   `주 ${days}회 · 하루 ${kcal(n.kcal)} · 단백질 ${n.proteinG}g`;
 
 export const muscleOf = (cell: string): string => muscleLabel(cell);
+/**
+ * 근육량을 '양'으로 — 몸 모양 말('근육질')은 살이 많은 몸에 붙으면 거짓말이 된다.
+ * 비만한 몸은 체중을 받치느라 제지방이 실제로 많다 → '많음'은 사실, '근육질'은 아니다(11/27).
+ * 기준: M2 ≈ 운동 안 하는 사람 평균.
+ */
+export const MUSCLE_AMOUNT = ['적은 편', '보통', '많은 편', '많음', '아주 많음'] as const;
+export const muscleAmountOf = (cell: string): string => MUSCLE_AMOUNT[Math.min(4, Math.max(0, parseCell(cell).m - 1))];
 
 /**
  * 계산 → 저장할 프로필. 화면 밖 값(알레르기 · 신경 쓰이는 부위)은 base 에서.
@@ -63,7 +70,8 @@ export function profileFromAnalysis(
     // 온보딩 10단계에서 고른 부위 — 빠뜨리면 루틴 보조 종목이 사라진다
     ...(base?.focus?.length ? { focus: base.focus } : {}),
     ...(strategy ? { strategy } : {}),
-    // 보고 맞춘 체형은 다시 계산해도 남긴다(그림 전용)
-    ...(base?.bodyShape ? { bodyShape: base.bodyShape } : {}),
+    // 보고 맞춘 체형은 다시 계산해도 남긴다(그림 전용). 단 성별이 바뀌면 버린다 — 남자 몸에 맞춘 어깨 · 상체 값이
+    // 여자 몸에 그대로 얹혀 어깨만 넓은 몸이 나왔다(11/27 대표 "여자 아바타가 안 예쁘다")
+    ...(base?.bodyShape && base.sex === i.sex ? { bodyShape: base.bodyShape } : {}),
   };
 }

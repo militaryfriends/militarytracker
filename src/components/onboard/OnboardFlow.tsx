@@ -162,7 +162,7 @@ export function OnboardFlow({ mode }: { mode: FlowMode }) {
 
         <ScrollView style={o.scroll} contentContainerStyle={o.scrollInner} keyboardShouldPersistTaps="handled">
           {key === 'sex' && <StepSex p={d.profile} update={d.setProfile} num={num} total={total} />}
-          {key === 'age' && numStep('age', '나이를 알려주세요', '세', '25', false)}
+          {key === 'age' && numStep('age', '나이를 알려주세요', '세', '25', false, '15세 이상부터 계산할 수 있어요.')}
           {key === 'height' && numStep('height', '키를 알려주세요', 'cm', '175', true)}
           {key === 'weight' && numStep('weight', '지금 체중을\n알려주세요', 'kg', '72', true, '아침 공복 체중이면 가장 정확해요.')}
           {key === 'body' && (

@@ -15,7 +15,7 @@ import { useOnboardDraft } from '../../src/stores/onboardDraft';
 import { AvatarView } from '../../src/components/body/AvatarView';
 import { has3D } from '../../src/components/body/avatar3d/Avatar3D';
 import { AccuracyMeter } from '../../src/components/onboard/StepBody';
-import { kg, muscleOf, pct0 } from '../../src/components/body/format';
+import { kg, muscleAmountOf, pct0 } from '../../src/components/body/format';
 import { EmptyState } from '../../src/components/ui';
 import { analyzeBody } from '../../src/utils/bodyAnalysis';
 
@@ -58,7 +58,7 @@ export default function CompareScreen() {
     ['체중', `${kg(a.input.weightKg)}kg`],
     [fromInbody ? '체지방률 (인바디)' : '체지방률 (추정)', `${pct0(a.comp.bfPct)}%`],
     ['제지방량', `${kg(leanKg)}kg`],
-    ['근육', muscleOf(a.cell)],
+    ['근육량', muscleAmountOf(a.cell)],
   ];
 
   return (
