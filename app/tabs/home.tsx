@@ -79,7 +79,7 @@ export default function HomeScreen() {
     // '최근'이 언제인지 날짜를 붙인다 — 바로 위 이번 주 0세트와 어긋나 보이지 않게(검수 5)
     // 오늘 이미 운동했으면 '오늘은 ○○ 차례'라고 또 시키지 않는다 — 방금 끝냈는데 다음 날 루틴을 오늘 하라고 읽혔다(11/27 화면 점검)
     ? lastLog.date === todayStr
-      ? `오늘 ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 다음 운동은 ${day.name}이에요.`
+      ? `오늘 ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 다음은 ${day.name} 차례예요.`
       : `${Number(lastLog.date.slice(5, 7))}/${Number(lastLog.date.slice(8, 10))} ${lastLog.dayName}에서 ${lastLog.totalSets}세트를 했어요. 오늘은 ${day.name} 차례예요.`
     : (() => {
       const first = day.ids.map((id) => exById(id)).find(Boolean);
