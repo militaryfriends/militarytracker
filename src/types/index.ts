@@ -127,6 +127,16 @@ export interface PlanDay {
   name: string;
   focus: string;
   ids: string[];
+  /** 붙인 부위 집중 루틴(루틴 둘러보기 › ○○데이에 붙이기) — ids 의 끝에 들어가 있고, 떼면 그 종목만 빠진다 */
+  addons?: PlanAddon[];
+}
+
+export interface PlanAddon {
+  /** 부위 집중 루틴 id (src/data/routines.ts) */
+  rid: string;
+  name: string;
+  /** 이 묶음이 실제로 더한 종목(원래 그날에 있던 종목은 빼고) */
+  ids: string[];
 }
 
 export interface Plan {

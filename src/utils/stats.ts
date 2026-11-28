@@ -45,15 +45,13 @@ export function currentStreakDays(logs: WorkoutLog[]): number {
 export function nextDayIdx(logs: WorkoutLog[], plan: Plan | null): number {
   if (!plan?.days.length) return 0;
   const len = plan.days.length;
-  const last = logs[0];
-  if (!last) return 0;
-
-  let idx = last.dayIdx;
-  if (idx < 0 || idx >= len) {
-    idx = plan.days.findIndex((d) => d.name === last.dayName);
+  // 플랜 요일에 이어지는 가장 최근 기록 — '지금 한 번만 하기'(dayIdx −1, 플랜에 없는 이름) 기록은 건너뛴다(11/28)
+  for (const last of logs) {
+    let idx = last.dayIdx;
+    if (idx < 0 || idx >= len) idx = plan.days.findIndex((d) => d.name === last.dayName);
+    if (idx >= 0) return (idx + 1) % len;
   }
-  if (idx < 0) return 0;
-  return (idx + 1) % len;
+  return 0;
 }
 
 // ─── 볼륨 집계 ─────────────────────────────────────────────────────────────

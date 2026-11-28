@@ -6,7 +6,10 @@ import { colors, themed, useThemeMode } from '../../../src/theme';
 import { showAlert } from '../../../src/utils/alert';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState, useSafeBack } from '../../../src/components/ui';
 import ExerciseMedia from '../../../src/components/ExerciseMedia';
-import { routineById, routineExCount } from '../../../src/data/routines';
+import { isFocus, routineById, routineExCount } from '../../../src/data/routines';
+import { FocusActions } from '../../../src/components/FocusActions';
+import { Segmented } from '../../../src/ui';
+import { PART_LABEL } from '../../../src/data/exercises';
 import { exByIds } from '../../../src/data/exercises';
 import { planFromRoutine } from '../../../src/utils/planner';
 import { savePlan } from '../../../src/services/authService';
@@ -22,6 +25,7 @@ export default function RoutineDetailScreen() {
   const { user } = useAuthStore();
   const { plan, setPlan } = useAppStore();
   const [applying, setApplying] = useState(false);
+  const [dayPick, setDayPick] = useState(0);
 
   const routine = routineById(String(routineId));
   const isOnboard = onboard === '1';
@@ -34,6 +38,16 @@ export default function RoutineDetailScreen() {
         <EmptyState text="루틴을 찾을 수 없습니다." />
       </Screen>
     );
+  }
+
+  /** 분할 루틴은 플랜 전체를 바꾼다 — 한 번 묻는다 */
+  function confirmApply() {
+    if (!routine) return;
+    if (!plan) { void apply(); return; }
+    showAlert('플랜을 바꿀까요?', `지금 플랜이 ${routine.name}(주 ${routine.daysPerWeek}일)으로 바뀌어요. 붙여 둔 부위 집중 묶음도 빠져요.`, [
+      { text: '취소', style: 'cancel' },
+      { text: '바꾸기', onPress: () => { void apply(); } },
+    ]);
   }
 
   async function apply() {
@@ -50,6 +64,41 @@ export default function RoutineDetailScreen() {
     } finally {
       setApplying(false);
     }
+  }
+
+  if (isFocus(routine)) {
+    const day = routine.days[Math.min(dayPick, routine.days.length - 1)];
+    const list = exByIds(day.exIds);
+    return (
+      <Screen>
+        <TopBar title={routine.name} onBack={() => router.back()} />
+        <Body>
+          <Text style={s.kicker}>부위 집중 · {routine.group}</Text>
+          <Text style={s.subtitle}>{routine.subtitle}</Text>
+          <Text style={s.desc}>{routine.desc}</Text>
+          {routine.days.length > 1 ? (
+            <View style={{ marginTop: 14 }}>
+              <Segmented<string> label="세션" options={routine.days.map((d, i) => ({ value: String(i), label: d.name }))}
+                value={String(dayPick)} onChange={(v) => setDayPick(Number(v))} />
+            </View>
+          ) : null}
+          <SectionLabel>{list.length}동작</SectionLabel>
+          {list.map((e, i) => (
+            <PressableScale key={e.id} scaleTo={PRESS_SCALE.card} style={s.exRow} onPress={() => router.push(`/exercise/${e.id}`)}
+              accessibilityRole="button" accessibilityLabel={`${i + 1}번째, ${e.n}`}>
+              <Text style={s.exNum}>{i + 1}</Text>
+              <ExerciseMedia exId={e.id} rounded={10} style={s.exThumb} dim={0.3} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.exName}>{e.n}</Text>
+                <Text style={s.exMeta}>{e.g.startsWith(PART_LABEL[e.part]) ? e.g : `${PART_LABEL[e.part]} · ${e.g}`}</Text>
+              </View>
+              <Text style={s.chev}>›</Text>
+            </PressableScale>
+          ))}
+          <FocusActions routine={routine} day={day} />
+        </Body>
+      </Screen>
+    );
   }
 
   return (
@@ -104,8 +153,8 @@ export default function RoutineDetailScreen() {
           <PrimaryBtn label="이 루틴으로 시작하기" onPress={() => router.replace('/tabs/home')} style={{ marginTop: 8 }} />
         ) : (
           <PrimaryBtn
-            label={isCurrent ? '현재 사용 중인 루틴' : '내 플랜으로 적용'}
-            onPress={apply}
+            label={isCurrent ? '현재 사용 중인 루틴' : '내 플랜으로 바꾸기'}
+            onPress={confirmApply}
             loading={applying}
             disabled={isCurrent}
             style={{ marginTop: 8 }}
@@ -128,6 +177,15 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 const s = themed(() => StyleSheet.create({
   subtitle: { fontSize: 13, color: colors.mid, marginTop: 4 },
+  kicker: { fontSize: 12, fontWeight: '700', color: colors.muted, marginTop: 4 },
+  exRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.panel, borderRadius: 14,
+    padding: 10, borderWidth: 1, borderColor: colors.line, marginBottom: 8,
+  },
+  exNum: { width: 18, textAlign: 'center', fontSize: 13, fontWeight: '800', color: colors.muted },
+  exThumb: { width: 52, height: 52 },
+  exName: { fontSize: 14, fontWeight: '700', color: colors.ink },
+  exMeta: { fontSize: 11.5, color: colors.muted, marginTop: 2 },
   desc: { fontSize: 13, color: colors.muted, lineHeight: 21, marginTop: 8 },
   statRow: { flexDirection: 'row', gap: 8, marginTop: 16, marginBottom: 4 },
   stat: {

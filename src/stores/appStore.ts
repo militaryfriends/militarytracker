@@ -87,6 +87,8 @@ interface AppState {
 
   /** 진행 중인 세션이 있으면 false 를 돌려준다(덮어쓰지 않는다). replace=true 면 덮어쓴다 */
   startSession: (dayIdx: number, replace?: boolean) => boolean;
+  /** 플랜 밖 운동 한 번(부위 집중 루틴 '지금 한 번만 하기') — 기록의 dayIdx 는 −1, 다음 차례 계산에서 건너뛴다 */
+  startCustom: (name: string, ids: readonly string[], replace?: boolean) => boolean;
   setVal: (si: number, field: 'w' | 'r', v: string) => void;
   toggleSet: (si: number) => void;
   addSet: () => void;
@@ -224,6 +226,24 @@ export const useAppStore = create<AppState>()(
           summary: null,
           session: {
             dayIdx, dayName: day.name, exIdx: 0, data,
+            startedAt: Date.now(), lastActiveAt: Date.now(), restEndsAt: null,
+          },
+        });
+        return true;
+      },
+
+      startCustom: (name, ids, replace = false) => {
+        const { session, profile } = get();
+        if (session && !replace) return false;
+        const lv = (profile?.level ?? 2) as 1 | 2 | 3;
+        const data: ExerciseSession[] = [...new Set(ids)]
+          .filter((id) => !!exById(id))
+          .map((id) => ({ id, sets: Array.from({ length: prescription(exById(id)!, lv).sets }, () => ({ w: '', r: '', done: false })) }));
+        if (!data.length) return false;
+        set({
+          summary: null,
+          session: {
+            dayIdx: -1, dayName: name.slice(0, 40), exIdx: 0, data,
             startedAt: Date.now(), lastActiveAt: Date.now(), restEndsAt: null,
           },
         });

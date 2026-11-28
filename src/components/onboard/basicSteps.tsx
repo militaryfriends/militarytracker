@@ -9,7 +9,7 @@ import { Text } from '../Text';
 import { colors, themed, useThemeMode } from '../../theme';
 import type { UserProfile } from '../../types';
 import { ProBadge } from '../ProLock';
-import { ROUTINES, routineExCount } from '../../data/routines';
+import { SPLIT_ROUTINES, routineExCount } from '../../data/routines';
 import { o } from './styles';
 import { PressableScale, PRESS_SCALE } from '../../ui';
 
@@ -134,7 +134,7 @@ export function StepRoutine({
   onReco: () => void;
 }) {
   useThemeMode();
-  const list = [...ROUTINES].sort((a, b) => {
+  const list = [...SPLIT_ROUTINES].sort((a, b) => {
     if (recommendedId) {
       if (a.id === recommendedId) return -1;
       if (b.id === recommendedId) return 1;

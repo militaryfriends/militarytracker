@@ -1,16 +1,36 @@
-import { View, StyleSheet } from 'react-native';
+/**
+ * 루틴 둘러보기 (2026-11-28 개편)
+ *  · 맨 위 검색: 부위 · 종목 · 루틴 이름(utils/routineSearch).
+ *  · 분할 루틴(메인): 일주일 플랜을 통째로 바꾸는 루틴 — 5분할 · 푸시풀레그 · 상하체 · 3분할 · 4분할 · 전신 · 홈트.
+ *  · 부위 집중: 운동하는 날 끝에 붙이거나 한 번만 하는 2~5동작 — 등 · 가슴 · 어깨 · 팔 · 하체 · 코어 · 홈트 · 조건 묶음으로 가로 줄.
+ */
+import { useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/Text';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, useSafeBack } from '../../src/components/ui';
-import { ROUTINES, recommendRoutine, routineExCount } from '../../src/data/routines';
+import { FOCUS_GROUPS, FOCUS_ROUTINES, ROUTINES, SPLIT_ROUTINES, recommendRoutine, routineExCount, type Routine } from '../../src/data/routines';
+import { searchRoutines } from '../../src/utils/routineSearch';
 import { useAppStore } from '../../src/stores/appStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { ProBadge } from '../../src/components/ProLock';
 import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
-/** 루틴마다 대표 종목 하나 — 첫날 첫 종목, 앞 루틴이 이미 쓴 종목이면 그다음(카드마다 다른 그림) */
+/** 루틴마다 대표 종목 하나 — 앞 루틴이 이미 쓴 종목이면 그다음(카드마다 다른 그림) */
+/** 분할 루틴 보여 주는 순서 — 많이 찾는 것부터(5분할 · 푸시풀레그 · 상하체 · 3분할 …) */
+const ORDER = ['bro5', 'ppl', 'upperlower', 'split3', 'split4', 'fullbody', 'ul2', 'ppl6', 'home3'];
+const SPLIT_ORDER = [...SPLIT_ROUTINES].sort((a, b) => {
+  const ia = ORDER.indexOf(a.id); const ib = ORDER.indexOf(b.id);
+  return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+});
+
+/** 이 루틴(여러 세션이면 그중 하나라도)이 플랜에 붙어 있는지 */
+const isAttached = (plan: { days: { addons?: { rid: string }[] }[] } | null, id: string) =>
+  !!plan?.days.some((d) => d.addons?.some((a) => a.rid === id || a.rid.startsWith(`${id}/`)));
+
 const coverOf: Map<string, string> = (() => {
   const used = new Set<string>();
   const m = new Map<string, string>();
@@ -27,6 +47,7 @@ export default function RoutineListScreen() {
   const router = useRouter();
   const goBack = useSafeBack();
   const { profile, plan } = useAppStore();
+  const [q, setQ] = useState('');
 
   // 추천은 구독 기능 — 구독 전에는 배지를 걸지 않는다
   const { can } = useEntitlement();
@@ -35,71 +56,195 @@ export default function RoutineListScreen() {
     ? recommendRoutine({ place: profile.env, days: profile.days, level: profile.level }).id
     : null;
 
+  const splits = useMemo(() => searchRoutines(SPLIT_ORDER, q, false), [q]);
+  const focus = useMemo(() => searchRoutines(FOCUS_ROUTINES, q), [q]);
+  const searching = q.trim().length > 0;
+
   return (
     <Screen>
       <TopBar title="루틴" onBack={goBack} />
       <Body>
-        <Text style={s.lead}>
-          분할 방식을 고르면 데이별 종목까지 바로 확인할 수 있습니다.
-        </Text>
+        <View style={s.search}>
+          <Ionicons name="search" size={17} color={colors.muted} />
+          <TextInput
+            value={q}
+            onChangeText={setQ}
+            placeholder="부위 · 종목으로 찾기 (예: 삼두, 덤벨)"
+            placeholderTextColor={colors.muted}
+            style={s.searchInput}
+            returnKeyType="search"
+            accessibilityLabel="루틴 검색"
+          />
+          {searching ? (
+            <PressableScale onPress={() => setQ('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="검색어 지우기">
+              <Ionicons name="close-circle" size={18} color={colors.muted} />
+            </PressableScale>
+          ) : null}
+        </View>
 
-        {!canReco && (
+        {!canReco && !searching && (
           <PressableScale style={s.recoLock} onPress={() => router.push('/subscribe?f=routine_reco')}>
             <Text style={s.recoLockTxt}>내 조건에 맞는 루틴 추천받기</Text>
             <ProBadge />
           </PressableScale>
         )}
 
-        <SectionLabel>전체 루틴</SectionLabel>
-        {ROUTINES.map((r) => {
-          const cover = coverOf.get(r.id);
-          const isCurrent = plan?.routineId === r.id;
-          return (
-            <PressableScale scaleTo={PRESS_SCALE.card}
-              key={r.id}
-              style={[s.card, isCurrent && s.cardCurrent]}
-              onPress={() => router.push(`/routine/${r.id}`)}
-            >
-              <View style={s.head}>
-                {/* 대표 이미지 — 그 루틴 첫날 첫 종목의 자세 클립 한 프레임(검수 3-2). 앞 카드와 겹치면 다음 종목 */}
-                {cover ? <ExerciseMedia exId={cover} rounded={14} style={s.cover} dim={0.15} /> : (
-                  <View style={s.shortBox}><Text style={s.short}>{r.short}</Text></View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <View style={s.nameRow}>
-                    <Text style={s.name}>{r.name}</Text>
-                    {isCurrent && <View style={s.badge}><Text style={s.badgeTxt}>사용중</Text></View>}
-                    {!isCurrent && r.id === recommendedId && (
-                      <View style={s.badgeGhost}><Text style={s.badgeGhostTxt}>추천</Text></View>
-                    )}
-                  </View>
-                  <Text style={s.sub}>{r.subtitle}</Text>
-                </View>
-                <Text style={s.chev}>›</Text>
-              </View>
+        {searching && !splits.length && !focus.length ? (
+          <Text style={s.empty}>“{q.trim()}”에 맞는 루틴이 없어요. 부위나 종목 이름으로 찾아 보세요.</Text>
+        ) : null}
 
-              <Text style={s.desc} numberOfLines={2}>{r.desc}</Text>
-
-              <View style={s.tagRow}>
-                {r.tags.map((t) => (
-                  <View key={t} style={s.tag}><Text style={s.tagTxt}>{t}</Text></View>
+        {searching ? <>
+        {focus.length > 0 && (
+          <>
+            <SectionLabel>부위 집중 · 운동하는 날에 붙여요</SectionLabel>
+            {searching ? (
+              <View style={s.grid}>
+                {focus.map((r) => (
+                  <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} grid onPress={() => router.push(`/routine/${r.id}`)} />
                 ))}
-                <View style={s.tag}><Text style={s.tagTxt}>{routineExCount(r)}종목</Text></View>
               </View>
-            </PressableScale>
-          );
-        })}
+            ) : (
+              FOCUS_GROUPS.map((g) => {
+                const list = focus.filter((r) => r.group === g);
+                if (!list.length) return null;
+                return (
+                  <View key={g} style={s.group}>
+                    <Text style={s.groupTitle}>{g}</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}
+                      style={s.rowScroll}>
+                      {list.map((r) => (
+                        <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} onPress={() => router.push(`/routine/${r.id}`)} />
+                      ))}
+                    </ScrollView>
+                  </View>
+                );
+              })
+            )}
+          </>
+        )}
+
+        {splits.length > 0 && (
+          <>
+            <SectionLabel>분할 루틴 · 플랜을 통째로 바꿔요</SectionLabel>
+            {splits.map((r) => (
+              <SplitCard key={r.id} r={r} current={plan?.routineId === r.id} recommended={r.id === recommendedId}
+                onPress={() => router.push(`/routine/${r.id}`)} />
+            ))}
+          </>
+        )}
+
+</> : <>
+        {splits.length > 0 && (
+          <>
+            <SectionLabel>분할 루틴 · 플랜을 통째로 바꿔요</SectionLabel>
+            {splits.map((r) => (
+              <SplitCard key={r.id} r={r} current={plan?.routineId === r.id} recommended={r.id === recommendedId}
+                onPress={() => router.push(`/routine/${r.id}`)} />
+            ))}
+          </>
+        )}
+
+
+        {focus.length > 0 && (
+          <>
+            <SectionLabel>부위 집중 · 운동하는 날에 붙여요</SectionLabel>
+            {searching ? (
+              <View style={s.grid}>
+                {focus.map((r) => (
+                  <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} grid onPress={() => router.push(`/routine/${r.id}`)} />
+                ))}
+              </View>
+            ) : (
+              FOCUS_GROUPS.map((g) => {
+                const list = focus.filter((r) => r.group === g);
+                if (!list.length) return null;
+                return (
+                  <View key={g} style={s.group}>
+                    <Text style={s.groupTitle}>{g}</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}
+                      style={s.rowScroll}>
+                      {list.map((r) => (
+                        <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} onPress={() => router.push(`/routine/${r.id}`)} />
+                      ))}
+                    </ScrollView>
+                  </View>
+                );
+              })
+            )}
+          </>
+        )}
+</>}
+        <View style={{ height: 24 }} />
       </Body>
     </Screen>
   );
 }
 
+function SplitCard({ r, current, recommended, onPress }: { r: Routine; current: boolean; recommended: boolean; onPress: () => void }) {
+  useThemeMode();
+  const cover = coverOf.get(r.id);
+  return (
+    <PressableScale scaleTo={PRESS_SCALE.card} style={[s.card, current && s.cardCurrent]} onPress={onPress}
+      accessibilityRole="button" accessibilityLabel={`${r.name}, ${r.subtitle}`}>
+      <View style={s.head}>
+        {cover ? <ExerciseMedia exId={cover} rounded={14} style={s.cover} dim={0.15} /> : (
+          <View style={s.shortBox}><Text style={s.short}>{r.short}</Text></View>
+        )}
+        <View style={{ flex: 1 }}>
+          <View style={s.nameRow}>
+            <Text style={s.name}>{r.name}</Text>
+            {current && <View style={s.badge}><Text style={s.badgeTxt}>사용중</Text></View>}
+            {!current && recommended && (
+              <View style={s.badgeGhost}><Text style={s.badgeGhostTxt}>추천</Text></View>
+            )}
+          </View>
+          <Text style={s.sub}>{r.subtitle}</Text>
+        </View>
+        <Text style={s.chev}>›</Text>
+      </View>
+      <Text style={s.desc} numberOfLines={2}>{r.desc}</Text>
+      <View style={s.tagRow}>
+        {r.tags.map((t) => (
+          <View key={t} style={s.tag}><Text style={s.tagTxt}>{t}</Text></View>
+        ))}
+        <View style={s.tag}><Text style={s.tagTxt}>{routineExCount(r)}종목</Text></View>
+      </View>
+    </PressableScale>
+  );
+}
+
+function FocusCard({ r, attached, grid, onPress }: { r: Routine; attached: boolean; grid?: boolean; onPress: () => void }) {
+  useThemeMode();
+  const cover = coverOf.get(r.id) ?? r.days[0]?.exIds[0];
+  const n = r.days[0]?.exIds.length ?? 0;
+  const home = r.place.length === 1 && r.place[0] === 'home';
+  return (
+    <PressableScale scaleTo={PRESS_SCALE.card} style={grid ? s.fGrid : s.fCard} onPress={onPress}
+      accessibilityRole="button" accessibilityLabel={`${r.name}, ${n}동작${attached ? ', 붙어 있음' : ''}`}>
+      <View style={s.fThumb}>
+        {cover ? <ExerciseMedia exId={cover} rounded={0} dim={0.1} style={s.fThumbImg} /> : null}
+        {attached ? (
+          <View style={s.fOn}><Ionicons name="checkmark" size={12} color={colors.bg} /></View>
+        ) : null}
+      </View>
+      <Text style={s.fName} numberOfLines={2}>{r.name}</Text>
+      <Text style={s.fMeta}>{n}동작{home ? ' · 집에서' : ''}{r.days.length > 1 ? ` · ${r.days.length}세션` : ''}</Text>
+    </PressableScale>
+  );
+}
+
 const s = themed(() => StyleSheet.create({
-  lead: { fontSize: 13, color: colors.muted, lineHeight: 20, marginTop: 4 },
+  search: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.panel, borderRadius: 14,
+    paddingHorizontal: 14, height: 46, borderWidth: 1, borderColor: colors.line, marginTop: 6,
+  },
+  // 웹 기본 초점 테두리는 빼고(바깥 칸이 이미 테두리) — outlineStyle 은 웹에서만 먹는다
+  searchInput: { flex: 1, fontSize: 16, color: colors.ink, paddingVertical: 0, outlineStyle: 'none' } as never,
+  empty: { fontSize: 13, color: colors.muted, lineHeight: 20, marginTop: 24, textAlign: 'center' },
   recoLock: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
     backgroundColor: colors.panel2, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
-    borderWidth: 1, borderColor: colors.line2, marginTop: 14,
+    borderWidth: 1, borderColor: colors.line2, marginTop: 12,
   },
   recoLockTxt: { fontSize: 13, fontWeight: '600', color: colors.mid, flexShrink: 1 },
   card: {
@@ -126,4 +271,23 @@ const s = themed(() => StyleSheet.create({
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   tag: { backgroundColor: colors.panel3, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 4 },
   tagTxt: { fontSize: 10, color: colors.muted, fontWeight: '600' },
+
+  group: { marginBottom: 18 },
+  groupTitle: { fontSize: 15, fontWeight: '800', color: colors.ink, marginBottom: 10 },
+  // 가로 줄은 화면 끝까지 — Body 의 좌우 여백(16)만큼 밖으로 뺀다
+  rowScroll: { marginHorizontal: -16 },
+  row: { gap: 10, paddingHorizontal: 16 },
+  fCard: { width: 136 },
+  fGrid: { width: '48.5%', marginBottom: 6 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  fThumb: {
+    aspectRatio: 1, borderRadius: 14, backgroundColor: colors.panel2, overflow: 'hidden', marginBottom: 7,
+  },
+  fThumbImg: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
+  fOn: {
+    position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center',
+  },
+  fName: { fontSize: 13, fontWeight: '700', color: colors.ink, lineHeight: 18 },
+  fMeta: { fontSize: 11, color: colors.muted, marginTop: 2 },
 }));

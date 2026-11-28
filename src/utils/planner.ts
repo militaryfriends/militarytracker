@@ -257,7 +257,17 @@ export function normalizePlan(plan: Plan | null | undefined): Plan | null {
       focus: str(d?.focus, 40),
       // 같은 종목이 두 번 들어오면 세션에 같은 종목이 두 개 생기고 '지난 기록' 은 첫 것만 본다
       ids: Array.isArray(d?.ids) ? [...new Set(d.ids.filter((x) => typeof x === 'string' && !!exById(x)))] : [],
+      addons: Array.isArray(d?.addons) ? d.addons : undefined,
     }))
+    .map((d) => {
+      // 붙인 묶음은 그날 종목에 실제로 남아 있는 것만 — 하나도 없으면 묶음째 버린다
+      const addons = (d.addons ?? [])
+        .filter((a) => a && typeof a.rid === 'string' && Array.isArray(a.ids))
+        .map((a) => ({ rid: str(a.rid, 40), name: str(a.name, 24), ids: a.ids.filter((x) => d.ids.includes(x)) }))
+        .filter((a) => a.ids.length > 0);
+      const { addons: _drop, ...rest } = d;
+      return addons.length ? { ...rest, addons } : rest;
+    })
     // 종목이 하나도 남지 않은 데이는 버린다 — 화면에서 undefined 참조를 만든다
     .filter((d) => d.ids.length > 0);
   if (!days.length) return null;

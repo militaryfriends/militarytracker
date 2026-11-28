@@ -26,6 +26,7 @@ import { FADE_RISE, TabFade, useTabSpace } from '../../src/components/TabBar';
 import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { LibrarySection } from '../../src/components/LibrarySection';
+import { detachAddon } from '../../src/utils/planAddons';
 
 const SRC_LABEL: Record<string, string> = { AI: 'AI 구성', LOCAL: '자동 구성', PRESET: '프리셋 루틴' };
 
@@ -113,6 +114,24 @@ export default function PlanScreen() {
       else showAlert('오류', '플랜 재생성에 실패했습니다.');
     } finally {
       setBusy(null);
+    }
+  }
+
+  /** 붙인 묶음 떼기 — 보고 있는 요일에서 */
+  async function detach(rid: string) {
+    if (!plan || !user) return;
+    if (session) {
+      showAlert('진행 중인 운동이 있습니다', '운동을 마치거나 종료한 뒤 바꿔주세요.');
+      return;
+    }
+    const idx = Math.min(activeDay, plan.days.length - 1);
+    const next = detachAddon(plan, idx, rid);
+    if (next === plan) return;
+    try {
+      await savePlan(user.uid, next);
+      setPlan(next);
+    } catch {
+      showAlert('오류', '플랜을 저장하지 못했어요.');
     }
   }
 
@@ -206,6 +225,20 @@ export default function PlanScreen() {
           );
         })}
 
+        {/* 붙인 부위 집중 묶음 — 루틴 둘러보기에서 붙인 것. 떼면 그 종목만 빠진다(11/28) */}
+        {(day.addons ?? []).map((a) => (
+          <View key={a.rid} style={s.addon}>
+            <Ionicons name="add-circle-outline" size={18} color={colors.mid} />
+            <Text style={s.addonTxt} numberOfLines={1}>{a.name} · {a.ids.length}동작 붙음</Text>
+            <PressableScale onPress={() => detach(a.rid)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`${a.name} 떼기`}>
+              <Text style={s.addonOff}>떼기</Text>
+            </PressableScale>
+          </View>
+        ))}
+        <PressableScale style={s.addMore} onPress={() => router.push('/routine')} accessibilityRole="button">
+          <Text style={s.addMoreTxt}>+ 부위 집중 루틴 붙이기</Text>
+        </PressableScale>
+
         <Text style={s.regenLabel}>루틴 바꾸기</Text>
         <View style={s.regenRow}>
           <GhostBtn
@@ -297,5 +330,13 @@ const s = themed(() => StyleSheet.create({
   goTxt: { fontSize: 16, fontWeight: '700', color: colors.onRed },
 
   regenLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, marginTop: 26, paddingHorizontal: 4 },
+  addon: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.panel2, borderRadius: 14,
+    paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.line, marginTop: 8,
+  },
+  addonTxt: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.mid },
+  addonOff: { fontSize: 13, fontWeight: '700', color: colors.ink },
+  addMore: { minHeight: 44, justifyContent: 'center', alignItems: 'center', marginTop: 6 },
+  addMoreTxt: { fontSize: 13, fontWeight: '700', color: colors.mid },
   regenRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
 }));
