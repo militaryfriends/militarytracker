@@ -28,6 +28,12 @@ test('붙이기: 그날 끝에 더하고, 이미 있는 종목은 다시 넣지 
   const p = attachAddon(plan, 0, tri);
   assert.deepEqual(p.days[0].ids, ['bench', 'incdbpress', 'pushdown', 'ohropeext', 'skullcrusher']);
   assert.deepEqual(p.days[0].addons, [{ rid: 'f-tri', name: '삼두 집중', ids: ['ohropeext', 'skullcrusher'] }]);
+  // 같은 동작(케이블 푸시다운 ↔ 로프 푸시다운)은 붙이지 않는다
+  const rope = attachAddon(plan, 0, { ...tri, rid: 'f-rope', ids: ['ropepushdown', 'kickback'] });
+  assert.deepEqual(rope.days[0].addons?.[0].ids, ['kickback']);
+  // 화면이 정한 거르기(예: 집에서 못 하는 종목)
+  const homeOnly = attachAddon(plan, 0, tri, (id) => id === 'skullcrusher');
+  assert.deepEqual(homeOnly.days[0].addons?.[0].ids, ['ohropeext']);
   assert.equal(p.days.length, 3);
   assert.deepEqual(p.days[1], plan.days[1]);
   assert.equal(attachedDay(p, 'f-tri'), 0);
@@ -45,4 +51,23 @@ test('떼기: 그 묶음이 더한 종목만 빠지고 원래 종목(pushdown)�
   // 다 이미 있는 종목뿐이면 붙일 게 없다
   const only = attachAddon(plan, 2, { ...calf, ids: ['calfraise'] });
   assert.equal(only, plan);
+});
+
+test('옮기기: 재구성 · 분할 교체 뒤에도 붙인 묶음이 새 플랜의 맞는 요일로 간다', async () => {
+  const { carryAddons } = await import('../planAddons');
+  const withTri = attachAddon(plan, 0, tri);
+  const upperLower: Plan = {
+    planSrc: 'LOCAL', planReason: '', routineId: null,
+    days: [
+      { id: 'up', name: '상체', focus: '가슴 · 등 · 어깨 · 팔', ids: ['bench', 'bbrow'] },
+      { id: 'low', name: '하체', focus: '하체 · 코어', ids: ['backsquat'] },
+    ],
+  };
+  const sources = (rid: string) => (rid === tri.rid ? tri : undefined);
+  const r = carryAddons(withTri, upperLower, sources);
+  assert.deepEqual(r.moved, ['삼두 집중']);
+  assert.equal(attachedDay(r.plan, 'f-tri'), 0);
+  assert.deepEqual(r.plan.days[0].ids, ['bench', 'bbrow', 'ohropeext', 'pushdown', 'skullcrusher']);
+  // 붙인 게 없으면 그대로
+  assert.equal(carryAddons(plan, upperLower, sources).plan, upperLower);
 });

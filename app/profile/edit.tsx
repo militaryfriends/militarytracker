@@ -17,6 +17,9 @@ import { calcBodyStats, effectiveWeight, validateProfile } from '../../src/utils
 import { UserProfile } from '../../src/types';
 import { STRATEGIES, STRATEGY, legacyGoalOf, strategyOfGoal } from '../../src/utils/projection';
 import { PressableScale } from '../../src/ui';
+import { carryAddons } from '../../src/utils/planAddons';
+import { addonSkip } from '../../src/utils/addonFilter';
+import { addonSource } from '../../src/data/routines';
 import { useOnboardDraft } from '../../src/stores/onboardDraft';
 
 export default function ProfileEditScreen() {
@@ -110,13 +113,14 @@ export default function ProfileEditScreen() {
       // 장소 · 기구가 바뀌었으면 지금 루틴을 새 기구에 맞출지 묻는다(없는 기구 종목이 루틴에 남지 않게)
       const kitChanged = profile && (profile.env !== p.env || kitSummary(profile) !== kitSummary(p));
       if (kitChanged && plan) {
-        showAlert('루틴도 바꿀까요?', `${kitSummary(p)} 기준으로 운동 루틴을 다시 짭니다. 지금 루틴은 되돌릴 수 없어요.`, [
+        showAlert('루틴도 바꿀까요?', `${kitSummary(p)} 기준으로 운동 루틴을 다시 짭니다. 지금 루틴은 되돌릴 수 없어요.${plan.days.some((d) => (d.addons ?? []).length) ? ' 붙여 둔 부위 집중 묶음은 새 기구로 할 수 있는 것만 옮겨요.' : ''}`, [
           { text: '나중에', style: 'cancel', onPress: () => router.back() },
           {
             text: '다시 짜기',
             onPress: async () => {
               try {
-                const next = buildLocalPlan(p, Date.now());
+                // 붙여 둔 부위 집중 묶음은 새 기구로 할 수 있는 것만 새 루틴으로 옮긴다
+                const next = carryAddons(plan, buildLocalPlan(p, Date.now()), addonSource, addonSkip(p)).plan;
                 await savePlan(user.uid, next);
                 setPlan(next);
               } catch {

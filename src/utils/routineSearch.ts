@@ -3,7 +3,10 @@
  * 띄어쓰기로 나눈 낱말이 모두 들어 있어야 한다("등 덤벨" → 덤벨로 등). 띄어쓰기 · 가운뎃점은 무시하고 비교한다.
  */
 import { exById } from '../data/exercises';
-import type { Routine } from '../data/routines';
+import { LEVEL_LABEL, type Routine } from '../data/routines';
+
+/** 같은 뜻으로 찾는 말 — 검색어를 이 말로 바꿔서 찾는다 */
+const SYNONYM: Record<string, string> = { 턱걸이: '풀업', 친업: '풀업', 초보: '입문', 초보자: '입문', 복근운동: '복근', 엉덩이운동: '엉덩이' };
 
 const norm = (s: string) => s.toLowerCase().replace(/[\s·・,/()]+/g, '');
 
@@ -13,9 +16,10 @@ function textOf(r: Routine, deep: boolean): string {
   const key = `${r.id}|${deep ? 1 : 0}`;
   let t = haystack.get(key);
   if (t === undefined) {
-    const base = [r.name, r.short, r.subtitle, r.group ?? '', ...r.tags];
+    // 설명(desc)은 찾지 않는다 — "팔"이 '팔꿈치'에 걸리던 문제(11/28 검수)
+    const base = [r.name, r.short, r.subtitle, r.group ?? '', LEVEL_LABEL[r.level], ...r.tags];
     const more = deep
-      ? [r.desc, ...r.days.map((d) => `${d.name} ${d.focus}`), ...r.days.flatMap((d) => d.exIds.map((id) => exById(id)?.n ?? ''))]
+      ? [...r.days.map((d) => `${d.name} ${d.focus}`), ...r.days.flatMap((d) => d.exIds.map((id) => exById(id)?.n ?? ''))]
       : [];
     t = norm([...base, ...more].join(' '));
     haystack.set(key, t);
@@ -24,7 +28,7 @@ function textOf(r: Routine, deep: boolean): string {
 }
 
 export function searchRoutines<T extends Routine>(list: readonly T[], query: string, deep = true): T[] {
-  const words = query.split(/\s+/).map(norm).filter(Boolean);
+  const words = query.split(/\s+/).map(norm).filter(Boolean).map((w) => SYNONYM[w] ?? w);
   if (!words.length) return [...list];
   return list.filter((r) => {
     const t = textOf(r, deep);

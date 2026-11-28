@@ -35,10 +35,12 @@ export interface Routine {
   group?: FocusGroup;
   /** 붙이기 좋은 요일의 부위 낱말(utils/planAddons suggestDay) */
   attach?: string[];
+  /** 따로 하루를 잡는 편 — '지금 한 번만 하기'를 기본 버튼으로 */
+  nowFirst?: boolean;
 }
 
-export type FocusGroup = '등' | '가슴' | '어깨' | '팔' | '하체' | '코어' | '홈트' | '조건';
-export const FOCUS_GROUPS: readonly FocusGroup[] = ['등', '가슴', '어깨', '팔', '하체', '코어', '홈트', '조건'];
+export type FocusGroup = '등' | '가슴' | '어깨' | '팔' | '하체' | '코어' | '홈트' | '상황별';
+export const FOCUS_GROUPS: readonly FocusGroup[] = ['등', '가슴', '어깨', '팔', '하체', '코어', '홈트', '상황별'];
 
 export const ROUTINES: Routine[] = [
   {
@@ -46,7 +48,7 @@ export const ROUTINES: Routine[] = [
     name: '푸시 풀 레그',
     short: 'PPL',
     subtitle: '주 3일 · 미는 동작 / 당기는 동작 / 하체',
-    desc: '미는 동작 · 당기는 동작 · 하체로 나눈 3분할. 한 부위를 주 1~2회 운동합니다.',
+    desc: '미는 동작 · 당기는 동작 · 하체로 나눈 3분할. 주 3일이면 한 부위를 주 1회 운동합니다.',
     daysPerWeek: 3,
     // 바벨 스쿼트·바벨로우·풀업이 들어가는 구성이라 입문(1)이 아니라 중급으로 표기한다.
     // 입문자는 recommendRoutine 이 fullbody 로 보낸다.
@@ -101,7 +103,7 @@ export const ROUTINES: Routine[] = [
     name: '상하체 2분할',
     short: 'U/L',
     subtitle: '주 4일 · 상체 / 하체',
-    desc: '주 4일로 각 부위를 2회씩 자극합니다. 시간 대비 효율이 가장 좋은 중급자 루틴.',
+    desc: '주 4일로 각 부위를 주 2회씩. 중급자에게 무난한 구성입니다.',
     daysPerWeek: 4,
     level: 2,
     place: ['gym'],
@@ -213,14 +215,14 @@ export const ROUTINES: Routine[] = [
   },
   {
     id: 'core',
-    name: '코어 10분',
+    name: '코어 A · B',
     short: '코어',
-    subtitle: '주 2~3일 · 10분 복근 서킷',
-    desc: '메인 운동 후 붙이는 짧은 코어 서킷. 세트 간 휴식을 30초로 줄여 서킷처럼 돌립니다. A·B 두 세션을 번갈아 합니다.',
+    subtitle: '2세션 · 주 2~3회',
+    desc: 'A는 위아래 복근, B는 회전 · 버티기. 두 세션을 서로 다른 날에 붙여 번갈아 합니다.',
     daysPerWeek: 2,
     level: 1,
     place: ['gym', 'home'],
-    tags: ['코어', '10분', '서킷', '복근'],
+    tags: ['코어', '복근', '옆구리'],
     kind: 'focus',
     group: '코어',
     attach: ['코어', '하체'],
@@ -231,222 +233,225 @@ export const ROUTINES: Routine[] = [
   },
   {
     id: 'f-lat-width', kind: 'focus', group: '등', attach: ['등'],
-    name: '넓은 등 · 광배', short: '광배', subtitle: '4동작 · 약 20분 · 주 1~2회',
-    desc: '위에서 아래로 당기는 수직 당기기 위주. 팔꿈치를 옆구리 쪽으로 끌어내리며 광배 너비에 집중합니다.',
-    daysPerWeek: 1, level: 2, place: ['gym'], tags: ['등', '광배', '너비', '역삼각형', '랫풀다운', '풀업'],
-    days: [{ id: 'main', name: '넓은 등 · 광배', focus: '넓은 등 · 광배', desc: '위에서 아래로 당기는 수직 당기기 위주. 팔꿈치를 옆구리 쪽으로 끌어내리며 광배 너비에 집중합니다.', exIds: ['widelatpull', 'pullup', 'straightarmpull', 'cablepullover'] }],
+    name: '넓은 등 · 광배', short: '광배', subtitle: '4동작 · 주 1~2회',
+    desc: '풀업으로 시작해 랫풀다운 · 스트레이트암 풀다운으로. 팔꿈치를 옆구리 쪽으로 끌어내리며 광배 너비에 집중합니다.',
+    daysPerWeek: 1, level: 2, place: ['gym'], tags: ['등', '광배', '너비', '랫풀다운', '풀업', '턱걸이'],
+    days: [{ id: 'main', name: '넓은 등 · 광배', focus: '넓은 등 · 광배', desc: '풀업으로 시작해 랫풀다운 · 스트레이트암 풀다운으로. 팔꿈치를 옆구리 쪽으로 끌어내리며 광배 너비에 집중합니다.', exIds: ['pullup', 'widelatpull', 'straightarmpull'] }],
   },
   {
     id: 'f-back-thick', kind: 'focus', group: '등', attach: ['등'],
-    name: '등 두께', short: '두께', subtitle: '4동작 · 약 20분 · 주 1~2회',
-    desc: '몸 쪽으로 당기는 수평 당기기 위주. 날개뼈를 모으며 등 가운데 두께에 집중합니다.',
+    name: '등 두께', short: '두께', subtitle: '4동작 · 주 1~2회',
+    desc: '몸 쪽으로 당기는 수평 당기기 위주. 허리에 부담이 큰 바벨로우는 하나만 넣고, 나머지는 몸을 받친 로우로 날개뼈를 모읍니다.',
     daysPerWeek: 1, level: 2, place: ['gym'], tags: ['등', '두께', '로우', '중부'],
-    days: [{ id: 'main', name: '등 두께', focus: '등 두께', desc: '몸 쪽으로 당기는 수평 당기기 위주. 날개뼈를 모으며 등 가운데 두께에 집중합니다.', exIds: ['bbrow', 'chestsupportedrow', 'tbarrow', 'cablerow'] }],
+    days: [{ id: 'main', name: '등 두께', focus: '등 두께', desc: '몸 쪽으로 당기는 수평 당기기 위주. 허리에 부담이 큰 바벨로우는 하나만 넣고, 나머지는 몸을 받친 로우로 날개뼈를 모읍니다.', exIds: ['bbrow', 'chestsupportedrow', 'cablerow', 'onearmdbrow'] }],
   },
   {
     id: 'f-traps', kind: 'focus', group: '등', attach: ['등'],
-    name: '승모 · 윗등', short: '승모', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '승모 · 윗등', short: '승모', subtitle: '4동작 · 주 1~2회',
     desc: '위 · 가운데 승모를 나눠서. 으쓱하는 동작과 뒤로 당기는 동작을 같이 넣었습니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['등', '승모', '윗등', '슈러그', '목'],
     days: [{ id: 'main', name: '승모 · 윗등', focus: '승모 · 윗등', desc: '위 · 가운데 승모를 나눠서. 으쓱하는 동작과 뒤로 당기는 동작을 같이 넣었습니다.', exIds: ['bbshrug', 'seatedshrug', 'facepull', 'reversefly'] }],
   },
   {
     id: 'f-db-back', kind: 'focus', group: '등', attach: ['등'],
-    name: '덤벨로 등', short: '덤벨등', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '덤벨로 등', short: '덤벨등', subtitle: '4동작 · 주 1~2회',
     desc: '덤벨 한 쌍으로 광배 · 승모 · 뒤어깨까지. 머신이 없는 날이나 집에서도 됩니다.',
     daysPerWeek: 1, level: 1, place: ['gym', 'home'], tags: ['등', '덤벨', '홈트', '승모'],
     days: [{ id: 'main', name: '덤벨로 등', focus: '덤벨로 등', desc: '덤벨 한 쌍으로 광배 · 승모 · 뒤어깨까지. 머신이 없는 날이나 집에서도 됩니다.', exIds: ['onearmdbrow', 'dbrow', 'shrug', 'reversefly'] }],
   },
   {
     id: 'f-upper-chest', kind: 'focus', group: '가슴', attach: ['가슴'],
-    name: '윗가슴', short: '윗가슴', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '윗가슴', short: '윗가슴', subtitle: '4동작 · 주 1~2회',
     desc: '벤치를 15~30도로 세운 프레스와 아래에서 위로 모으는 플라이. 가슴 위쪽에 집중합니다.',
     daysPerWeek: 1, level: 2, place: ['gym'], tags: ['가슴', '윗가슴', '인클라인', '쇄골'],
     days: [{ id: 'main', name: '윗가슴', focus: '윗가슴', desc: '벤치를 15~30도로 세운 프레스와 아래에서 위로 모으는 플라이. 가슴 위쪽에 집중합니다.', exIds: ['inclinebench', 'incdbpress', 'lowcablefly', 'incdbfly'] }],
   },
   {
     id: 'f-lower-chest', kind: 'focus', group: '가슴', attach: ['가슴'],
-    name: '아랫가슴', short: '아랫가슴', subtitle: '3동작 · 약 15분 · 주 1~2회',
+    name: '아랫가슴', short: '아랫가슴', subtitle: '3동작 · 주 1~2회',
     desc: '디클라인 프레스 · 딥스 · 위에서 아래로 모으는 플라이로 가슴 아래쪽에 집중합니다.',
     daysPerWeek: 1, level: 2, place: ['gym'], tags: ['가슴', '아랫가슴', '디클라인', '딥스'],
     days: [{ id: 'main', name: '아랫가슴', focus: '아랫가슴', desc: '디클라인 프레스 · 딥스 · 위에서 아래로 모으는 플라이로 가슴 아래쪽에 집중합니다.', exIds: ['declinebench', 'dipschest', 'highcablefly'] }],
   },
   {
     id: 'f-chest-full', kind: 'focus', group: '가슴', attach: ['가슴'],
-    name: '가슴 고르게', short: '가슴', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '가슴 전체', short: '가슴', subtitle: '4동작 · 주 1~2회',
     desc: '무겁게 미는 프레스와 깊게 늘리는 플라이. 위 · 가운데를 한 번에 씁니다.',
     daysPerWeek: 1, level: 2, place: ['gym'], tags: ['가슴', '벤치', '플라이'],
-    days: [{ id: 'main', name: '가슴 고르게', focus: '가슴 고르게', desc: '무겁게 미는 프레스와 깊게 늘리는 플라이. 위 · 가운데를 한 번에 씁니다.', exIds: ['bench', 'incdbpress', 'dbfly', 'crossover'] }],
+    days: [{ id: 'main', name: '가슴 전체', focus: '가슴 전체', desc: '무겁게 미는 프레스와 깊게 늘리는 플라이. 위 · 가운데를 한 번에 씁니다.', exIds: ['bench', 'incdbpress', 'dbfly', 'crossover'] }],
   },
   {
     id: 'f-3d-shoulder', kind: 'focus', group: '어깨', attach: ['어깨'],
-    name: '어깨 앞 · 옆 · 뒤', short: '3D', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '어깨 앞 · 옆 · 뒤', short: '3D', subtitle: '4동작 · 주 1~2회',
     desc: '프레스로 앞어깨, 레이즈로 옆어깨, 플라이로 뒤어깨. 세 방향을 한 번에 씁니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['어깨', '3D', '삼각근', '숄더'],
     days: [{ id: 'main', name: '어깨 앞 · 옆 · 뒤', focus: '어깨 앞 · 옆 · 뒤', desc: '프레스로 앞어깨, 레이즈로 옆어깨, 플라이로 뒤어깨. 세 방향을 한 번에 씁니다.', exIds: ['dbshoulderpress', 'latraise', 'reardeltfly', 'frontraise'] }],
   },
   {
     id: 'f-side-delt', kind: 'focus', group: '어깨', attach: ['어깨'],
-    name: '옆어깨', short: '옆어깨', subtitle: '3동작 · 약 15분 · 주 1~2회',
+    name: '옆어깨', short: '옆어깨', subtitle: '3동작 · 주 1~2회',
     desc: '옆어깨만 세 가지 각도로. 승모가 먼저 올라오지 않게 어깨를 내리고 팔꿈치로 이끕니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['어깨', '측면', '레터럴', '어깨 넓이'],
     days: [{ id: 'main', name: '옆어깨', focus: '옆어깨', desc: '옆어깨만 세 가지 각도로. 승모가 먼저 올라오지 않게 어깨를 내리고 팔꿈치로 이끕니다.', exIds: ['latraise', 'cablelatraise', 'leaninglatraise'] }],
   },
   {
     id: 'f-rear-delt', kind: 'focus', group: '어깨', attach: ['어깨', '등'],
-    name: '뒤어깨', short: '뒤어깨', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '뒤어깨', short: '뒤어깨', subtitle: '4동작 · 주 1~2회',
     desc: '잘 안 하게 되는 뒤어깨. 가볍게, 끝에서 한 박자 멈추는 플라이 · 페이스풀 위주입니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['어깨', '후면', '리어델트', '자세'],
-    days: [{ id: 'main', name: '뒤어깨', focus: '뒤어깨', desc: '잘 안 하게 되는 뒤어깨. 가볍게, 끝에서 한 박자 멈추는 플라이 · 페이스풀 위주입니다.', exIds: ['reversefly', 'cablereardelt', 'facepullsh', 'inclinereardelt'] }],
+    days: [{ id: 'main', name: '뒤어깨', focus: '뒤어깨', desc: '잘 안 하게 되는 뒤어깨. 가볍게, 끝에서 한 박자 멈추는 플라이 · 페이스풀 위주입니다.', exIds: ['reversefly', 'cablereardelt', 'facepullsh'] }],
   },
   {
     id: 'f-cable-shoulder', kind: 'focus', group: '어깨', attach: ['어깨'],
-    name: '케이블로 어깨', short: '케이블', subtitle: '3동작 · 약 15분 · 주 1~2회',
+    name: '케이블로 어깨', short: '케이블', subtitle: '3동작 · 주 1~2회',
     desc: '케이블 하나로 앞 · 옆 · 뒤 어깨. 동작 내내 장력이 걸립니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['어깨', '케이블'],
     days: [{ id: 'main', name: '케이블로 어깨', focus: '케이블로 어깨', desc: '케이블 하나로 앞 · 옆 · 뒤 어깨. 동작 내내 장력이 걸립니다.', exIds: ['cablefrontraise', 'cablelatraise', 'cablereardelt'] }],
   },
   {
     id: 'f-triceps', kind: 'focus', group: '팔', attach: ['삼두'],
-    name: '삼두 세 갈래', short: '삼두', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '머리 위로 늘리는 동작 · 밀어 내리는 동작 · 누워서 펴는 동작. 삼두 세 갈래를 고루 씁니다.',
+    name: '삼두 세 갈래', short: '삼두', subtitle: '3동작 · 주 1~2회',
+    desc: '머리 위로 늘리는 익스텐션(장두) · 로프 푸시다운(외측) · 리버스그립 푸시다운(내측). 세 갈래를 하나씩 씁니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['팔', '삼두', '푸시다운', '익스텐션'],
-    days: [{ id: 'main', name: '삼두 세 갈래', focus: '삼두 세 갈래', desc: '머리 위로 늘리는 동작 · 밀어 내리는 동작 · 누워서 펴는 동작. 삼두 세 갈래를 고루 씁니다.', exIds: ['ohropeext', 'ropepushdown', 'skullcrusher'] }],
+    days: [{ id: 'main', name: '삼두 세 갈래', focus: '삼두 세 갈래', desc: '머리 위로 늘리는 익스텐션(장두) · 로프 푸시다운(외측) · 리버스그립 푸시다운(내측). 세 갈래를 하나씩 씁니다.', exIds: ['ohropeext', 'ropepushdown', 'revpushdown'] }],
   },
   {
     id: 'f-biceps', kind: 'focus', group: '팔', attach: ['이두'],
-    name: '이두 각도별', short: '이두', subtitle: '3동작 · 약 15분 · 주 1~2회',
+    name: '이두 각도별', short: '이두', subtitle: '3동작 · 주 1~2회',
     desc: '팔을 뒤에 두는 컬 · 앞에 고정하는 컬 · 해머 그립. 팔 위치를 바꿔 이두를 여러 각도로 씁니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['팔', '이두', '컬'],
     days: [{ id: 'main', name: '이두 각도별', focus: '이두 각도별', desc: '팔을 뒤에 두는 컬 · 앞에 고정하는 컬 · 해머 그립. 팔 위치를 바꿔 이두를 여러 각도로 씁니다.', exIds: ['incdbcurl', 'preachercurl', 'hammercurl'] }],
   },
   {
-    id: 'f-arms-front', kind: 'focus', group: '팔', attach: ['이두'],
-    name: '앞에서 보는 팔', short: '팔앞', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '이두 · 상완근 · 전완을 함께. 바벨컬 · 해머컬 · 리버스컬 세 가지 그립입니다.',
-    daysPerWeek: 1, level: 1, place: ['gym'], tags: ['팔', '이두', '상완근', '전완', '굵은 팔'],
-    days: [{ id: 'main', name: '앞에서 보는 팔', focus: '앞에서 보는 팔', desc: '이두 · 상완근 · 전완을 함께. 바벨컬 · 해머컬 · 리버스컬 세 가지 그립입니다.', exIds: ['bbcurl', 'hammercurl', 'reversecurl'] }],
-  },
-  {
     id: 'f-forearm', kind: 'focus', group: '팔', attach: ['이두', '등'],
-    name: '전완근 · 악력', short: '전완', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '엄지가 위 · 아래를 향하는 그립으로 전완 바깥쪽과 손목을 씁니다.',
-    daysPerWeek: 1, level: 1, place: ['gym'], tags: ['팔', '전완', '악력', '손목'],
-    days: [{ id: 'main', name: '전완근 · 악력', focus: '전완근 · 악력', desc: '엄지가 위 · 아래를 향하는 그립으로 전완 바깥쪽과 손목을 씁니다.', exIds: ['reversecurl', 'hammercurl', 'cablehammer'] }],
+    name: '전완근', short: '전완', subtitle: '3동작 · 주 1~2회',
+    desc: '손등이 위로 오는 리버스컬과 엄지가 위로 오는 해머컬. 전완 바깥쪽과 상완근을 씁니다.',
+    daysPerWeek: 1, level: 1, place: ['gym'], tags: ['팔', '전완', '팔뚝', '손목'],
+    days: [{ id: 'main', name: '전완근', focus: '전완근', desc: '손등이 위로 오는 리버스컬과 엄지가 위로 오는 해머컬. 전완 바깥쪽과 상완근을 씁니다.', exIds: ['reversecurl', 'hammercurl'] }],
   },
   {
     id: 'f-arms-all', kind: 'focus', group: '팔', attach: ['이두', '삼두'],
-    name: '팔 전체', short: '팔', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '팔 전체', short: '팔', subtitle: '4동작 · 주 1~2회',
     desc: '이두 둘 · 삼두 둘을 번갈아. 한쪽이 쉬는 동안 반대쪽을 합니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['팔', '이두', '삼두', '팔뚝'],
     days: [{ id: 'main', name: '팔 전체', focus: '팔 전체', desc: '이두 둘 · 삼두 둘을 번갈아. 한쪽이 쉬는 동안 반대쪽을 합니다.', exIds: ['bbcurl', 'closegripbench', 'hammercurl', 'ohext'] }],
   },
   {
-    id: 'f-legs-full', kind: 'focus', group: '하체', attach: ['하체'],
-    name: '하체 전체', short: '하체', subtitle: '5동작 · 약 25분 · 주 1~2회',
+    id: 'f-legs-full', kind: 'focus', nowFirst: true, group: '하체', attach: ['하체'],
+    name: '하체 전체', short: '하체', subtitle: '5동작 · 주 1~2회',
     desc: '앞벅지 · 뒷벅지 · 엉덩이 · 종아리를 한 번에. 따로 하루를 잡아도 되는 분량입니다.',
     daysPerWeek: 1, level: 2, place: ['gym'], tags: ['하체', '다리', '허벅지', '스쿼트'],
     days: [{ id: 'main', name: '하체 전체', focus: '하체 전체', desc: '앞벅지 · 뒷벅지 · 엉덩이 · 종아리를 한 번에. 따로 하루를 잡아도 되는 분량입니다.', exIds: ['backsquat', 'rdlleg', 'bulgarian', 'legcurl', 'calfraise'] }],
   },
   {
     id: 'f-glutes', kind: 'focus', group: '하체', attach: ['하체'],
-    name: '엉덩이', short: '둔근', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '엉덩이', short: '둔근', subtitle: '4동작 · 주 1~2회',
     desc: '힙쓰러스트로 무겁게, 불가리안 · 킥백 · 어브덕션으로 엉덩이 위 · 옆까지.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['하체', '엉덩이', '둔근', '힙'],
     days: [{ id: 'main', name: '엉덩이', focus: '엉덩이', desc: '힙쓰러스트로 무겁게, 불가리안 · 킥백 · 어브덕션으로 엉덩이 위 · 옆까지.', exIds: ['hipthrust', 'bulgarian', 'glutekickback', 'hipabduction'] }],
   },
   {
     id: 'f-quads', kind: 'focus', group: '하체', attach: ['하체'],
-    name: '앞벅지', short: '앞벅지', subtitle: '3동작 · 약 15분 · 주 1~2회',
+    name: '앞벅지', short: '앞벅지', subtitle: '3동작 · 주 1~2회',
     desc: '무릎이 앞으로 나가는 스쿼트 계열과 레그익스텐션으로 앞벅지에 집중합니다.',
     daysPerWeek: 1, level: 2, place: ['gym'], tags: ['하체', '앞벅지', '대퇴사두'],
-    days: [{ id: 'main', name: '앞벅지', focus: '앞벅지', desc: '무릎이 앞으로 나가는 스쿼트 계열과 레그익스텐션으로 앞벅지에 집중합니다.', exIds: ['frontsquat', 'hacksquat', 'legext'] }],
+    days: [{ id: 'main', name: '앞벅지', focus: '앞벅지', desc: '무릎이 앞으로 나가는 스쿼트 계열과 레그익스텐션으로 앞벅지에 집중합니다.', exIds: ['goblet', 'hacksquat', 'legext'] }],
   },
   {
     id: 'f-calves', kind: 'focus', group: '하체', attach: ['하체'],
-    name: '종아리', short: '종아리', subtitle: '2동작 · 약 10분 · 주 1~2회',
+    name: '종아리', short: '종아리', subtitle: '2동작 · 주 1~2회',
     desc: '선 자세(비복근)와 앉은 자세(가자미근)를 둘 다. 바닥에서 튕기지 말고 끝까지 늘립니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['하체', '종아리', '카프'],
     days: [{ id: 'main', name: '종아리', focus: '종아리', desc: '선 자세(비복근)와 앉은 자세(가자미근)를 둘 다. 바닥에서 튕기지 말고 끝까지 늘립니다.', exIds: ['calfraise', 'seatedcalf'] }],
   },
   {
     id: 'f-adductor', kind: 'focus', group: '하체', attach: ['하체'],
-    name: '안쪽 허벅지 · 고관절', short: '내전근', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '옆으로 넓게 서는 동작 위주. 안쪽 허벅지와 고관절을 씁니다.',
+    name: '안쪽 허벅지 · 고관절', short: '내전근', subtitle: '3동작 · 주 1~2회',
+    desc: '옆으로 넓게 서는 동작 두 가지. 안쪽 허벅지(내전근)를 씁니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['하체', '내전근', '안쪽 허벅지', '고관절'],
-    days: [{ id: 'main', name: '안쪽 허벅지 · 고관절', focus: '안쪽 허벅지 · 고관절', desc: '옆으로 넓게 서는 동작 위주. 안쪽 허벅지와 고관절을 씁니다.', exIds: ['sidelunge', 'sumosquat', 'goblet'] }],
+    days: [{ id: 'main', name: '안쪽 허벅지 · 고관절', focus: '안쪽 허벅지 · 고관절', desc: '옆으로 넓게 서는 동작 두 가지. 안쪽 허벅지(내전근)를 씁니다.', exIds: ['sidelunge', 'sumosquat'] }],
   },
   {
     id: 'f-lower-abs', kind: 'focus', group: '코어', attach: ['코어'],
-    name: '아랫배', short: '아랫배', subtitle: '4동작 · 약 20분 · 주 1~2회',
-    desc: '골반을 말아 올리는 동작 위주. 반동 없이 허리를 바닥에 붙인 채로 합니다.',
+    name: '아랫배', short: '아랫배', subtitle: '4동작 · 주 1~2회',
+    desc: '골반을 말아 올리는 동작 위주. 반동 없이, 허리를 바닥에 붙인 채로 합니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['코어', '아랫배', '하복부', '복근'],
-    days: [{ id: 'main', name: '아랫배', focus: '아랫배', desc: '골반을 말아 올리는 동작 위주. 반동 없이 허리를 바닥에 붙인 채로 합니다.', exIds: ['revcrunch', 'legraise', 'hanginglegraise', 'deadbug'] }],
+    days: [{ id: 'main', name: '아랫배', focus: '아랫배', desc: '골반을 말아 올리는 동작 위주. 반동 없이, 허리를 바닥에 붙인 채로 합니다.', exIds: ['revcrunch', 'legraise', 'flutterkick', 'deadbug'] }],
   },
   {
     id: 'f-obliques', kind: 'focus', group: '코어', attach: ['코어'],
-    name: '옆구리', short: '옆구리', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '옆구리', short: '옆구리', subtitle: '4동작 · 주 1~2회',
     desc: '버티기 · 비틀기 · 대각선으로 당기기. 옆구리(복사근)를 세 방향으로 씁니다.',
     daysPerWeek: 1, level: 1, place: ['gym'], tags: ['코어', '옆구리', '복사근'],
     days: [{ id: 'main', name: '옆구리', focus: '옆구리', desc: '버티기 · 비틀기 · 대각선으로 당기기. 옆구리(복사근)를 세 방향으로 씁니다.', exIds: ['sideplank', 'russiantwist', 'cablewoodchop', 'bicyclecrunch'] }],
   },
   {
     id: 'f-abs-full', kind: 'focus', group: '코어', attach: ['코어'],
-    name: '복근 전체', short: '복근', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    name: '복근 전체', short: '복근', subtitle: '4동작 · 주 1~2회',
     desc: '윗배 · 아랫배 · 옆구리 · 버티기를 한 번씩. 운동 끝에 붙이기 좋은 분량입니다.',
-    daysPerWeek: 1, level: 1, place: ['gym'], tags: ['코어', '복근', '식스팩', '뱃살'],
+    daysPerWeek: 1, level: 1, place: ['gym'], tags: ['코어', '복근', '윗배', '아랫배', '옆구리'],
     days: [{ id: 'main', name: '복근 전체', focus: '복근 전체', desc: '윗배 · 아랫배 · 옆구리 · 버티기를 한 번씩. 운동 끝에 붙이기 좋은 분량입니다.', exIds: ['crunch', 'legraise', 'bicyclecrunch', 'plank'] }],
   },
   {
     id: 'f-home-back', kind: 'focus', group: '홈트', attach: ['등'],
-    name: '집에서 등', short: '홈등', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '책상 · 밴드 · 덤벨로 하는 등 운동. 철봉이 없어도 됩니다.',
+    name: '집에서 등', short: '홈등', subtitle: '3동작 · 주 1~2회',
+    desc: '책상 · 밴드 · 덤벨로 하는 등 운동. 인버티드 로우는 흔들리지 않는 튼튼한 책상에서만 합니다.',
     daysPerWeek: 1, level: 1, place: ['home'], tags: ['홈트', '등', '맨몸', '밴드'],
-    days: [{ id: 'main', name: '집에서 등', focus: '집에서 등', desc: '책상 · 밴드 · 덤벨로 하는 등 운동. 철봉이 없어도 됩니다.', exIds: ['invertedrow', 'bandedpulldown', 'reversefly'] }],
+    days: [{ id: 'main', name: '집에서 등', focus: '집에서 등', desc: '책상 · 밴드 · 덤벨로 하는 등 운동. 인버티드 로우는 흔들리지 않는 튼튼한 책상에서만 합니다.', exIds: ['invertedrow', 'bandedpulldown', 'reversefly'] }],
   },
   {
     id: 'f-home-shoulder', kind: 'focus', group: '홈트', attach: ['어깨'],
-    name: '집에서 어깨', short: '홈어깨', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '파이크 푸시업으로 각도를 세우고 덤벨로 마무리합니다.',
+    name: '집에서 어깨', short: '홈어깨', subtitle: '3동작 · 주 1~2회',
+    desc: '파이크 푸시업으로 시작하고 덤벨로 마무리합니다. 덤벨 한 쌍이 필요합니다.',
     daysPerWeek: 1, level: 1, place: ['home'], tags: ['홈트', '어깨', '맨몸', '덤벨'],
-    days: [{ id: 'main', name: '집에서 어깨', focus: '집에서 어깨', desc: '파이크 푸시업으로 각도를 세우고 덤벨로 마무리합니다.', exIds: ['pikepushupsh', 'dbshoulderpress', 'latraise'] }],
+    days: [{ id: 'main', name: '집에서 어깨', focus: '집에서 어깨', desc: '파이크 푸시업으로 시작하고 덤벨로 마무리합니다. 덤벨 한 쌍이 필요합니다.', exIds: ['pikepushupsh', 'dbshoulderpress', 'latraise'] }],
   },
   {
     id: 'f-home-tri', kind: 'focus', group: '홈트', attach: ['삼두'],
-    name: '집에서 삼두', short: '홈삼두', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '의자 딥스 · 다이아몬드 푸시업 · 덤벨 킥백. 팔꿈치를 뒤로 고정합니다.',
+    name: '집에서 삼두', short: '홈삼두', subtitle: '3동작 · 주 1~2회',
+    desc: '의자로 하는 벤치딥스 · 다이아몬드 푸시업 · 덤벨 킥백. 팔꿈치를 뒤로 고정합니다.',
     daysPerWeek: 1, level: 1, place: ['home'], tags: ['홈트', '삼두', '맨몸', '의자'],
-    days: [{ id: 'main', name: '집에서 삼두', focus: '집에서 삼두', desc: '의자 딥스 · 다이아몬드 푸시업 · 덤벨 킥백. 팔꿈치를 뒤로 고정합니다.', exIds: ['benchdip', 'diamondpushuptri', 'kickback'] }],
+    days: [{ id: 'main', name: '집에서 삼두', focus: '집에서 삼두', desc: '의자로 하는 벤치딥스 · 다이아몬드 푸시업 · 덤벨 킥백. 팔꿈치를 뒤로 고정합니다.', exIds: ['benchdip', 'diamondpushuptri', 'kickback'] }],
   },
   {
     id: 'f-pushup-steps', kind: 'focus', group: '홈트', attach: ['가슴'],
-    name: '푸시업 단계별', short: '푸시업', subtitle: '3동작 · 약 15분 · 주 1~2회',
-    desc: '쉬운 각도부터 어려운 각도까지. 몸을 일자로 유지할 수 있는 단계에서 시작합니다.',
+    name: '푸시업 단계별', short: '푸시업', subtitle: '3동작 · 주 1~2회',
+    desc: '쉬운 각도부터 어려운 각도까지 차례로. 몸이 일자로 버티지 못하면 그 단계에서 멈춥니다.',
     daysPerWeek: 1, level: 1, place: ['home', 'gym'], tags: ['홈트', '푸시업', '맨몸', '가슴'],
-    days: [{ id: 'main', name: '푸시업 단계별', focus: '푸시업 단계별', desc: '쉬운 각도부터 어려운 각도까지. 몸을 일자로 유지할 수 있는 단계에서 시작합니다.', exIds: ['inclinepushup', 'pushup', 'declinepushup'] }],
+    days: [{ id: 'main', name: '푸시업 단계별', focus: '푸시업 단계별', desc: '쉬운 각도부터 어려운 각도까지 차례로. 몸이 일자로 버티지 못하면 그 단계에서 멈춥니다.', exIds: ['inclinepushup', 'pushup', 'declinepushup'] }],
   },
   {
-    id: 'f-chair', kind: 'focus', group: '홈트', attach: ['전신'],
-    name: '의자 하나로', short: '의자', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    id: 'f-chair', kind: 'focus', nowFirst: true, group: '홈트', attach: ['전신'],
+    name: '의자 하나로', short: '의자', subtitle: '4동작 · 주 1~2회',
     desc: '의자 하나로 하체 · 삼두 · 가슴. 흔들리지 않는 의자를 벽에 붙여 씁니다.',
     daysPerWeek: 1, level: 1, place: ['home'], tags: ['홈트', '의자', '맨몸', '전신'],
     days: [{ id: 'main', name: '의자 하나로', focus: '의자 하나로', desc: '의자 하나로 하체 · 삼두 · 가슴. 흔들리지 않는 의자를 벽에 붙여 씁니다.', exIds: ['stepup', 'benchdip', 'inclinepushup', 'bulgarian'] }],
   },
   {
-    id: 'f-short', kind: 'focus', group: '조건', attach: ['전신'],
-    name: '짧게 20분', short: '20분', subtitle: '4동작 · 약 20분 · 주 1~2회',
-    desc: '시간 없는 날 전신 네 동작. 큰 동작부터 순서대로, 세트 사이 휴식은 짧게.',
+    id: 'f-short', kind: 'focus', nowFirst: true, group: '상황별', attach: ['전신'],
+    name: '짧게 20분', short: '20분', subtitle: '4동작 · 주 1~2회',
+    desc: '시간 없는 날 전신 네 동작. 덤벨 한 쌍이 필요합니다. 큰 동작부터, 세트 사이 휴식은 짧게.',
     daysPerWeek: 1, level: 1, place: ['gym', 'home'], tags: ['짧게', '20분', '전신', '바쁜 날'],
-    days: [{ id: 'main', name: '짧게 20분', focus: '짧게 20분', desc: '시간 없는 날 전신 네 동작. 큰 동작부터 순서대로, 세트 사이 휴식은 짧게.', exIds: ['goblet', 'pushup', 'dbrow', 'plank'] }],
+    days: [{ id: 'main', name: '짧게 20분', focus: '짧게 20분', desc: '시간 없는 날 전신 네 동작. 덤벨 한 쌍이 필요합니다. 큰 동작부터, 세트 사이 휴식은 짧게.', exIds: ['goblet', 'pushup', 'dbrow', 'plank'] }],
   },
   {
-    id: 'f-balance', kind: 'focus', group: '조건', attach: ['전신'],
-    name: '좌우 균형 · 한쪽씩', short: '한쪽씩', subtitle: '4동작 · 약 20분 · 주 1~2회',
+    id: 'f-balance', kind: 'focus', nowFirst: true, group: '상황별', attach: ['전신'],
+    name: '좌우 균형 · 한쪽씩', short: '한쪽씩', subtitle: '4동작 · 주 1~2회',
     desc: '한쪽씩 하는 동작만. 약한 쪽부터 하고, 강한 쪽은 약한 쪽 횟수에 맞춥니다.',
     daysPerWeek: 1, level: 2, place: ['gym', 'home'], tags: ['좌우', '불균형', '한쪽', '균형'],
     days: [{ id: 'main', name: '좌우 균형 · 한쪽씩', focus: '좌우 균형 · 한쪽씩', desc: '한쪽씩 하는 동작만. 약한 쪽부터 하고, 강한 쪽은 약한 쪽 횟수에 맞춥니다.', exIds: ['onearmdbrow', 'bulgarian', 'onearmlatraise', 'sldl'] }],
   },
 ];
+
+// 부위 집중 루틴: 부제의 동작 수와 난이도는 종목에서 바로 계산한다(손으로 적으면 종목을 바꿀 때 어긋난다 — 11/28 검수)
+for (const r of ROUTINES) {
+  if (r.kind !== 'focus') continue;
+  const ex = r.days.flatMap((d) => exByIds(d.exIds));
+  r.level = Math.max(1, ...ex.map((e) => e.lv)) as 1 | 2 | 3;
+  if (r.days.length === 1) r.subtitle = `${r.days[0].exIds.length}동작 · 주 1~2회`;
+}
+
+export const LEVEL_LABEL: Record<1 | 2 | 3, string> = { 1: '입문', 2: '중급', 3: '상급' };
 
 const ROUTINE_MAP = new Map(ROUTINES.map((r) => [r.id, r]));
 
@@ -454,6 +459,19 @@ const ROUTINE_MAP = new Map(ROUTINES.map((r) => [r.id, r]));
 export const SPLIT_ROUTINES = ROUTINES.filter((r) => r.kind !== 'focus');
 export const FOCUS_ROUTINES = ROUTINES.filter((r) => r.kind === 'focus');
 export const isFocus = (r: Routine): boolean => r.kind === 'focus';
+
+/**
+ * 붙이기 묶음 정보 — rid 는 루틴 id, 세션이 여럿인 루틴(코어 A · B)은 "루틴id/세션id".
+ * FocusActions(붙이기)와 carryAddons(재구성 · 분할 교체 때 옮기기)가 같은 값을 쓴다.
+ */
+export function addonSource(rid: string): { rid: string; name: string; ids: string[]; attach: string[] } | undefined {
+  const [rId, dId] = rid.split('/');
+  const r = routineById(rId);
+  if (!r || r.kind !== 'focus') return undefined;
+  const day = dId ? r.days.find((d) => d.id === dId) : r.days[0];
+  if (!day) return undefined;
+  return { rid, name: (r.days.length > 1 ? day.name : r.name).slice(0, 24), ids: day.exIds, attach: r.attach ?? [] };
+}
 
 export const routineById = (id: string): Routine | undefined => ROUTINE_MAP.get(id);
 

@@ -6,7 +6,10 @@ import { colors, themed, useThemeMode } from '../../../src/theme';
 import { showAlert } from '../../../src/utils/alert';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, EmptyState, useSafeBack } from '../../../src/components/ui';
 import ExerciseMedia from '../../../src/components/ExerciseMedia';
-import { isFocus, routineById, routineExCount } from '../../../src/data/routines';
+import { LEVEL_LABEL, addonSource, isFocus, routineById, routineExCount } from '../../../src/data/routines';
+import { carryAddons } from '../../../src/utils/planAddons';
+import { addonSkip } from '../../../src/utils/addonFilter';
+import { sessionMinutes } from '../../../src/utils/prescription';
 import { FocusActions } from '../../../src/components/FocusActions';
 import { Segmented } from '../../../src/ui';
 import { PART_LABEL } from '../../../src/data/exercises';
@@ -44,7 +47,8 @@ export default function RoutineDetailScreen() {
   function confirmApply() {
     if (!routine) return;
     if (!plan) { void apply(); return; }
-    showAlert('플랜을 바꿀까요?', `지금 플랜이 ${routine.name}(주 ${routine.daysPerWeek}일)으로 바뀌어요. 붙여 둔 부위 집중 묶음도 빠져요.`, [
+    const hasAddons = plan.days.some((d) => (d.addons ?? []).length > 0);
+    showAlert('플랜을 바꿀까요?', `지금 플랜이 ${routine.name}(주 ${routine.daysPerWeek}일)으로 바뀌어요.${hasAddons ? ' 붙여 둔 부위 집중 묶음은 새 플랜의 맞는 요일로 옮겨 드려요.' : ''}`, [
       { text: '취소', style: 'cancel' },
       { text: '바꾸기', onPress: () => { void apply(); } },
     ]);
@@ -54,11 +58,13 @@ export default function RoutineDetailScreen() {
     if (!user || !routine) return;
     setApplying(true);
     try {
-      const next = planFromRoutine(routine.id);
-      if (!next) throw new Error('invalid');
+      const fresh = planFromRoutine(routine.id);
+      if (!fresh) throw new Error('invalid');
+      // 붙여 둔 부위 집중 묶음은 새 플랜으로 옮긴다
+      const { plan: next, moved } = carryAddons(plan, fresh, addonSource, addonSkip(useAppStore.getState().profile));
       await savePlan(user.uid, next);
       setPlan(next);
-      showAlert('적용 완료', `${routine.name} 루틴이 내 플랜으로 설정되었습니다.`);
+      showAlert('적용 완료', `${routine.name} 루틴이 내 플랜으로 설정되었습니다.${moved.length ? ` 붙여 둔 ${moved.join(' · ')}도 옮겼어요.` : ''}`);
     } catch {
       showAlert('오류', '루틴 적용에 실패했습니다.');
     } finally {
@@ -74,7 +80,7 @@ export default function RoutineDetailScreen() {
         <TopBar title={routine.name} onBack={() => router.back()} />
         <Body>
           <Text style={s.kicker}>부위 집중 · {routine.group}</Text>
-          <Text style={s.subtitle}>{routine.subtitle}</Text>
+          <Text style={s.subtitle}>{list.length}동작 · 약 {sessionMinutes(list, (useAppStore.getState().profile?.level ?? 2) as 1 | 2 | 3)}분 · {LEVEL_LABEL[routine.level]} · 주 1~2회</Text>
           <Text style={s.desc}>{routine.desc}</Text>
           {routine.days.length > 1 ? (
             <View style={{ marginTop: 14 }}>

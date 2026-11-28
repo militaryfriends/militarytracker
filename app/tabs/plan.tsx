@@ -13,7 +13,7 @@ import { showAlert } from '../../src/utils/alert';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { exById, EQUIP_LABEL, PART_LABEL } from '../../src/data/exercises';
-import { routineById } from '../../src/data/routines';
+import { addonSource, routineById } from '../../src/data/routines';
 import { nextDayIdx } from '../../src/utils/stats';
 import { savePlan } from '../../src/services/authService';
 import { generatePlan, SubscriptionRequired, QuotaExceeded } from '../../src/services/aiService';
@@ -26,7 +26,8 @@ import { FADE_RISE, TabFade, useTabSpace } from '../../src/components/TabBar';
 import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { LibrarySection } from '../../src/components/LibrarySection';
-import { detachAddon } from '../../src/utils/planAddons';
+import { carryAddons, detachAddon } from '../../src/utils/planAddons';
+import { addonSkip } from '../../src/utils/addonFilter';
 
 const SRC_LABEL: Record<string, string> = { AI: 'AI 구성', LOCAL: '자동 구성', PRESET: '프리셋 루틴' };
 
@@ -78,9 +79,10 @@ export default function PlanScreen() {
     }
     // 재구성은 현재 플랜을 덮어쓰고 되돌릴 수 없다 — 확인을 받는다
     const label = plan?.routineId ? `현재 루틴(${routineById(plan.routineId)?.name ?? '프리셋'})` : '현재 플랜';
+    const hasAddons = !!plan?.days.some((d) => (d.addons ?? []).length > 0);
     showAlert(
       mode === 'ai' ? 'AI로 다시 구성' : '자동 재구성',
-      `${label}을 새 구성으로 바꿉니다. 이전 플랜은 되돌릴 수 없습니다. 진행할까요?`,
+      `${label}을 새 구성으로 바꿉니다. 이전 플랜은 되돌릴 수 없습니다.${hasAddons ? ' 붙여 둔 부위 집중 묶음은 새 플랜의 맞는 요일로 옮겨 드려요.' : ''} 진행할까요?`,
       [
         { text: '취소', style: 'cancel' },
         { text: '진행', onPress: () => doRegenerate(mode) },
@@ -102,9 +104,13 @@ export default function PlanScreen() {
         next = r.plan;
         if (r.fallback) fallbackReason = r.reason ?? 'AI 서버에 연결하지 못했습니다.';
       }
+      // 붙여 둔 부위 집중 묶음은 새 플랜으로 옮긴다(11/28)
+      const carried = carryAddons(plan, next, addonSource, addonSkip(profile));
+      next = carried.plan;
       await savePlan(user.uid, next);
       setPlan(next);
       setActiveDay(0);
+      if (carried.moved.length && !fallbackReason) showAlert('새 플랜으로 바꿨어요', `붙여 둔 ${carried.moved.join(' · ')}도 맞는 요일로 옮겼어요.`);
       if (fallbackReason) {
         showAlert('자동 구성으로 대체', `${fallbackReason} 자동 알고리즘으로 구성했습니다.`);
       }
@@ -235,7 +241,7 @@ export default function PlanScreen() {
             </PressableScale>
           </View>
         ))}
-        <PressableScale style={s.addMore} onPress={() => router.push('/routine')} accessibilityRole="button">
+        <PressableScale style={s.addMore} onPress={() => router.push('/routine?focus=1')} accessibilityRole="button">
           <Text style={s.addMoreTxt}>+ 부위 집중 루틴 붙이기</Text>
         </PressableScale>
 

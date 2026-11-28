@@ -32,7 +32,13 @@ test('루틴: 분할은 메인(5분할 · 푸시풀레그 · 상하체 · 3분�
 test('검색: 부위 · 종목 이름 · 여러 낱말 · 띄어쓰기 무시', () => {
   const ids = (q: string) => searchRoutines(ROUTINES, q).map((r) => r.id);
   assert.ok(ids('삼두').includes('f-triceps'));
-  assert.ok(ids('스컬크러셔').includes('f-triceps'));
+  assert.ok(ids('리버스그립 푸시다운').includes('f-triceps'));
+  assert.ok(ids('턱걸이').includes('f-lat-width'));
+  assert.ok(ids('초보').length > 0);
+  // '팔'이 설명의 '팔꿈치'에 걸리지 않는다
+  assert.ok(!ids('팔').includes('f-side-delt'));
+  // 효과를 암시하는 꼬리표 금지
+  for (const r of ROUTINES) assert.ok(!r.tags.some((t) => ['뱃살', '식스팩', '역삼각형'].includes(t)), r.id);
   assert.ok(ids('등 덤벨').includes('f-db-back'));
   assert.ok(!ids('등 덤벨').includes('f-triceps'));
   assert.ok(ids('5분할').includes('bro5'));
@@ -54,4 +60,23 @@ test('붙이기 요일: 푸시풀레그 플랜에서 삼두 → 푸시, 종아�
   assert.equal(by('f-calves'), 2);
   assert.equal(by('f-traps'), 1);
   assert.equal(by('f-upper-chest'), 0);
+  assert.equal(by('f-biceps'), 1); // 이두 → 풀데이(예전엔 푸시데이로 갔다)
+  assert.equal(by('f-forearm'), 1);
+});
+
+test('붙이기 요일: 5분할은 팔 날 · 하체 날, 3분할은 등·이두', () => {
+  const mk = (id: string): Plan => {
+    const r = ROUTINES.find((x) => x.id === id)!;
+    return { planSrc: 'PRESET', planReason: '', routineId: id, days: r.days.map((d) => ({ id: d.id, name: d.name, focus: d.focus, ids: d.exIds })) };
+  };
+  const at = (planId: string, rid: string) => {
+    const p = mk(planId);
+    return p.days[suggestDay(p, FOCUS_ROUTINES.find((r) => r.id === rid)! as { attach: string[] })].name;
+  };
+  assert.equal(at('bro5', 'f-triceps'), '팔');
+  assert.equal(at('bro5', 'f-biceps'), '팔');
+  assert.equal(at('bro5', 'f-arms-all'), '팔');
+  assert.equal(at('bro5', 'core'), '하체');
+  assert.equal(at('split3', 'f-biceps'), '등·이두');
+  assert.equal(at('split4', 'f-arms-all'), '어깨·팔');
 });

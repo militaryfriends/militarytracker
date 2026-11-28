@@ -28,3 +28,9 @@ export const repsText = (r: string) => (/[초회]$/.test(r) ? r : `${r}회`);
 export const rxText = (rx: Rx) => `${rx.sets}세트 × ${repsText(rx.reps)}`;
 /** RIR 을 풀어 쓴 안내 — "마지막 세트도 2회 더 할 수 있을 때 멈추기" */
 export const rirText = (rx: Rx) => `세트마다 ${rx.rir}회 정도 여유를 남기는 무게`;
+
+/** 한 세션 예상 시간(분) — 운동 탭과 같은 공식: 세트 수 × 2.4분, 5분 단위, 최소 10분 */
+export function sessionMinutes(exs: readonly Exercise[], level: Lv = 2): number {
+  const sets = exs.reduce((a, e) => a + prescription(e, level).sets, 0);
+  return Math.max(10, Math.round((sets * 2.4) / 5) * 5);
+}

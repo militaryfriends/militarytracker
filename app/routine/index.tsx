@@ -9,10 +9,12 @@ import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/Text';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
-import { Screen, TopBar, Body, SectionLabel, useSafeBack } from '../../src/components/ui';
-import { FOCUS_GROUPS, FOCUS_ROUTINES, ROUTINES, SPLIT_ROUTINES, recommendRoutine, routineExCount, type Routine } from '../../src/data/routines';
+import { Screen, TopBar, Body, useSafeBack } from '../../src/components/ui';
+import { FOCUS_GROUPS, FOCUS_ROUTINES, LEVEL_LABEL, ROUTINES, SPLIT_ROUTINES, recommendRoutine, routineExCount, type Routine } from '../../src/data/routines';
+import { exByIds } from '../../src/data/exercises';
+import { sessionMinutes } from '../../src/utils/prescription';
 import { searchRoutines } from '../../src/utils/routineSearch';
 import { useAppStore } from '../../src/stores/appStore';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
@@ -48,6 +50,7 @@ export default function RoutineListScreen() {
   const goBack = useSafeBack();
   const { profile, plan } = useAppStore();
   const [q, setQ] = useState('');
+  const { focus: focusParam } = useLocalSearchParams<{ focus?: string }>();
 
   // 추천은 구독 기능 — 구독 전에는 배지를 걸지 않는다
   const { can } = useEntitlement();
@@ -59,6 +62,47 @@ export default function RoutineListScreen() {
   const splits = useMemo(() => searchRoutines(SPLIT_ORDER, q, false), [q]);
   const focus = useMemo(() => searchRoutines(FOCUS_ROUTINES, q), [q]);
   const searching = q.trim().length > 0;
+  // 검색 중이거나 운동 탭의 '+ 부위 집중 루틴 붙이기'로 들어왔으면 부위 집중을 먼저
+  const focusFirst = searching || focusParam === '1';
+  const lv = (profile?.level ?? 2) as 1 | 2 | 3;
+
+  const splitSection = splits.length > 0 ? (
+    <>
+      <SectionHead title="분할 루틴" desc="일주일 플랜을 통째로 바꿔요" />
+      {splits.map((r) => (
+        <SplitCard key={r.id} r={r} current={plan?.routineId === r.id} recommended={r.id === recommendedId}
+          onPress={() => router.push(`/routine/${r.id}`)} />
+      ))}
+    </>
+  ) : null;
+
+  const focusSection = focus.length > 0 ? (
+    <>
+      <SectionHead title="부위 집중" desc="플랜은 그대로, 운동하는 날 끝에 붙이거나 한 번만 해요" />
+      {searching ? (
+        <View style={s.grid}>
+          {focus.map((r) => (
+            <FocusCard key={r.id} r={r} lv={lv} attached={isAttached(plan, r.id)} grid onPress={() => router.push(`/routine/${r.id}`)} />
+          ))}
+        </View>
+      ) : (
+        FOCUS_GROUPS.map((g) => {
+          const list = focus.filter((r) => r.group === g);
+          if (!list.length) return null;
+          return (
+            <View key={g} style={s.group}>
+              <Text style={s.groupTitle}>{g}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row} style={s.rowScroll}>
+                {list.map((r) => (
+                  <FocusCard key={r.id} r={r} lv={lv} attached={isAttached(plan, r.id)} onPress={() => router.push(`/routine/${r.id}`)} />
+                ))}
+              </ScrollView>
+            </View>
+          );
+        })
+      )}
+    </>
+  ) : null;
 
   return (
     <Screen>
@@ -93,90 +137,20 @@ export default function RoutineListScreen() {
           <Text style={s.empty}>“{q.trim()}”에 맞는 루틴이 없어요. 부위나 종목 이름으로 찾아 보세요.</Text>
         ) : null}
 
-        {searching ? <>
-        {focus.length > 0 && (
-          <>
-            <SectionLabel>부위 집중 · 운동하는 날에 붙여요</SectionLabel>
-            {searching ? (
-              <View style={s.grid}>
-                {focus.map((r) => (
-                  <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} grid onPress={() => router.push(`/routine/${r.id}`)} />
-                ))}
-              </View>
-            ) : (
-              FOCUS_GROUPS.map((g) => {
-                const list = focus.filter((r) => r.group === g);
-                if (!list.length) return null;
-                return (
-                  <View key={g} style={s.group}>
-                    <Text style={s.groupTitle}>{g}</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}
-                      style={s.rowScroll}>
-                      {list.map((r) => (
-                        <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} onPress={() => router.push(`/routine/${r.id}`)} />
-                      ))}
-                    </ScrollView>
-                  </View>
-                );
-              })
-            )}
-          </>
-        )}
-
-        {splits.length > 0 && (
-          <>
-            <SectionLabel>분할 루틴 · 플랜을 통째로 바꿔요</SectionLabel>
-            {splits.map((r) => (
-              <SplitCard key={r.id} r={r} current={plan?.routineId === r.id} recommended={r.id === recommendedId}
-                onPress={() => router.push(`/routine/${r.id}`)} />
-            ))}
-          </>
-        )}
-
-</> : <>
-        {splits.length > 0 && (
-          <>
-            <SectionLabel>분할 루틴 · 플랜을 통째로 바꿔요</SectionLabel>
-            {splits.map((r) => (
-              <SplitCard key={r.id} r={r} current={plan?.routineId === r.id} recommended={r.id === recommendedId}
-                onPress={() => router.push(`/routine/${r.id}`)} />
-            ))}
-          </>
-        )}
-
-
-        {focus.length > 0 && (
-          <>
-            <SectionLabel>부위 집중 · 운동하는 날에 붙여요</SectionLabel>
-            {searching ? (
-              <View style={s.grid}>
-                {focus.map((r) => (
-                  <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} grid onPress={() => router.push(`/routine/${r.id}`)} />
-                ))}
-              </View>
-            ) : (
-              FOCUS_GROUPS.map((g) => {
-                const list = focus.filter((r) => r.group === g);
-                if (!list.length) return null;
-                return (
-                  <View key={g} style={s.group}>
-                    <Text style={s.groupTitle}>{g}</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}
-                      style={s.rowScroll}>
-                      {list.map((r) => (
-                        <FocusCard key={r.id} r={r} attached={isAttached(plan, r.id)} onPress={() => router.push(`/routine/${r.id}`)} />
-                      ))}
-                    </ScrollView>
-                  </View>
-                );
-              })
-            )}
-          </>
-        )}
-</>}
+        {focusFirst ? <>{focusSection}{splitSection}</> : <>{splitSection}{focusSection}</>}
         <View style={{ height: 24 }} />
       </Body>
     </Screen>
+  );
+}
+
+function SectionHead({ title, desc }: { title: string; desc: string }) {
+  useThemeMode();
+  return (
+    <View style={s.secHead}>
+      <Text style={s.secTitle}>{title}</Text>
+      <Text style={s.secDesc}>{desc}</Text>
+    </View>
   );
 }
 
@@ -213,14 +187,15 @@ function SplitCard({ r, current, recommended, onPress }: { r: Routine; current: 
   );
 }
 
-function FocusCard({ r, attached, grid, onPress }: { r: Routine; attached: boolean; grid?: boolean; onPress: () => void }) {
+function FocusCard({ r, lv, attached, grid, onPress }: { r: Routine; lv: 1 | 2 | 3; attached: boolean; grid?: boolean; onPress: () => void }) {
   useThemeMode();
-  const cover = coverOf.get(r.id) ?? r.days[0]?.exIds[0];
-  const n = r.days[0]?.exIds.length ?? 0;
+  // 대표 그림은 그 루틴의 첫 종목(무엇을 하는지 보이게 — 카드끼리 겹쳐도 괜찮다)
+  const cover = r.days[0]?.exIds[0];
+  const ex = exByIds(r.days[0]?.exIds ?? []);
   const home = r.place.length === 1 && r.place[0] === 'home';
   return (
     <PressableScale scaleTo={PRESS_SCALE.card} style={grid ? s.fGrid : s.fCard} onPress={onPress}
-      accessibilityRole="button" accessibilityLabel={`${r.name}, ${n}동작${attached ? ', 붙어 있음' : ''}`}>
+      accessibilityRole="button" accessibilityLabel={`${r.name}, ${ex.length}동작, ${LEVEL_LABEL[r.level]}${attached ? ', 붙어 있음' : ''}`}>
       <View style={s.fThumb}>
         {cover ? <ExerciseMedia exId={cover} rounded={0} dim={0.1} style={s.fThumbImg} /> : null}
         {attached ? (
@@ -228,7 +203,9 @@ function FocusCard({ r, attached, grid, onPress }: { r: Routine; attached: boole
         ) : null}
       </View>
       <Text style={s.fName} numberOfLines={2}>{r.name}</Text>
-      <Text style={s.fMeta}>{n}동작{home ? ' · 집에서' : ''}{r.days.length > 1 ? ` · ${r.days.length}세션` : ''}</Text>
+      <Text style={s.fMeta}>
+        {r.days.length > 1 ? `${r.days.length}세션` : `${ex.length}동작 · 약 ${sessionMinutes(ex, lv)}분`} · {LEVEL_LABEL[r.level]}{home ? ' · 집' : ''}
+      </Text>
     </PressableScale>
   );
 }
@@ -272,6 +249,9 @@ const s = themed(() => StyleSheet.create({
   tag: { backgroundColor: colors.panel3, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 4 },
   tagTxt: { fontSize: 10, color: colors.muted, fontWeight: '600' },
 
+  secHead: { marginTop: 22, marginBottom: 12 },
+  secTitle: { fontSize: 18, fontWeight: '800', color: colors.ink },
+  secDesc: { fontSize: 13, color: colors.mid, marginTop: 3, lineHeight: 19 },
   group: { marginBottom: 18 },
   groupTitle: { fontSize: 15, fontWeight: '800', color: colors.ink, marginBottom: 10 },
   // 가로 줄은 화면 끝까지 — Body 의 좌우 여백(16)만큼 밖으로 뺀다
