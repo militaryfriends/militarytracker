@@ -35,7 +35,7 @@ const ALL: Guide[] = [
   { id: 'muscle-memory', title: '머슬메모리', hook: '운동 쉬면 근육, 다시 돌아오는 데 얼마나?', tags: ['상식'], sec: 67, ig: 'DgO3Db3qim8', poster: require('../../assets/guide/muscle-memory.jpg') },
   { id: 'tib-30', title: '벽 발끝 들기 30일', hook: '벽에 등 대고 발끝을 매일 들면', tags: ['하체', '맨몸'], sec: 63, ig: 'DgKJqWXKZtE', poster: require('../../assets/guide/tib-30.jpg') },
   { id: 'bw-routine', title: '맨몸 운동 루틴', hook: '집에서 운동하신다면', tags: ['맨몸', '전신'], sec: 72, ig: 'Df_FUTUqqeU', poster: require('../../assets/guide/bw-routine.jpg') },
-  { id: 'posture5', title: '거북목 · 말린 어깨 5분', hook: '하나쯤 해당되시죠?', tags: ['스트레칭', '어깨'], sec: 45, ig: 'DgHjvnNqXsd', poster: require('../../assets/guide/posture5.jpg') },
+  { id: 'posture5', title: '거북목·말린 어깨 5분', hook: '하나쯤 해당되시죠?', tags: ['스트레칭', '어깨'], sec: 45, ig: 'DgHjvnNqXsd', poster: require('../../assets/guide/posture5.jpg') },
 ];
 
 // 로컬 시험(EXPO_PUBLIC_GUIDE_BASE=http://localhost:…)이면 모든 편을 그 주소에서 읽는다 — 업로드 전 화면 · 재생 확인용

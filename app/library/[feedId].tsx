@@ -2,7 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from '../../src/components/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
-import { Screen, TopBar, Body, SectionLabel, EmptyState, GhostBtn, useSafeBack } from '../../src/components/ui';
+import { Screen, TopBar, Body, SectionLabel, EmptyState, useSafeBack } from '../../src/components/ui';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { FEED, feedById, uniqueCovers } from '../../src/data/feed';
 import { GUIDES } from '../../src/data/guides';
@@ -22,7 +22,7 @@ export default function LibraryDetailScreen() {
   if (!item) {
     return (
       <Screen>
-        <TopBar title="라이브러리" onBack={goBack} />
+        <TopBar title="부위별 운동 정리" onBack={goBack} />
         <EmptyState text="콘텐츠를 찾을 수 없습니다." />
       </Screen>
     );
@@ -68,7 +68,8 @@ export default function LibraryDetailScreen() {
                   <ExerciseMedia exId={e.id} rounded={10} style={s.exThumb} dim={0.3} />
                   <View style={{ flex: 1 }}>
                     <Text style={s.exName}>{e.n}</Text>
-                    <Text style={s.exMeta}>{PART_LABEL[e.part]} · {e.g}</Text>
+                    {/* "이두 · 이두 전체"처럼 부위가 두 번 나오지 않게 */}
+                    <Text style={s.exMeta}>{e.g.startsWith(PART_LABEL[e.part]) ? e.g : `${PART_LABEL[e.part]} · ${e.g}`}</Text>
                   </View>
                   <Text style={s.chev}>›</Text>
                 </PressableScale>
@@ -84,7 +85,7 @@ export default function LibraryDetailScreen() {
               ))}
             </>
           )}
-          <GhostBtn label="운동 탭에서 오늘 운동 보기" onPress={() => router.navigate('/tabs/plan')} style={{ marginTop: 8, marginBottom: 24 }} />
+          <View style={{ height: 24 }} />
         </View>
       </Body>
     </Screen>

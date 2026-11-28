@@ -70,7 +70,7 @@ export function NudgeSettings() {
       <View style={s.subRow}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>구독 알림</Text>
-          <Text style={s.subHint}>무료 체험이 끝나기 7 · 2 · 1일 전, 해지한 구독이 끝나기 3 · 1일 전 낮 12시에 알려 드려요.</Text>
+          <Text style={s.subHint}>무료 체험은 해지 마감 이틀 전과 마감 직전에, 해지한 구독은 끝나기 사흘 전과 하루 전에 알려 드려요.</Text>
         </View>
         <Switch value={prefs.sub} onValueChange={toggleSub} accessibilityLabel="구독 알림"
           trackColor={{ false: colors.panel3, true: colors.ink }}

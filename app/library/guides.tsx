@@ -1,5 +1,5 @@
 /**
- * 가이드 영상 전체 — 오늘 탭 '오늘의 가이드 › 전체 보기'. 게시한 VO 운동 꿀팁 릴스(src/data/guides.ts).
+ * 가이드 전체 — 오늘 탭 '오늘의 가이드 › 전체 보기'. 게시한 VO 운동 꿀팁 릴스(src/data/guides.ts).
  */
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -15,7 +15,7 @@ export default function GuidesScreen() {
   const goBack = useSafeBack();
   return (
     <Screen>
-      <TopBar title="가이드 영상" meta={`${GUIDES.length}편`} onBack={goBack} />
+      <TopBar title="가이드 전체" meta={`${GUIDES.length}편`} onBack={goBack} />
       <Body>
         {GUIDES.length === 0 ? <EmptyState text="영상을 준비하고 있어요." /> : null}
         <View style={s.grid}>

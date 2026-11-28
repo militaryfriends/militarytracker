@@ -1,5 +1,5 @@
 /**
- * 부위별 가이드 — 운동 탭 아래(2026-11-28 오늘 탭에서 옮김. 오늘 탭에는 '오늘의 가이드' 한 편만 둔다).
+ * 부위별 운동 정리(옛 라이브러리) — 운동 탭 아래. '가이드'는 영상(오늘의 가이드)에만 쓴다(2026-11-28 오늘 탭에서 옮김. 오늘 탭에는 '오늘의 가이드' 한 편만 둔다).
  *  · 꼬리표는 모두 '{연관 종목 수}종목'으로 맞춘다(예전: 1편 · 5동작 · 부위별 · 비교가 섞여 있었다).
  *  · 표지는 카드끼리 같은 그림이 겹치지 않게 고른다(feed.ts uniqueCovers).
  */
@@ -19,7 +19,7 @@ export function LibrarySection() {
   return (
     <View style={s.wrap}>
       <View style={s.secRow}>
-        <Text style={s.secTitle}>부위별 가이드</Text>
+        <Text style={s.secTitle}>부위별 운동 정리</Text>
         <Text style={s.secMeta}>{FEED.length}개</Text>
       </View>
       <View style={s.grid}>

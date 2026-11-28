@@ -225,7 +225,7 @@ export default function PlanScreen() {
         </View>
         <GhostBtn label="다른 루틴 둘러보기" onPress={() => router.push('/routine')} style={{ marginTop: 10 }} />
 
-        {/* 부위별 가이드 — 오늘 탭에서 옮겨 왔다(11/28) */}
+        {/* 부위별 운동 정리 — 오늘 탭에서 옮겨 왔다(11/28) */}
         <LibrarySection />
 
         <Notice>일반적인 운동 가이드입니다. 통증이나 질환이 있다면 전문가와 상담하세요.</Notice>

@@ -32,7 +32,9 @@ export default function GuidePlayerScreen() {
   // 웹 브라우저는 소리 있는 자동 재생을 막는다 — 처음 한 번은 크게 누를 곳을 준다
   const [started, setStarted] = useState(false);
   useEffect(() => {
-    if (isPlaying) setStarted(true);
+    if (!isPlaying) return;
+    setStarted(true);
+    setEnded(false); // 되감아 다시 보면 '다음 가이드' 카드를 걷는다
   }, [isPlaying]);
   const needTap = Platform.OS === 'web' && !!url && !started && status === 'readyToPlay';
   const [ended, setEnded] = useState(false);

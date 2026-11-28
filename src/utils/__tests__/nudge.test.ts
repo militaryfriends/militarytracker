@@ -18,8 +18,14 @@ test('결석 알림: 문구에 금지어 · 숫자 약속이 없고 한마디가
       assert.ok(n.title.length <= 20, n.title);
     }
   }
-  assert.ok(nudgePlan('mild', '홈 레그')[0].body.startsWith('오늘은 홈 레그.'));
-  assert.ok(!nudgePlan('mild')[0].body.startsWith('오늘은'));
+  assert.ok(nudgePlan('mild', '홈 레그')[0].body.startsWith('오늘 차례는 홈 레그예요.'));
+  assert.ok(nudgePlan('mild', '등')[0].body.startsWith('오늘 차례는 등이에요.'));
+  assert.ok(nudgePlan('hot', '레그데이')[0].body.startsWith('오늘 차례는 레그데이입니다.'));
+  assert.ok(!nudgePlan('mild')[0].body.startsWith('오늘 차례는'));
+  // 순한맛은 해요체 문장으로 끝난다(끊긴 명사형 금지)
+  for (const n of nudgePlan('mild', '레그데이')) {
+    assert.ok(/요\.$/.test(n.body.split('\n')[0]), n.body);
+  }
   // "오늘"이 한 문장에 두 번 나오지 않는다
   for (const n of [...nudgePlan('mild', '레그데이'), ...nudgePlan('hot', '레그데이')]) {
     assert.ok((n.body.match(/오늘/g) ?? []).length <= 1, n.body);

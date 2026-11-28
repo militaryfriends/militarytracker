@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { ThemeToggle, colors, themed, useThemeMode } from '../../src/theme';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { GUIDES } from '../../src/data/guides';
+import { GUIDES, secLabel } from '../../src/data/guides';
 import { pickGuide } from '../../src/utils/guidePick';
 import { GuideCard } from '../../src/components/GuideCard';
 import { exById } from '../../src/data/exercises';
@@ -106,7 +106,8 @@ export default function HomeScreen() {
   const doneCount = (workoutDone ? 1 : 0) + (weighed ? 1 : 0);
   const stats = calcBodyStats(profile, weights, project);
   const weekday = new Date().toLocaleDateString('ko-KR', { weekday: 'long' });
-  const guide = pickGuide(GUIDES, day.focus);
+  const picked = pickGuide(GUIDES, `${day.name} ${day.focus}`);
+  const guide = picked?.guide;
   const dateLine = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
   return (
@@ -204,7 +205,7 @@ export default function HomeScreen() {
         </View>
 
         {/* 오늘의 가이드 — 게시한 VO 운동 꿀팁 릴스 한 편, 오늘 부위에 맞춰 날마다 바뀐다(11/28 라이브러리 자리를 바꿈).
-            부위별 가이드(옛 라이브러리)는 운동 탭 아래로 옮겼다 */}
+            부위별 운동 정리(옛 라이브러리)는 운동 탭 아래로 옮겼다 */}
         {guide ? (
           <>
             <View style={s.secRow}>
@@ -214,7 +215,8 @@ export default function HomeScreen() {
                 <Text style={s.secMore}>전체 보기 ›</Text>
               </PressableScale>
             </View>
-            <GuideCard guide={guide} onPress={() => router.push(`/library/guide/${guide.id}`)} />
+            <GuideCard guide={guide} onPress={() => router.push(`/library/guide/${guide.id}`)}
+              kicker={picked?.part ? `${picked.part} 날 추천 · ${secLabel(guide.sec)}` : undefined} />
           </>
         ) : null}
       </ScrollView>

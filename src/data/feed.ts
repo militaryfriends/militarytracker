@@ -98,7 +98,7 @@ export const FEED: FeedItem[] = [
   },
   {
     id: 'biceps-3',
-    n: '납작한 이두 살리는 3동작',
+    n: '이두 운동 3가지',
     part: '이두',
     cnt: '3동작',
     summary: '장두·단두·상완근을 나눠 공략하면 팔 두께가 달라집니다.',
@@ -124,7 +124,7 @@ export const FEED: FeedItem[] = [
   },
   {
     id: 'lat-width',
-    n: '광배가 커지는 동작',
+    n: '광배 넓이 운동 5가지',
     part: '등',
     cnt: '5동작',
     summary: '등 너비는 수직 당기기에서 만들어집니다.',

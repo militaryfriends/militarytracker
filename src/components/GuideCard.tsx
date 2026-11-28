@@ -1,5 +1,5 @@
 /**
- * 오늘의 가이드 카드 — 오늘 탭. 게시한 VO 운동 꿀팁 릴스 한 편(src/data/guides.ts).
+ * 가이드 카드 — 오늘 탭 '오늘의 가이드' · 부위별 운동 정리 상세. 게시한 VO 운동 꿀팁 릴스 한 편(src/data/guides.ts).
  * 표지(9:16)를 왼쪽에 작게, 오른쪽에 제목 · 한 줄 · 길이. 누르면 영상 화면.
  */
 import { Image, StyleSheet, View } from 'react-native';
@@ -9,16 +9,17 @@ import { colors, themed, useThemeMode } from '../theme';
 import { PressableScale, PRESS_SCALE } from '../ui';
 import { secLabel, type Guide } from '../data/guides';
 
-export function GuideCard({ guide, onPress }: { guide: Guide; onPress: () => void }) {
+/** kicker: 머리글 — 없으면 '영상 · 길이'. 오늘 운동에 맞춰 골랐으면 '하체 날 추천 · 길이' */
+export function GuideCard({ guide, onPress, kicker }: { guide: Guide; onPress: () => void; kicker?: string }) {
   useThemeMode();
   return (
     <PressableScale scaleTo={PRESS_SCALE.card} style={s.card} onPress={onPress} accessibilityRole="button"
-      accessibilityLabel={`오늘의 가이드, ${guide.title}, ${secLabel(guide.sec)} 영상`}>
+      accessibilityLabel={`${guide.title}, ${secLabel(guide.sec)} 영상`}>
       <View style={s.poster}>
         <Image source={guide.poster} style={s.posterImg} resizeMode="cover" accessibilityIgnoresInvertColors />
       </View>
       <View style={s.info}>
-        <Text style={s.kicker}>운동 꿀팁 · {secLabel(guide.sec)}</Text>
+        <Text style={s.kicker}>{kicker ?? `영상 · ${secLabel(guide.sec)}`}</Text>
         <Text style={s.title} numberOfLines={2}>{guide.title}</Text>
         {guide.hook ? <Text style={s.hook} numberOfLines={2}>{guide.hook}</Text> : null}
         <View style={{ flex: 1 }} />
