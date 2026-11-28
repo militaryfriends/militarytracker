@@ -109,7 +109,8 @@ export function shapeAt(sex: Sex, stored: Omit<Shape, 'xl'> | null | undefined, 
  * 근육: M4 이상 0 · M3 0.25 · M2 0.5 · M1 0.7. 둘을 합칠 때는 1 - (1-a)(1-b).
  */
 function softFor(sex: Sex, f: number, m: number): number {
-  if (sex !== 'male') return 0;
+  // 여자 v2(r13): 22%(f 2) 0 → 26%(f 2.8) 1 — 살이 붙으면 11자 선이 사라진다
+  if (sex !== 'male') return clamp((f - 2) / 0.8, 0, 1);
   const fs = clamp((f - 1.6) / (3.6 - 1.6), 0, 1);
   const ms = clamp((4 - m) / 3, 0, 1) * 0.7;
   return 1 - (1 - Math.pow(fs, 0.85)) * (1 - ms);
