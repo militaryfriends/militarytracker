@@ -7,7 +7,8 @@
  * 고르는 즉시 위의 3D 몸이 바뀐다(저장 전 미리보기). MY 탭 '내 몸' 카드에서 연다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../../src/theme';

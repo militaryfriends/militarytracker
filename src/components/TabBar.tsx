@@ -6,7 +6,8 @@
  * 모션: 켜진 탭 뒤의 판이 스프링으로 미끄러져 옮겨 가고(SPRING.snap), 새로 켜진 아이콘이 한 번 튄다. 누르면 살짝 눌린다.
  */
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';

@@ -1,8 +1,9 @@
 import { analyzeBody } from '../src/utils/bodyAnalysis';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking, AppState,
+  View, TextInput, StyleSheet, ActivityIndicator, Platform, Linking, AppState,
 } from 'react-native';
+import { Text } from '../src/components/Text';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { targetPlanOf } from '../src/components/body/TargetPanel';
 import { colors, themed, useThemeMode } from '../src/theme';

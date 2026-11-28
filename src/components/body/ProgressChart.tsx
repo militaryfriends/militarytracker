@@ -4,7 +4,8 @@
  * 색만으로 구분하지 않는다: 예상 = 점선, 실제 = 실선 + 점, 체크인 = 큰 점. 범례를 늘 붙인다.
  */
 import { useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Text } from '../Text';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { colors, themed, useThemeMode } from '../../theme';
 import type { BodyProject, Checkin, WeightRecord } from '../../types';

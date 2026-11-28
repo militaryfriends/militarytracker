@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
+  View, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { showAlert } from '../../src/utils/alert';

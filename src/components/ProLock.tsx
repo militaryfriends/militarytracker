@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Text } from './Text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';

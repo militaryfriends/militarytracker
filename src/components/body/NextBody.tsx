@@ -7,7 +7,8 @@
  * 마지막 한 달이 되면 "다음 몸 시작하기" 버튼이 나온다(지금 몸으로 다시 계산 → 카드 4장).
  */
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale } from '../../ui';

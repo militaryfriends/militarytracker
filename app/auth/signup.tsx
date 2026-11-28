@@ -3,9 +3,10 @@
  */
 import { useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View,
   type TextInput,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';

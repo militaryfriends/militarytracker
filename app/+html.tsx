@@ -73,6 +73,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard',
     'Noto Sans KR', 'Segoe UI', Roboto, sans-serif;
+  /* 한국어 단어 중간에서 줄을 바꾸지 않는다("차례예 / 요" 금지). 한 단어가 한 줄보다 길 때만 자른다.
+     네이티브는 src/components/Text.tsx 가 같은 일을 한다 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 /* maximum-scale=1 로 핀치줌을 막지 않는다(접근성). 대신 입력창을 16px 이상으로 두어 iOS Safari 자동 줌을 피한다 */
 input, textarea { font-size: max(16px, 1em); }

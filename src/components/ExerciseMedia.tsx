@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, Image, StyleSheet, StyleProp, ViewStyle, ImageSourcePropType,
+  View, Image, StyleSheet, StyleProp, ViewStyle, ImageSourcePropType,
 } from 'react-native';
+import { Text } from './Text';
 import { useVideoPlayer, VideoView, VideoSource } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, partTint, themed, useThemeMode } from '../theme';

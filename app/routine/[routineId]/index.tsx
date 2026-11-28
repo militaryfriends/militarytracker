@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '../../../src/components/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../../src/theme';
 import { showAlert } from '../../../src/utils/alert';

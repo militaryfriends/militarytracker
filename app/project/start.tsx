@@ -8,7 +8,8 @@
  * 숫자를 AI 가 바꿀 수 없게: 앱이 보내는 건 id 뿐이고 서버가 숫자를 정한다.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

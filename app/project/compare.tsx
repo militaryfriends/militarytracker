@@ -4,7 +4,8 @@
  * 목표 몸 비교는 다음 화면 카드 4장이 맡는다(여기서 목표 몸을 하나로 못 박지 않는다).
  */
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';

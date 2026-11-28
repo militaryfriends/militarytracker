@@ -14,9 +14,10 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View,
   type LayoutChangeEvent, type StyleProp, type TextInput, type ViewStyle,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';

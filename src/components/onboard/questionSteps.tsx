@@ -3,7 +3,8 @@
  * 숫자 칸은 화면에 들어오면 바로 키패드가 뜨고(autoFocus), 키패드의 '완료'가 '다음'을 누른다 — 키패드가 다음 버튼을 가려도 막히지 않게.
  */
 import { useEffect, useRef } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
+import { Text } from '../Text';
 import type { TextInputInstance } from 'react-native';
 import { colors, useThemeMode } from '../../theme';
 import type { FocusPart, UserProfile } from '../../types';

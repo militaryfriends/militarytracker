@@ -4,7 +4,8 @@
  * 블러 없음 · 숫자는 엔진 값 그대로. 3D 가 없으면(네이티브 · 여성) 같은 자리에서 칸 이미지가 바뀐다.
  */
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
+import { Text } from '../Text';
 import { colors, themed, useThemeMode } from '../../theme';
 import { haptic } from '../../ui';
 import type { Coord, Sex } from '../../utils/bodyComp';

@@ -2,7 +2,8 @@
  * 사전 신청(대기자) 무료 자격이 확인됐는데 아직 시작 전이면 홈에서 한 줄로 알려 준다(2026-11-28 대표 결정 · 문구).
  * 무료 기간은 결제 수단을 등록해야 시작된다 — 누르면 구독 화면. 시작하면(스토어 구독이 생기면) 저절로 사라진다.
  */
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from './Text';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { PressableScale } from '../ui';

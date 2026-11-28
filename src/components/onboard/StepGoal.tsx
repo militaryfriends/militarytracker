@@ -4,7 +4,8 @@
  * 아래 텍스트 버튼: "잘 모르겠어요, 추천해주세요"(목표 미정 → 엔진이 정한다) · "체형보다 운동 습관이 먼저예요"(습관 경로).
  */
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale, haptic } from '../../ui';

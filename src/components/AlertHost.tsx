@@ -3,7 +3,8 @@
  * (AI 동의를 못 해 코치 · AI 식단 · AI 플랜이 막혔다). showAlert 가 웹에서는 여기로 보낸다. 앱은 네이티브 Alert 그대로.
  */
 import { useEffect, useState } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { colors, themed, useThemeMode } from '../theme';
 import { PressableScale } from '../ui';
 import type { AlertButton } from '../utils/alert';

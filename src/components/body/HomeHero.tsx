@@ -6,7 +6,8 @@
  * 숫자는 MY(내 몸) 카드 · 체크인과 같은 계산(useNowBody · progressPct)이다.
  */
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, themed, useThemeMode } from '../../theme';

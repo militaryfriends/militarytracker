@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator,
+  View, StyleSheet, ActivityIndicator,
   ScrollView, StyleProp, ViewStyle, TextStyle,
 } from 'react-native';
+import { Text } from './Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';

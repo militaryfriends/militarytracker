@@ -3,7 +3,8 @@
  * 문구 · 단계는 utils/nudge.ts, 예약은 services/reminders.ts. 알림은 앱(iOS · Android)에서만 울린다.
  */
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { colors, themed, useThemeMode } from '../theme';
 import { PressableScale, Segmented } from '../ui';
 import { canNudge, setNudgePrefs, useNudgePrefs } from '../services/reminders';

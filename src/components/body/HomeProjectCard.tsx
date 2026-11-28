@@ -6,7 +6,8 @@
  * "지금" 아바타는 체중 기록으로도 바뀐다(무료 사용자 포함) — 바뀌는 게 보여야 돌아온다.
  */
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, themed, useThemeMode } from '../../theme';

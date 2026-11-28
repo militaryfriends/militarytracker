@@ -8,7 +8,8 @@
  *  설정 순서: docs/대기자-혜택-스토어-설정.md
  */
 import { useMemo, useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { httpsCallable } from 'firebase/functions';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, useSafeBack, EmptyState } from '../../src/components/ui';

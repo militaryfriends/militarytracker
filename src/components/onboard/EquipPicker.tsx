@@ -5,7 +5,8 @@
  * 저장값은 늘 배열이다(헬스장 기본 = GYM_KIT 전부) — 프로필은 merge 로 저장돼 undefined 로는 예전 값이 안 지워진다.
  */
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../Text';
 import { useThemeMode } from '../../theme';
 import { GYM_KIT, HOME_KIT, KIT_LABEL, type Kit } from '../../data/equipment';
 import { Opt } from './basicSteps';

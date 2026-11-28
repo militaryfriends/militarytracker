@@ -4,7 +4,8 @@
  * 무리한 목표는 깎아서 그대로 말한다(체지방 하한 · 24개월 한도) — 숨기거나 부풀리지 않는다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../Text';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale } from '../../ui';
 import { planTarget, type TargetAsk, type TargetPlan } from '../../utils/projection';

@@ -7,7 +7,8 @@
  * 거절해도 분석은 저장되고 홈의 "내 변화 프로젝트" 카드에서 이 화면으로 다시 온다.
  */
 import { useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

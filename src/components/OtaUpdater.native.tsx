@@ -10,7 +10,8 @@
  *  - 운동 중(세션)이면 필수라도 운동이 끝날 때까지 미룬다(세트 기록을 잃지 않게).
  */
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Modal, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Modal, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import * as Updates from 'expo-updates';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';

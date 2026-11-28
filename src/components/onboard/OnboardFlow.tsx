@@ -11,8 +11,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  KeyboardAvoidingView, Platform, ScrollView, View,
 } from 'react-native';
+import { Text } from '../Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useThemeMode } from '../../theme';

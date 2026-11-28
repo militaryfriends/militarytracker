@@ -3,8 +3,9 @@
  * 화면 문구 · 검증은 예전 app/onboard.tsx 와 같다. 단계 번호만 바깥에서 받는다.
  */
 import {
-  ActivityIndicator, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, StyleSheet, TextInput, View,
 } from 'react-native';
+import { Text } from '../Text';
 import { colors, themed, useThemeMode } from '../../theme';
 import type { UserProfile } from '../../types';
 import { ProBadge } from '../ProLock';

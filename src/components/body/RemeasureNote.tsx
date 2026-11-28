@@ -2,7 +2,8 @@
  * 지금 몸 체지방이 몸으로 보기 어려운 값(남 8% · 여 15% 미만)이면 허리를 다시 재 보라고 한다(2026-11-25 검수 1-2).
  * 예전에 허리를 작게 넣고 시작한 사람(프로젝트 시작값이 그대로 남는다)도 여기서 고칠 길을 연다 → 내 몸 다시 계산의 허리 단계.
  */
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale } from '../../ui';

@@ -7,7 +7,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale, Segmented } from '../../ui';

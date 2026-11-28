@@ -4,8 +4,9 @@ import { hasHydrated } from '../../src/stores/appStore';
 import { RemeasureNote } from '../../src/components/body/RemeasureNote';
 import { WaitlistNote } from '../../src/components/WaitlistNote';
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator,
+  View, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

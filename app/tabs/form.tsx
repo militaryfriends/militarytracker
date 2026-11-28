@@ -1,7 +1,8 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, FlatList,
+  View, TextInput, StyleSheet, FlatList,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';

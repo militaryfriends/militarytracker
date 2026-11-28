@@ -9,8 +9,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Switch, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Switch, TextInput, View,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../../src/theme';

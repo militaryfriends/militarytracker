@@ -3,7 +3,8 @@
  * 화면 설정(시스템 · 라이트 · 다크), 기간 고르기 등.
  */
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Text } from '../components/Text';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../theme/tokens';
 import { haptic } from './haptics';

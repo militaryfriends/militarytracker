@@ -2,7 +2,8 @@
  * AI 코치 답변 아래 카드 — 식단(끼니 · 음식별 양 · 합계)과 WARNING.
  * 숫자는 서버가 식품표로 계산한 값이다(functions/src/coachMeal.ts). 화면은 그리기만 한다.
  */
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from './Text';
 import { colors, themed, useThemeMode } from '../theme';
 import { FONT } from '../ui';
 import type { CoachMeal } from '../services/aiService';

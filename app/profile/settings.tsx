@@ -4,7 +4,8 @@
  * 예전엔 내 몸 탭 아래로 9개 묶음이 이어져 로그아웃까지 화면 여러 장을 내려야 했다.
  */
 import { useEffect, useState } from 'react';
-import { Linking, StyleSheet, Switch, Text, View } from 'react-native';
+import { Linking, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { useRouter } from 'expo-router';
 import { chooseTheme, colors, themed, useThemePref, useThemeMode, type ThemePref } from '../../src/theme';
 import { Segmented, haptic, setHapticsEnabled, useHapticsEnabled, PressableScale, PRESS_SCALE } from '../../src/ui';

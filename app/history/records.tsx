@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
 import { Screen, TopBar, EmptyState, useSafeBack } from '../../src/components/ui';

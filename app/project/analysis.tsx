@@ -8,7 +8,8 @@
  * 온보딩에서는 AI 를 부르지 않는다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, BackHandler, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, StyleSheet, View } from 'react-native';
+import { Text, keepWords } from '../../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -235,7 +236,7 @@ export default function AnalysisScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[s.stepTxt, state === 'now' && s.stepNow, state === 'wait' && s.stepWait]}>{state === 'done' ? doneOf(title) : title}</Text>
                   {state === 'done' ? (
-                    <Animated.Text entering={FadeInDown.duration(220)} style={s.sub}>{work.lines[i]}</Animated.Text>
+                    <Animated.Text entering={FadeInDown.duration(220)} style={s.sub}>{keepWords(work.lines[i])}</Animated.Text>
                   ) : null}
                 </View>
               </View>

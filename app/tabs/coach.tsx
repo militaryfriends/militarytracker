@@ -8,9 +8,10 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, FlatList,
+  View, TextInput, StyleSheet, FlatList,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { nextDayIdx } from '../../src/utils/stats';

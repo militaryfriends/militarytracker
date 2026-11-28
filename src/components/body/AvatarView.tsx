@@ -9,7 +9,8 @@
  * 블러 · 가림 처리는 하지 않는다 — 결제 전에도 전부 선명하게.
  */
 import { memo, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text } from '../Text';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { type Coord, type Sex } from '../../utils/bodyComp';
 import { colors, themed, useThemeMode } from '../../theme';

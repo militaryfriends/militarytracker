@@ -4,7 +4,8 @@
  * 허리는 권장(건너뛸 수 있다), 인바디는 토글(기본 꺼짐).
  */
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Text } from '../Text';
 import { webSwitch } from '../../ui/webSwitch';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../../theme';

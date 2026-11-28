@@ -5,7 +5,8 @@
  * 동작 줄이기면 점은 멈추고 글만 바뀐다. 화면 낭독기는 줄이 바뀔 때 읽는다.
  */
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { colors, themed, useThemeMode } from '../theme';
 

@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { TabFade } from '../../src/components/TabBar';
 import { MyBodyCard } from '../../src/components/body/MyBodyCard';
 import {
-  View, Text, ScrollView, StyleSheet,
+  View, ScrollView, StyleSheet,
   TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';

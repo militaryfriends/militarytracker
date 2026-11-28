@@ -3,7 +3,8 @@
  * 예상 아바타(배지 '예상', 블러 없음) + 이름 · 기간 + 예상 체중 · 체지방률 · 허리(참고) + 목표 도달 표시 + 실천 조건.
  * 선택되면 지금 칸 → 예상 칸으로 0.6초 크로스페이드.
  */
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { colors, themed, useThemeMode } from '../../theme';
 import { PressableScale } from '../../ui';
 import type { Sex } from '../../utils/bodyComp';

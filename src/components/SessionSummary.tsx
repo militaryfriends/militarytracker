@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { Text } from './Text';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

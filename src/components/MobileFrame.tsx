@@ -1,5 +1,6 @@
 import { ReactNode, useMemo } from 'react';
-import { Platform, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Text } from './Text';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors, themed, useThemeMode } from '../theme';
 import { FrameSizeContext } from '../ui/screenSize';

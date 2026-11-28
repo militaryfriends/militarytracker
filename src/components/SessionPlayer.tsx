@@ -2,9 +2,10 @@ import { prescription, repsText, rxText } from '../utils/prescription';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ScrollView, FlatList,
+  View, TextInput, StyleSheet, ScrollView, FlatList,
   Vibration, Platform, ActivityIndicator, KeyboardAvoidingView, Keyboard, PanResponder,
 } from 'react-native';
+import { Text } from './Text';
 import type { TextInputInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {

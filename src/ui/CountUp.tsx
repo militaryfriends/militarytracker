@@ -1,6 +1,7 @@
 /** 숫자가 이전 값에서 목표까지 올라온다 (요약 통계 · 이번 주 숫자). 동작 줄이기면 바로 목표 값 */
 import { useEffect, useRef, useState } from 'react';
-import { Text, type StyleProp, type TextStyle } from 'react-native';
+import { type StyleProp, type TextStyle } from 'react-native';
+import { Text } from '../components/Text';
 import { useReducedMotion } from 'react-native-reanimated';
 import { DURATION } from './motion';
 

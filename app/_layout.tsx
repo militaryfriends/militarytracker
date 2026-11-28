@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
+import { Text } from '../src/components/Text';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Font from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

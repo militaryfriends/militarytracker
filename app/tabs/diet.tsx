@@ -1,6 +1,7 @@
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator,
+  View, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
