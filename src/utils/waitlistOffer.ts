@@ -20,9 +20,23 @@ export const OFFER_LABEL: Record<WaitlistOffer, string> = { m3: '3개월', m1: '
 export const OFFER_TAG: Record<WaitlistOffer, string> = { m3: 'waitlist-3m', m1: 'waitlist-1m' };
 export const WAITLIST_TAGS: readonly string[] = [OFFER_TAG.m3, OFFER_TAG.m1];
 
+/** ⚠️ 임시 브랜치(claude/tmp-waitlist-preview) 전용 — 미리보기 화면 확인용. 주소의 ?mockWaitlist=m3|m1 · mockStore=1 · mockRedeem=1 · mockAlert=1 */
+const q = (k: string): string | null => {
+  try {
+    return typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get(k) : null;
+  } catch {
+    return null;
+  }
+};
+export const mockWaitlist = (): WaitlistOffer | null => {
+  const m = q('mockWaitlist');
+  return m === 'm3' || m === 'm1' ? m : null;
+};
+export const mockFlag = (k: 'mockStore' | 'mockRedeem' | 'mockAlert'): boolean => q(k) === '1';
+
 /** 무료 자격이 있고 아직 시작 전이면 그 혜택, 아니면 null */
 export const waitlistOffer = (sub: Subscription | null | undefined): WaitlistOffer | null =>
-  sub?.waitlist === 'eligible' ? offerOf(sub.waitlistDays) : null;
+  mockWaitlist() ?? (sub?.waitlist === 'eligible' ? offerOf(sub.waitlistDays) : null);
 
 /**
  * 관리자 화면 미리 세기 — App Store Connect 에서 내려받은 일회용 코드 목록(CSV · 줄바꿈 · 쉼표) → 코드만, 중복 없이.

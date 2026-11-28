@@ -18,7 +18,7 @@ import {
 } from '../src/services/billingService';
 import { resendVerification } from '../src/services/authService';
 import { SUB_STATUS_LABEL, isProSub } from '../src/utils/subscription';
-import { OFFER_LABEL, waitlistOffer } from '../src/utils/waitlistOffer';
+import { OFFER_LABEL, waitlistOffer, mockWaitlist, mockFlag } from '../src/utils/waitlistOffer';
 import type { Subscription } from '../src/types';
 import { useAppStore } from '../src/stores/appStore';
 import { AvatarView } from '../src/components/body/AvatarView';
@@ -83,9 +83,11 @@ export default function SubscribeScreen() {
   const dayKcal = calcBodyStats(profile, weights, bodyProject)?.kcal ?? chosen?.nutrition.kcal;
   const patchUser = useAuthStore((s) => s.patchUser);
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
-  const { sub, pro, left } = useEntitlement();
+  const { sub, pro: realPro, left } = useEntitlement();
+  // ⚠️ 임시 미리보기 — ?mockWaitlist 면 구독 전 계정처럼, mockStore=1 이면 앱(결제 가능)처럼 그린다
+  const pro = mockWaitlist() ? false : realPro;
   // 결제 SDK 연결 전엔 가격표·구매·복원·코드 입력을 숨긴다 (심사 거절 사유)
-  const storeReady = STORE_BILLING_READY && Platform.OS !== 'web';
+  const storeReady = (STORE_BILLING_READY && Platform.OS !== 'web') || mockFlag('mockStore');
 
   const { width } = useScreenSize();
   const avW = Math.round(Math.min(150, (Math.min(width, 480) - 48) / 2));
@@ -113,7 +115,7 @@ export default function SubscribeScreen() {
   const wl = pro ? null : waitlistOffer(sub);
   const wlLabel = wl ? OFFER_LABEL[wl] : '';
   // iOS — App Store 코드 사용 화면으로 보낸 코드. 앱으로 돌아오면 구독이 생겼는지 확인한다
-  const [redeemCode, setRedeemCode] = useState<string | null>(null);
+  const [redeemCode, setRedeemCode] = useState<string | null>(mockFlag('mockRedeem') ? 'AB12CD34EF56GH78' : null);
   const checkRef = useRef<(how: 'auto' | 'retry' | 'manual') => void>(() => {});
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
