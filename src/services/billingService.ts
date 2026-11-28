@@ -230,6 +230,22 @@ export async function finishWaitlistRedeem(): Promise<Subscription | null> {
   return next && isProSub(next) ? next : null;
 }
 
+let lastWaitlistSync = 0;
+/**
+ * 대기자 자격자 — App Store 에서 코드를 쓰고 앱이 꺼졌거나 구독 화면을 떠났어도, 앱을 켜거나 다시 열 때
+ * 스토어 구독이 생겼는지 확인해 서버에 적는다(20초에 한 번까지). 생겼으면 새 sub, 아니면 null.
+ */
+export async function syncWaitlistIfEligible(sub: Subscription | null | undefined): Promise<Subscription | null> {
+  if (!sub || sub.waitlist !== 'eligible' || !canPurchase()) return null;
+  if (Date.now() - lastWaitlistSync < 20_000) return null;
+  lastWaitlistSync = Date.now();
+  try {
+    return await finishWaitlistRedeem();
+  } catch {
+    return null;
+  }
+}
+
 /** iOS — 코드 사용 화면이 안 열렸을 때, 애플의 코드 입력 시트에 직접 넣는 예비 길 */
 export async function openRedeemSheet(): Promise<void> {
   if (Platform.OS !== 'ios' || !canPurchase()) return;

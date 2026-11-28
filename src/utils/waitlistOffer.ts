@@ -26,12 +26,13 @@ export const waitlistOffer = (sub: Subscription | null | undefined): WaitlistOff
 
 /**
  * 관리자 화면 미리 세기 — App Store Connect 에서 내려받은 일회용 코드 목록(CSV · 줄바꿈 · 쉼표) → 코드만, 중복 없이.
- * 코드는 대문자 · 숫자 8~64자, 소문자가 섞인 머리글은 빠진다. 서버 사본: functions/src/offerPure.ts parseOfferCodes
+ * 코드는 대문자 · 숫자 8~64자이고 대문자가 하나는 있다(머리글 · 숫자만인 칸은 빠진다).
+ * 서버 사본: functions/src/offerPure.ts parseOfferCodes
  */
 export function parseOfferCodes(text: string): string[] {
   const out = new Set<string>();
   for (const tok of String(text ?? '').split(/[\s,;"']+/)) {
-    if (/^[A-Z0-9]{8,64}$/.test(tok)) out.add(tok);
+    if (/^(?=.*[A-Z])[A-Z0-9]{8,64}$/.test(tok)) out.add(tok);
   }
   return [...out];
 }

@@ -24,8 +24,8 @@ test('앱 · 서버 offerOf 가 같은 답', () => {
   }
 });
 
-test('오퍼 코드 목록 읽기 — 머리글 · 중복 · 짧은 낱말은 빠진다', () => {
-  const csv = 'Offer Code,Reference\nAB12CD34EF56GH78,waitlist\nAB12CD34EF56GH78,waitlist\n"ZXCV9876ASDF5432"\nshort,SHORT1\nlower12345678';
+test('오퍼 코드 목록 읽기 — 머리글 · 중복 · 짧은 낱말 · 숫자만인 칸은 빠진다', () => {
+  const csv = 'Offer Code,Reference,Expires\nAB12CD34EF56GH78,waitlist,20270630\nAB12CD34EF56GH78,waitlist,20270630\n"ZXCV9876ASDF5432"\nshort,SHORT1\nlower12345678';
   const want = ['AB12CD34EF56GH78', 'ZXCV9876ASDF5432'];
   assert.deepEqual(parseOfferCodes(csv), want);
   assert.deepEqual(server.parseOfferCodes(csv), want);
@@ -35,6 +35,13 @@ test('오퍼 코드 목록 읽기 — 머리글 · 중복 · 짧은 낱말은 �
 test('App Store 코드 사용 주소 — 앱 id 와 코드가 들어간다', () => {
   const u = server.redeemUrl('AB12CD34EF56GH78');
   assert.equal(u, 'https://apps.apple.com/redeem?ctx=offercodes&id=6827046995&code=AB12CD34EF56GH78');
+});
+
+test('코드 만료일 — 그날 밤 23:59:59 한국 시각, 형식이 아니면 없음', () => {
+  assert.equal(server.kstEndOfDay('2027-06-30'), '2027-06-30T14:59:59.000Z');
+  assert.equal(server.kstEndOfDay('2027/06/30'), null);
+  assert.equal(server.kstEndOfDay(''), null);
+  assert.equal(server.kstEndOfDay(undefined), null);
 });
 
 test('normalizeSub 가 무료 자격을 지킨다 · 깨진 값은 버린다', () => {

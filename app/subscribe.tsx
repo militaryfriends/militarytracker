@@ -115,12 +115,20 @@ export default function SubscribeScreen() {
   // iOS — App Store 코드 사용 화면으로 보낸 코드. 앱으로 돌아오면 구독이 생겼는지 확인한다
   const [redeemCode, setRedeemCode] = useState<string | null>(null);
   const checkRef = useRef<(how: 'auto' | 'retry' | 'manual') => void>(() => {});
+  const inflight = useRef(false);
+  const alive = useRef(true);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (Platform.OS !== 'ios') return;
-    const on = AppState.addEventListener('change', (st) => {
-      if (st === 'active') checkRef.current('auto');
-    });
-    return () => on.remove();
+    alive.current = true;
+    const on = Platform.OS === 'ios'
+      ? AppState.addEventListener('change', (st) => { if (st === 'active') checkRef.current('auto'); })
+      : null;
+    return () => {
+      // 화면을 떠난 뒤에 확인이 끝나 다른 화면에서 이동 · 알림이 뜨지 않게
+      alive.current = false;
+      on?.remove();
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
   }, []);
 
   function fail(e: unknown, fallback: string) {
@@ -184,6 +192,7 @@ export default function SubscribeScreen() {
     setBusy('waitlist');
     try {
       const r = await startWaitlistOffer(sub);
+      if (!alive.current) return;
       if (r.kind === 'redirected') setRedeemCode(r.code);
       else if (r.kind === 'done') applied(r.sub, `${wlLabel} 무료 기간이 시작되었습니다.`);
     } catch (e) {
@@ -198,22 +207,26 @@ export default function SubscribeScreen() {
    * auto 가 비면 4초 뒤 한 번 더 본다(retry).
    */
   async function checkRedeem(how: 'auto' | 'retry' | 'manual') {
-    if (!redeemCode || busy) return;
+    if (!redeemCode || busy || inflight.current) return;
+    inflight.current = true;
     setBusy('waitlist');
     try {
       const next = await finishWaitlistRedeem();
+      if (!alive.current) return;
       if (next) {
         setRedeemCode(null);
         applied(next, `${wlLabel} 무료 기간이 시작되었습니다.`);
       } else if (how === 'manual') {
         showAlert('안내', 'App Store에서 코드 사용을 마친 뒤 다시 눌러주세요. 방금 마치셨다면 몇 초 뒤에 반영됩니다.');
       } else if (how === 'auto') {
-        setTimeout(() => checkRef.current('retry'), 4000);
+        if (retryTimer.current) clearTimeout(retryTimer.current);
+        retryTimer.current = setTimeout(() => checkRef.current('retry'), 4000);
       }
     } catch (e) {
-      if (how === 'manual') fail(e, '구독 정보를 확인하지 못했습니다. 잠시 후 다시 눌러주세요.');
+      if (how === 'manual' && alive.current) fail(e, '구독 정보를 확인하지 못했습니다. 잠시 후 다시 눌러주세요.');
     } finally {
-      setBusy(null);
+      inflight.current = false;
+      if (alive.current) setBusy(null);
     }
   }
   checkRef.current = (how) => { void checkRedeem(how); };
@@ -270,7 +283,15 @@ export default function SubscribeScreen() {
         ) : null}
         {/* 체험 중은 초록 카드 대신 회색 한 줄(검수 3 #7) */}
         {pro && sub.status === 'trial' && !isAdmin ? (
-          <Text style={s.trialLine}>무료 체험 {left ?? 0}일 남음</Text>
+          <View style={s.trialWrap}>
+            <Text style={s.trialLine}>무료 체험 {left ?? 0}일 남음</Text>
+            {/* 무료 기간에도 언제든 취소할 수 있어야 한다 — 해지 길을 숨기지 않는다(대기자 혜택 문구 '언제든 취소') */}
+            {manageUrl ? (
+              <PressableScale onPress={() => Linking.openURL(manageUrl)} hitSlop={8} accessibilityRole="link">
+                <Text style={s.manageTxt}>구독 관리 · 해지</Text>
+              </PressableScale>
+            ) : null}
+          </View>
         ) : null}
 
         {/* 사전 신청(대기자) 무료 자격 — 결제 수단을 등록해야 무료 기간이 시작된다(2026-11-28 대표 결정 · 문구) */}
@@ -454,6 +475,7 @@ const s = themed(() => StyleSheet.create({
   pitchSub: { fontSize: 13, color: colors.mid, marginTop: 4, lineHeight: 19 },
   freeLine: { fontSize: 12.5, color: colors.muted, marginTop: 14, lineHeight: 18 },
   trialLine: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 18 },
+  trialWrap: { alignItems: 'center' },
   activeTxt: { fontSize: 15, fontWeight: '700', color: colors.ink, marginTop: 6 },
   activeSub: { fontSize: 11.5, color: colors.muted, marginTop: 6, lineHeight: 18 },
 

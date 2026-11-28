@@ -82,6 +82,7 @@ export default function WaitlistAdmin() {
   const parsed = useMemo(() => toRows(csv, cutoff), [csv, cutoff]);
   // iOS 혜택 코드(App Store 일회용 오퍼 코드)
   const [offer, setOffer] = useState<WaitlistOffer>('m3');
+  const [codeExpires, setCodeExpires] = useState('');
   const [codeText, setCodeText] = useState('');
   const codes = useMemo(() => parseOfferCodes(codeText), [codeText]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -98,16 +99,32 @@ export default function WaitlistAdmin() {
 
   async function uploadCodes() {
     if (!codes.length || busy) return;
+    const expires = codeExpires.trim();
+    if (expires && !/^\d{4}-\d{2}-\d{2}$/.test(expires)) {
+      showAlert('안내', '만료일은 YYYY-MM-DD 로 넣어 주세요(비워 두면 만료일 없이 등록).');
+      return;
+    }
     setBusy(true);
+    let added = 0;
+    let skipped = 0;
+    let sent = 0;
     try {
+      // 함수 시간 한도(30초) 안에 끝나게 1,000개씩 나눠 보낸다
       const call = httpsCallable(functions, 'subGrant', { timeout: 60_000 });
-      const res = await call({ offerCodes: { offer, codes } });
-      const d = res.data as { added?: number; skipped?: number };
-      showAlert('완료', `${OFFER_LABEL[offer]} 코드 ${d.added ?? 0}개 등록 · ${d.skipped ?? 0}개는 이미 있음`);
+      for (let i = 0; i < codes.length; i += 1000) {
+        const chunk = codes.slice(i, i + 1000);
+        const res = await call({ offerCodes: { offer, codes: chunk, ...(expires ? { expires } : {}) } });
+        const d = res.data as { added?: number; skipped?: number };
+        added += d.added ?? 0;
+        skipped += d.skipped ?? 0;
+        sent += chunk.length;
+      }
+      showAlert('완료', `${OFFER_LABEL[offer]} 코드 ${added}개 등록 · ${skipped}개는 이미 있음`);
       setCodeText('');
       loadStats();
     } catch (e) {
-      showAlert('실패', (e as Error)?.message || '등록하지 못했습니다.');
+      const done = sent ? `\n(앞의 ${sent}개는 등록됨 — 같은 목록을 다시 넣으면 나머지만 들어갑니다)` : '';
+      showAlert('실패', `${(e as Error)?.message || '등록하지 못했습니다.'}${done}`);
     } finally {
       setBusy(false);
     }
@@ -168,6 +185,9 @@ export default function WaitlistAdmin() {
               </PressableScale>
             ))}
           </View>
+          <TextInput style={s.input} value={codeExpires} onChangeText={setCodeExpires}
+            placeholder="코드 만료일 YYYY-MM-DD (콘솔에서 정한 날, 모르면 비움)" placeholderTextColor={colors.placeholder}
+            autoCapitalize="none" accessibilityLabel="코드 만료일" />
           <TextInput style={[s.input, s.area]} value={codeText} onChangeText={setCodeText} multiline
             placeholder={'코드 목록 (한 줄에 하나, CSV 그대로도 됩니다)'} placeholderTextColor={colors.placeholder}
             autoCapitalize="characters" autoCorrect={false} accessibilityLabel="오퍼 코드 붙여 넣기" />
