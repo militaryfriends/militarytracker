@@ -22,7 +22,8 @@ import { has3D } from './avatar3d/Avatar3D';
 import { coordOf } from './avatar3d/morph';
 import { projectNow } from './progress';
 import { kg, pct0 } from './format';
-import { NextBody } from './NextBody';
+import { NextBody, nextCardOf } from './NextBody';
+import type { AvatarBadge } from './AvatarView';
 import { useScreenSize } from '../../ui/screenSize';
 
 type View3 = 'now' | 'morph' | 'both' | 'goal';
@@ -36,15 +37,16 @@ const VIEWS = [
 /** 변신 — 큰 몸 하나가 지금 ↔ 예상을 오간다. 나란히 놓으면 작은 차이가 안 읽혀서(2026-11-28 대표 "동기부여는 받아야") 같은 자리에서 바뀌게 보여 준다. 숫자 · 몸은 엔진 값 그대로 */
 const MORPH_MS = 1100;
 const HOLD_MS = 1300;
-function useMorphLoop(on: boolean): boolean {
+/** 0 지금 → 1 이 프로젝트 끝 → 2 다음 몸(엔진이 끝난 몸에서 다시 낸 다음 프로젝트 끝) → 다시 지금. n = 단계 수 */
+function useMorphLoop(on: boolean, n: number): number {
   const reduce = useReducedMotion();
-  const [goal, setGoal] = useState(false);
+  const [i, setI] = useState(0);
   useEffect(() => {
-    if (!on || reduce) { setGoal(false); return; }
-    const t = setInterval(() => setGoal((g) => !g), MORPH_MS + HOLD_MS);
+    if (!on || reduce) { setI(0); return; }
+    const t = setInterval(() => setI((x) => (x + 1) % n), MORPH_MS + HOLD_MS);
     return () => clearInterval(t);
-  }, [on, reduce]);
-  return goal;
+  }, [on, reduce, n]);
+  return i % n;
 }
 
 export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
@@ -58,7 +60,8 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
   const { pro } = useEntitlement();
   const [view, setView] = useState<View3>('morph');
   const reduce = useReducedMotion();
-  const showGoal = useMorphLoop(view === 'morph');
+  const next = useMemo(() => (project ? nextCardOf(project) : null), [project]);
+  const stage = useMorphLoop(view === 'morph', next ? 3 : 2);
   // 고른 카드(식단 · 코치와 같은 카드), 없으면 추천
   const chosen = useAppStore((st) => st.profile?.strategy);
 
@@ -104,17 +107,33 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
       <View style={s.card}>
         <Text style={s.label}>내 몸</Text>
         <View style={s.stage}>
-          {view === 'morph' && !reduce ? (
-            <View style={s.col}>
-              <AvatarView sex={sex} {...(showGoal ? goalBody : nowBody)} width={one} badge={showGoal ? '예상' : '지금'} live morphMs={MORPH_MS}
-                label={`지금 ${kg(nowKg)}kg 체지방 ${pct0(now.nowComp.bfPct)}%에서 ${project.months}개월 뒤 예상 ${kg(project.end.weightKg)}kg 체지방 ${pct0(project.end.bfPct)}%로 바뀌는 몸`} />
-              <View style={s.morphRow}>
-                <Text style={[s.morphTxt, !showGoal && s.morphOn]}>지금 {kg(nowKg)}kg · {pct0(now.nowComp.bfPct)}%</Text>
-                <Text style={s.morphArrow}>→</Text>
-                <Text style={[s.morphTxt, showGoal && s.morphOn]}>{project.months}개월 뒤 {kg(project.end.weightKg)}kg · {pct0(project.end.bfPct)}%</Text>
+          {view === 'morph' && !reduce ? (() => {
+            const steps: { badge: AvatarBadge; when: string; body: typeof nowBody; w: number; bf: number }[] = [
+              { badge: '지금', when: '지금', body: nowBody, w: nowKg, bf: now.nowComp.bfPct },
+              { badge: '예상', when: `${project.months}개월 뒤`, body: goalBody, w: project.end.weightKg, bf: project.end.bfPct },
+            ];
+            if (next) steps.push({
+              badge: '다음', when: `${project.months + next.months}개월 뒤`,
+              body: { cell: next.end.cell, coord: coordOf(sex, next.end.bfPct, next.end.nffmi), own: true, bfPct: next.end.bfPct },
+              w: next.end.weightKg, bf: next.end.bfPct,
+            });
+            const cur = steps[stage] ?? steps[0];
+            return (
+              <View style={s.col}>
+                <AvatarView sex={sex} {...cur.body} width={one} badge={cur.badge} live morphMs={MORPH_MS}
+                  label={`바뀌는 몸: ${steps.map((x) => `${x.when} ${kg(x.w)}kg 체지방 ${pct0(x.bf)}%`).join(', ')}`} />
+                <View style={s.morphRow}>
+                  {steps.map((x, k) => (
+                    <View key={x.when} style={[s.morphCell, k === stage && s.morphCellOn]}>
+                      <Text style={[s.morphWhen, k === stage && s.morphOn]}>{x.when}</Text>
+                      <Text style={[s.morphTxt, k === stage && s.morphOn]}>{kg(x.w)}kg · {pct0(x.bf)}%</Text>
+                    </View>
+                  ))}
+                </View>
+                {next ? <Text style={s.morphNote}>다음 몸 = 이 프로젝트 뒤 {next.name} {next.months}개월</Text> : null}
               </View>
-            </View>
-          ) : view === 'both' || view === 'morph' ? (
+            );
+          })() : view === 'both' || view === 'morph' ? (
             <View style={s.pair}>
               <View style={s.col}>
                 <AvatarView sex={sex} {...nowBody} width={two} badge="지금" live yawGroup="my" />
@@ -245,10 +264,13 @@ const s = themed(() => StyleSheet.create({
   stage: { alignItems: 'center', marginTop: 10 },
   pair: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   col: { alignItems: 'center' },
-  morphRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 6 },
-  morphTxt: { fontSize: 12.5, color: colors.muted, fontWeight: '700' },
+  morphRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8, alignSelf: 'stretch' },
+  morphCell: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'transparent' },
+  morphCellOn: { borderColor: colors.line2, backgroundColor: colors.panel2 },
+  morphWhen: { fontSize: 11, color: colors.muted, fontWeight: '700' },
+  morphTxt: { fontSize: 12, color: colors.muted, fontWeight: '700', marginTop: 2 },
   morphOn: { color: colors.ink },
-  morphArrow: { fontSize: 12.5, color: colors.muted },
+  morphNote: { fontSize: 11, color: colors.muted, marginTop: 6, textAlign: 'center' },
   colTxt: { fontSize: 12.5, color: colors.mid, marginTop: 6, fontWeight: '700', textAlign: 'center' },
   hint: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 4 },
   fitRow: { alignItems: 'center' },
