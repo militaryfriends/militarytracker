@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NUDGE_DAYS, NUDGE_HOURS, nudgePlan, nudgeTimes } from '../nudge';
+import { NUDGE_DAYS, NUDGE_HOURS, lockScreenLines, nudgePlan, nudgeTimes } from '../nudge';
 
 test('결석 알림: 끔이면 하나도 없고, 순한맛 · 매운맛은 6단계', () => {
   assert.equal(nudgePlan('off').length, 0);
@@ -18,8 +18,25 @@ test('결석 알림: 문구에 금지어 · 숫자 약속이 없고 한마디가
       assert.ok(n.title.length <= 20, n.title);
     }
   }
-  assert.ok(nudgePlan('mild', '홈 레그')[0].body.startsWith('오늘 차례는 홈 레그.'));
-  assert.ok(!nudgePlan('mild')[0].body.startsWith('오늘 차례는'));
+  assert.ok(nudgePlan('mild', '홈 레그')[0].body.startsWith('오늘은 홈 레그.'));
+  assert.ok(!nudgePlan('mild')[0].body.startsWith('오늘은'));
+  // "오늘"이 한 문장에 두 번 나오지 않는다
+  for (const n of [...nudgePlan('mild', '레그데이'), ...nudgePlan('hot', '레그데이')]) {
+    assert.ok((n.body.match(/오늘/g) ?? []).length <= 1, n.body);
+  }
+});
+
+test('결석 알림: 작은 폰 잠금화면(한 줄 18자)에서도 본문이 3줄 안 — 4줄째에서 잘리지 않게', () => {
+  for (const level of ['mild', 'hot'] as const) {
+    for (const day of [undefined, '레그데이', '하체 · 코어 A']) {
+      for (const n of nudgePlan(level, day)) {
+        assert.ok(lockScreenLines(n.body) <= 3, `${lockScreenLines(n.body)}줄: ${n.body}`);
+        assert.ok(lockScreenLines(n.title) <= 1, n.title);
+      }
+    }
+  }
+  assert.equal(lockScreenLines('가'.repeat(18)), 1);
+  assert.equal(lockScreenLines('가'.repeat(10) + ' ' + '가'.repeat(10)), 2);
 });
 
 test('결석 알림: 3일째부터 고른 시각에, 지난 시각은 빼고, 14일째가 마지막', () => {
