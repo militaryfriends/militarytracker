@@ -12,6 +12,22 @@ const POSTERS = (mediaSnapshot as { items?: Record<string, { poster?: string }> 
 export function coverExId(item: Pick<FeedItem, 'exIds'>): string {
   return item.exIds.find((id) => !!EX_IMAGE[id] || !!POSTERS[id]?.poster) ?? item.exIds[0];
 }
+/**
+ * 카드마다 표지 종목 — 썸네일이 있는 종목 중 앞 카드가 이미 쓴 그림은 건너뛴다(같은 풀업 그림이 두 장 나오던 문제, 11/28).
+ * 쓸 수 있는 게 다 겹치면 그냥 첫 종목.
+ */
+export function uniqueCovers(items: readonly Pick<FeedItem, 'id' | 'exIds'>[]): Record<string, string> {
+  const used = new Set<string>();
+  const out: Record<string, string> = {};
+  for (const it of items) {
+    const withImg = it.exIds.filter((id) => !!EX_IMAGE[id] || !!POSTERS[id]?.poster);
+    const pick = withImg.find((id) => !used.has(id)) ?? coverExId(it);
+    used.add(pick);
+    out[it.id] = pick;
+  }
+  return out;
+}
+
 export interface FeedSection {
   h: string;
   body: string;

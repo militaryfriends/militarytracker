@@ -25,6 +25,7 @@ import { WorkoutSwitch } from '../../src/components/WorkoutSwitch';
 import { FADE_RISE, TabFade, useTabSpace } from '../../src/components/TabBar';
 import { FONT, PressableScale, PRESS_SCALE } from '../../src/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { LibrarySection } from '../../src/components/LibrarySection';
 
 const SRC_LABEL: Record<string, string> = { AI: 'AI 구성', LOCAL: '자동 구성', PRESET: '프리셋 루틴' };
 
@@ -223,6 +224,9 @@ export default function PlanScreen() {
           />
         </View>
         <GhostBtn label="다른 루틴 둘러보기" onPress={() => router.push('/routine')} style={{ marginTop: 10 }} />
+
+        {/* 부위별 가이드 — 오늘 탭에서 옮겨 왔다(11/28) */}
+        <LibrarySection />
 
         <Notice>일반적인 운동 가이드입니다. 통증이나 질환이 있다면 전문가와 상담하세요.</Notice>
       </ScrollView>

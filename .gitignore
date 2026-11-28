@@ -78,3 +78,7 @@ scripts/avatar-review/out/
 
 # Claude Code 개인 설정(커밋 금지)
 .claude/settings.local.json
+
+# 오늘의 가이드 영상 — 원본 경로 목록(노트북 경로) · 인코딩 결과 (scripts/upload-guides.mjs)
+media/guides.local.json
+media/guides_out/

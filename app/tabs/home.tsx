@@ -13,7 +13,9 @@ import { useRouter } from 'expo-router';
 import { ThemeToggle, colors, themed, useThemeMode } from '../../src/theme';
 import { useAppStore } from '../../src/stores/appStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { FEED, coverExId } from '../../src/data/feed';
+import { GUIDES } from '../../src/data/guides';
+import { pickGuide } from '../../src/utils/guidePick';
+import { GuideCard } from '../../src/components/GuideCard';
 import { exById } from '../../src/data/exercises';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
 import { nextDayIdx, weekStreak, currentStreakDays, totalSets } from '../../src/utils/stats';
@@ -104,6 +106,7 @@ export default function HomeScreen() {
   const doneCount = (workoutDone ? 1 : 0) + (weighed ? 1 : 0);
   const stats = calcBodyStats(profile, weights, project);
   const weekday = new Date().toLocaleDateString('ko-KR', { weekday: 'long' });
+  const guide = pickGuide(GUIDES, day.focus);
   const dateLine = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
   return (
@@ -200,30 +203,20 @@ export default function HomeScreen() {
           <Text style={s.commentTxt}>{comment}</Text>
         </View>
 
-        {/* Library */}
-        <View style={s.secRow}>
-          <Text style={s.secTitle}>라이브러리</Text>
-          <Text style={s.secMeta}>{FEED.length} 시리즈</Text>
-        </View>
-        <View style={s.grid}>
-          {FEED.map((f) => (
-            <PressableScale scaleTo={PRESS_SCALE.card}
-              key={f.id}
-              style={s.gridCard}
-              onPress={() => router.push(`/library/${f.id}`)}
-            >
-              <View style={s.gridThumb}>
-                <ExerciseMedia exId={coverExId(f)} rounded={0} dim={0} style={s.gridThumbImg} />
-                <View style={s.gridThumbOverlay} />
-                <View style={s.gridBadge}>
-                  <Text style={s.gridBadgeTxt}>{f.cnt}</Text>
-                </View>
-              </View>
-              <Text style={s.gridName} numberOfLines={2}>{f.n}</Text>
-              <Text style={s.gridPart}>{f.part}</Text>
-            </PressableScale>
-          ))}
-        </View>
+        {/* 오늘의 가이드 — 게시한 VO 운동 꿀팁 릴스 한 편, 오늘 부위에 맞춰 날마다 바뀐다(11/28 라이브러리 자리를 바꿈).
+            부위별 가이드(옛 라이브러리)는 운동 탭 아래로 옮겼다 */}
+        {guide ? (
+          <>
+            <View style={s.secRow}>
+              <Text style={s.secTitle}>오늘의 가이드</Text>
+              <PressableScale onPress={() => router.push('/library/guides')} accessibilityRole="button"
+                accessibilityLabel="가이드 영상 전체 보기" hitSlop={10}>
+                <Text style={s.secMore}>전체 보기 ›</Text>
+              </PressableScale>
+            </View>
+            <GuideCard guide={guide} onPress={() => router.push(`/library/guide/${guide.id}`)} />
+          </>
+        ) : null}
       </ScrollView>
       <TabFade />
     </SafeAreaView>
@@ -336,21 +329,5 @@ const s = themed(() => StyleSheet.create({
   },
   secTitle: { fontSize: 17, fontWeight: '700', color: colors.ink },
   secMeta: { fontSize: 11, color: colors.muted },
-
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridCard: { width: '47.5%' },
-  gridThumb: {
-    aspectRatio: 1, borderRadius: 16, backgroundColor: colors.panel2,
-    marginBottom: 8, overflow: 'hidden', justifyContent: 'flex-end', padding: 10,
-  },
-  gridThumbImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
-  gridThumbOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.mediaDim },
-  gridBadge: {
-    alignSelf: 'flex-start', backgroundColor: colors.mediaBadge,
-    borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
-    borderWidth: 0.5, borderColor: colors.mediaBadgeLine,
-  },
-  gridBadgeTxt: { fontSize: 10, color: colors.onMediaSub, fontWeight: '600' },
-  gridName: { fontSize: 12.5, fontWeight: '600', color: colors.ink, lineHeight: 17, marginBottom: 3 },
-  gridPart: { fontSize: 11, color: colors.muted },
+  secMore: { fontSize: 13, fontWeight: '600', color: colors.mid },
 }));

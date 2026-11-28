@@ -2,9 +2,13 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from '../../src/components/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../src/theme';
-import { Screen, TopBar, Body, SectionLabel, EmptyState, useSafeBack } from '../../src/components/ui';
+import { Screen, TopBar, Body, SectionLabel, EmptyState, GhostBtn, useSafeBack } from '../../src/components/ui';
 import ExerciseMedia from '../../src/components/ExerciseMedia';
-import { coverExId, feedById } from '../../src/data/feed';
+import { FEED, feedById, uniqueCovers } from '../../src/data/feed';
+import { GUIDES } from '../../src/data/guides';
+import { GuideCard } from '../../src/components/GuideCard';
+
+const COVERS = uniqueCovers(FEED);
 import { exByIds, PART_LABEL } from '../../src/data/exercises';
 import { PressableScale, PRESS_SCALE } from '../../src/ui';
 
@@ -25,13 +29,16 @@ export default function LibraryDetailScreen() {
   }
 
   const list = exByIds(item.exIds);
+  // 같은 부위 가이드 영상(최대 2편) — 읽고 끝나는 화면이 되지 않게(11/28)
+  const parts = item.part.split(/[·\s]+/).filter(Boolean);
+  const videos = GUIDES.filter((g) => g.tags.some((t) => parts.includes(t))).slice(0, 2);
 
   return (
     <Screen>
-      <TopBar title={item.n} meta={item.cnt} onBack={goBack} />
+      <TopBar title={item.n} meta={`${item.exIds.length}종목`} onBack={goBack} />
       <Body style={{ paddingHorizontal: 0 }}>
         <View style={s.hero}>
-          <ExerciseMedia exId={coverExId(item)} rounded={0} dim={0} style={s.heroImg} />
+          <ExerciseMedia exId={COVERS[item.id] ?? item.exIds[0]} rounded={0} dim={0} style={s.heroImg} />
           <View style={s.heroDim} />
           <View style={s.heroMeta}>
             <Text style={s.heroPart}>{item.part}</Text>
@@ -68,6 +75,16 @@ export default function LibraryDetailScreen() {
               ))}
             </>
           )}
+
+          {videos.length > 0 && (
+            <>
+              <SectionLabel>영상으로 보기</SectionLabel>
+              {videos.map((g) => (
+                <GuideCard key={g.id} guide={g} onPress={() => router.push(`/library/guide/${g.id}`)} />
+              ))}
+            </>
+          )}
+          <GhostBtn label="운동 탭에서 오늘 운동 보기" onPress={() => router.navigate('/tabs/plan')} style={{ marginTop: 8, marginBottom: 24 }} />
         </View>
       </Body>
     </Screen>
