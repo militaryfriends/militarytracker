@@ -10,19 +10,21 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TabGlyph, type TabIconName } from './TabIcons';
+import { Ionicons } from '@expo/vector-icons';
 import type { Tabs } from 'expo-router';
 import { colors, themed, useThemeMode } from '../theme';
 import { haptic, PressableScale, PRESS_SCALE, SPRING } from '../ui';
 
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
-const ITEMS: readonly { route: TabIconName; label: string }[] = [
-  { route: 'home', label: '오늘' },
-  { route: 'plan', label: '운동' },
-  { route: 'coach', label: '코치' },
-  { route: 'diet', label: '식단' },
-  { route: 'my', label: '내 몸' },
+// 아이콘은 앱 다른 곳과 같은 기본 세트(Ionicons) — 11/26 직접 그린 세트(TabIcons)는 작고 가늘어 11/28 대표 결정으로 되돌림
+const ITEMS: readonly { route: string; label: string; on: IoniconName; off: IoniconName }[] = [
+  { route: 'home', label: '오늘', on: 'home', off: 'home-outline' },
+  { route: 'plan', label: '운동', on: 'barbell', off: 'barbell-outline' },
+  { route: 'coach', label: '코치', on: 'chatbubble-ellipses', off: 'chatbubble-ellipses-outline' },
+  { route: 'diet', label: '식단', on: 'restaurant', off: 'restaurant-outline' },
+  { route: 'my', label: '내 몸', on: 'body', off: 'body-outline' },
 ];
 /** 탭에 없는 화면 → 켜 둘 탭 */
 const ALIAS: Record<string, string> = { form: 'plan' };
@@ -33,7 +35,7 @@ const PAD = 6; // 바 안쪽 여백 (+ 테두리 1)
 const ITEM_GAP = 2;
 
 /** 탭 아이콘 — 켜지는 순간 한 번 튄다 */
-function TabIcon({ on, name }: { on: boolean; name: TabIconName }) {
+function TabIcon({ on, name }: { on: boolean; name: IoniconName }) {
   const k = useSharedValue(1);
   const was = useRef(on);
   useEffect(() => {
@@ -44,7 +46,7 @@ function TabIcon({ on, name }: { on: boolean; name: TabIconName }) {
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: k.value }] }));
   return (
     <Animated.View style={anim}>
-      <TabGlyph name={name} on={on} color={on ? colors.ink : colors.mid} />
+      <Ionicons name={name} size={21} color={on ? colors.redText : colors.mid} />
     </Animated.View>
   );
 }
@@ -121,7 +123,7 @@ export function FloatingTabBar({ state, navigateToTab, hidden }: TabBarProps & {
                 }
               }}
             >
-              <TabIcon on={on} name={it.route} />
+              <TabIcon on={on} name={on ? it.on : it.off} />
               <Text style={[s.label, on && s.labelOn]} allowFontScaling={false}>{it.label}</Text>
             </PressableScale>
           );
@@ -142,9 +144,10 @@ const s = themed(() => StyleSheet.create({
     }),
   },
   item: { flex: 1, borderRadius: 25, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  blob: { position: 'absolute', left: PAD, top: PAD, bottom: PAD, borderRadius: 25, backgroundColor: colors.panel3 },
+  // 켜진 탭은 빨강(11/15 B3 · 대표 휴대폰 화면 기준, 11/28 되돌림) — 11/25 '빨강은 큰 버튼에만'으로 회색 판이 됐는데 바와 색이 같아 거의 안 보였다
+  blob: { position: 'absolute', left: PAD, top: PAD, bottom: PAD, borderRadius: 25, backgroundColor: colors.redSoft },
   label: { fontSize: 10.5, fontWeight: '600', color: colors.mid },
-  labelOn: { color: colors.ink, fontWeight: '700' },
+  labelOn: { color: colors.redText, fontWeight: '700' },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   fadeFill: { flex: 1 },
 }));

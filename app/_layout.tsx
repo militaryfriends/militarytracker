@@ -43,8 +43,8 @@ const eb = StyleSheet.create({
     color: '#F4F4F5', fontSize: 12.5, lineHeight: 18, marginTop: 18, padding: 14, borderRadius: 14, alignSelf: 'stretch',
     backgroundColor: '#18181B', borderWidth: 1, borderColor: '#37373D',
   },
-  btn: { marginTop: 20, minHeight: 52, paddingHorizontal: 32, borderRadius: 26, backgroundColor: '#C9C9F0', alignItems: 'center', justifyContent: 'center' },
-  btnTxt: { color: '#0A0A0B', fontSize: 15.5, fontWeight: '700' },
+  btn: { marginTop: 20, minHeight: 52, paddingHorizontal: 32, borderRadius: 26, backgroundColor: '#D13848', alignItems: 'center', justifyContent: 'center' },
+  btnTxt: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '700' },
 });
 
 // 첫 화면이 스플래시와 같은 장면을 그려 둘 때까지 스플래시를 잡아둔다 — 걷는 쪽은 그 화면 (src/components/brand/splash.ts)
