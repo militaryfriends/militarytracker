@@ -7,7 +7,8 @@ import { useAppStore } from '../../src/stores/appStore';
 import SessionPlayer from '../../src/components/SessionPlayer';
 import SessionSummary from '../../src/components/SessionSummary';
 import { useEffect } from 'react';
-import { scheduleComeback, useNudgePrefs } from '../../src/services/reminders';
+import { scheduleComeback, scheduleSubNotices, useNudgePrefs } from '../../src/services/reminders';
+import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { nextDayIdx } from '../../src/utils/stats';
 
 export default function TabLayout() {
@@ -25,6 +26,11 @@ export default function TabLayout() {
   useEffect(() => {
     if (lastAt) void scheduleComeback(lastAt, true, nextName);
   }, [lastAt, nudge.level, nudge.hour, nextName]);
+  // 무료 체험 · 해지 예약이 끝나기 전 알림 — 구독 상태나 설정이 바뀌면 다시 예약한다
+  const { sub } = useEntitlement();
+  useEffect(() => {
+    void scheduleSubNotices(sub);
+  }, [sub.status, sub.expiresAt, sub.source, nudge.sub]); // eslint-disable-line react-hooks/exhaustive-deps
   const kbOpen = useKeyboardOpen();
 
   return (

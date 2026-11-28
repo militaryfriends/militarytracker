@@ -13,6 +13,8 @@ import {
   NUDGE_DEFAULT, isNudgeHour, isNudgeLevel, nudgePlan, nudgeTimes, type NudgeHour, type NudgeLevel,
 } from '../utils/nudge';
 import { keepWords } from '../utils/keepWords';
+import { subNotices } from '../utils/subNotice';
+import type { Subscription } from '../types';
 
 type N = typeof import('expo-notifications');
 let mod: N | null | undefined;
@@ -33,9 +35,10 @@ function notifications(): N | null {
 }
 
 // ─── 설정(세기 · 시간) ──────────────────────────────────────────────────────
-export interface NudgePrefs { level: NudgeLevel; hour: NudgeHour }
+/** sub = 구독 알림(무료 체험 · 구독이 끝나기 전) 켬/끔 — 기본 켬 */
+export interface NudgePrefs { level: NudgeLevel; hour: NudgeHour; sub: boolean }
 const KEY = 'mt-nudge';
-let prefs: NudgePrefs = { ...NUDGE_DEFAULT };
+let prefs: NudgePrefs = { ...NUDGE_DEFAULT, sub: true };
 const listeners = new Set<(p: NudgePrefs) => void>();
 
 export function getNudgePrefs(): NudgePrefs {
@@ -44,7 +47,7 @@ export function getNudgePrefs(): NudgePrefs {
 
 export function setNudgePrefs(next: Partial<NudgePrefs>, remember = true) {
   const merged = { ...prefs, ...next };
-  if (merged.level === prefs.level && merged.hour === prefs.hour) return;
+  if (merged.level === prefs.level && merged.hour === prefs.hour && merged.sub === prefs.sub) return;
   prefs = merged;
   [...listeners].forEach((l) => l(prefs));
   if (remember) AsyncStorage.setItem(KEY, JSON.stringify(prefs)).catch(() => {});
@@ -54,10 +57,11 @@ export async function restoreNudgePrefs(): Promise<void> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return;
-    const v = JSON.parse(raw) as { level?: unknown; hour?: unknown };
+    const v = JSON.parse(raw) as { level?: unknown; hour?: unknown; sub?: unknown };
     setNudgePrefs({
       ...(isNudgeLevel(v.level) ? { level: v.level } : {}),
       ...(isNudgeHour(v.hour) ? { hour: v.hour } : {}),
+      ...(typeof v.sub === 'boolean' ? { sub: v.sub } : {}),
     }, false);
   } catch {
     /* 기본값 */
@@ -114,5 +118,39 @@ export async function scheduleComeback(lastWorkoutIso: string | null, askPermiss
     }
   } catch (e) {
     if (__DEV__) console.warn('[reminders]', e);
+  }
+}
+
+// ─── 구독 알림 ───────────────────────────────────────────────────────────────
+const SUB_TAG = 'sub';
+
+/**
+ * 무료 체험 · 해지 예약이 끝나기 전 알림을 다시 예약한다(utils/subNotice.ts).
+ * 권한은 여기서 묻지 않는다 — 결석 알림 흐름(첫 운동 뒤)이나 설정에서 켤 때 묻는다.
+ * askPermission: 설정에서 사용자가 직접 켰을 때만 true.
+ */
+export async function scheduleSubNotices(sub: Subscription | null | undefined, askPermission = false): Promise<void> {
+  const n = notifications();
+  if (!n) return;
+  try {
+    let perm = await n.getPermissionsAsync();
+    if (perm.status === 'undetermined' && askPermission && prefs.sub) perm = await n.requestPermissionsAsync();
+    if (perm.status !== 'granted') return;
+    if (Platform.OS === 'android') {
+      await n.setNotificationChannelAsync('subscription', { name: '구독 알림', importance: n.AndroidImportance.DEFAULT });
+    }
+    const all = await n.getAllScheduledNotificationsAsync();
+    await Promise.all(all
+      .filter((x) => (x.content.data as { tag?: string } | undefined)?.tag === SUB_TAG)
+      .map((x) => n.cancelScheduledNotificationAsync(x.identifier)));
+    if (!prefs.sub) return;
+    for (const p of subNotices(sub)) {
+      await n.scheduleNotificationAsync({
+        content: { title: keepWords(p.title), body: keepWords(p.body), data: { tag: SUB_TAG, url: '/profile/settings' } },
+        trigger: { type: n.SchedulableTriggerInputTypes.DATE, date: p.at, channelId: 'subscription' },
+      });
+    }
+  } catch (e) {
+    if (__DEV__) console.warn('[reminders:sub]', e);
   }
 }

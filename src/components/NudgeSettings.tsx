@@ -3,11 +3,13 @@
  * 문구 · 단계는 utils/nudge.ts, 예약은 services/reminders.ts. 알림은 앱(iOS · Android)에서만 울린다.
  */
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
 import { Text } from './Text';
 import { colors, themed, useThemeMode } from '../theme';
 import { PressableScale, Segmented } from '../ui';
-import { canNudge, setNudgePrefs, useNudgePrefs } from '../services/reminders';
+import { canNudge, scheduleSubNotices, setNudgePrefs, useNudgePrefs } from '../services/reminders';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { webSwitch } from '../ui/webSwitch';
 import {
   NUDGE_HOURS, NUDGE_HOUR_LABEL, NUDGE_LEVEL_LABEL, nudgePlan, type NudgeHour, type NudgeLevel,
 } from '../utils/nudge';
@@ -22,6 +24,12 @@ export function NudgeSettings() {
   const prefs = useNudgePrefs();
   const [open, setOpen] = useState(false);
   const plan = nudgePlan(prefs.level);
+  const { sub } = useEntitlement();
+  const toggleSub = (on: boolean) => {
+    setNudgePrefs({ sub: on });
+    // 직접 켰을 때만 알림 권한을 묻는다
+    if (on) void scheduleSubNotices(sub, true);
+  };
 
   return (
     <View style={s.card}>
@@ -59,6 +67,17 @@ export function NudgeSettings() {
       ) : (
         <Text style={s.hint}>꺼 두면 쉬어도 부르지 않아요.</Text>
       )}
+      <View style={s.subRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>구독 알림</Text>
+          <Text style={s.subHint}>무료 체험이 끝나기 7 · 2 · 1일 전, 해지한 구독이 끝나기 3 · 1일 전 낮 12시에 알려 드려요.</Text>
+        </View>
+        <Switch value={prefs.sub} onValueChange={toggleSub} accessibilityLabel="구독 알림"
+          trackColor={{ false: colors.panel3, true: colors.ink }}
+          thumbColor={prefs.sub ? colors.bg : '#FFFFFF'}
+          {...webSwitch(colors.bg)}
+          ios_backgroundColor={colors.panel3} />
+      </View>
       {!canNudge() ? <Text style={s.hint}>알림은 앱에서만 울려요. 여기서는 설정과 미리 보기만 됩니다.</Text> : null}
     </View>
   );
@@ -72,6 +91,11 @@ const s = themed(() => StyleSheet.create({
   sub: { fontSize: 11.5, color: colors.muted, lineHeight: 17, marginTop: 4, marginBottom: 12 },
   label: { fontSize: 12, color: colors.muted, fontWeight: '600', marginTop: 14, marginBottom: 8 },
   hint: { fontSize: 11.5, color: colors.muted, marginTop: 10, lineHeight: 17 },
+  subRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, paddingTop: 14,
+    borderTopWidth: 1, borderTopColor: colors.line,
+  },
+  subHint: { fontSize: 11.5, color: colors.muted, lineHeight: 17, marginTop: 4 },
   more: { minHeight: 44, justifyContent: 'center', marginTop: 6 },
   moreTxt: { fontSize: 12.5, color: colors.mid, fontWeight: '700' },
   list: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 2 },
