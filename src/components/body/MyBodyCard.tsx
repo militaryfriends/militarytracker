@@ -5,7 +5,8 @@
  *  · 계산 없음: 내 몸 계산하기
  * "지금" 몸은 마지막 체크인(또는 계산) 뒤의 체중 기록으로 바뀐다(홈 카드와 같은 규칙).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useReducedMotion } from 'react-native-reanimated';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, themed, useThemeMode } from '../../theme';
@@ -24,12 +25,27 @@ import { kg, pct0 } from './format';
 import { NextBody } from './NextBody';
 import { useScreenSize } from '../../ui/screenSize';
 
-type View3 = 'now' | 'both' | 'goal';
+type View3 = 'now' | 'morph' | 'both' | 'goal';
 const VIEWS = [
   { value: 'now', label: '지금' },
-  { value: 'both', label: '지금 vs 예상' },
+  { value: 'morph', label: '변신' },
+  { value: 'both', label: '나란히' },
   { value: 'goal', label: '예상' },
 ] as const satisfies readonly { value: View3; label: string }[];
+
+/** 변신 — 큰 몸 하나가 지금 ↔ 예상을 오간다. 나란히 놓으면 작은 차이가 안 읽혀서(2026-11-28 대표 "동기부여는 받아야") 같은 자리에서 바뀌게 보여 준다. 숫자 · 몸은 엔진 값 그대로 */
+const MORPH_MS = 1100;
+const HOLD_MS = 1300;
+function useMorphLoop(on: boolean): boolean {
+  const reduce = useReducedMotion();
+  const [goal, setGoal] = useState(false);
+  useEffect(() => {
+    if (!on || reduce) { setGoal(false); return; }
+    const t = setInterval(() => setGoal((g) => !g), MORPH_MS + HOLD_MS);
+    return () => clearInterval(t);
+  }, [on, reduce]);
+  return goal;
+}
 
 export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
   useThemeMode();
@@ -40,7 +56,9 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
   const checkins = useAppStore((st) => st.checkins);
   const weights = useAppStore((st) => st.weights);
   const { pro } = useEntitlement();
-  const [view, setView] = useState<View3>('both');
+  const [view, setView] = useState<View3>('morph');
+  const reduce = useReducedMotion();
+  const showGoal = useMorphLoop(view === 'morph');
   // 고른 카드(식단 · 코치와 같은 카드), 없으면 추천
   const chosen = useAppStore((st) => st.profile?.strategy);
 
@@ -86,7 +104,17 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
       <View style={s.card}>
         <Text style={s.label}>내 몸</Text>
         <View style={s.stage}>
-          {view === 'both' ? (
+          {view === 'morph' && !reduce ? (
+            <View style={s.col}>
+              <AvatarView sex={sex} {...(showGoal ? goalBody : nowBody)} width={one} badge={showGoal ? '예상' : '지금'} live morphMs={MORPH_MS}
+                label={`지금 ${kg(nowKg)}kg 체지방 ${pct0(now.nowComp.bfPct)}%에서 ${project.months}개월 뒤 예상 ${kg(project.end.weightKg)}kg 체지방 ${pct0(project.end.bfPct)}%로 바뀌는 몸`} />
+              <View style={s.morphRow}>
+                <Text style={[s.morphTxt, !showGoal && s.morphOn]}>지금 {kg(nowKg)}kg · {pct0(now.nowComp.bfPct)}%</Text>
+                <Text style={s.morphArrow}>→</Text>
+                <Text style={[s.morphTxt, showGoal && s.morphOn]}>{project.months}개월 뒤 {kg(project.end.weightKg)}kg · {pct0(project.end.bfPct)}%</Text>
+              </View>
+            </View>
+          ) : view === 'both' || view === 'morph' ? (
             <View style={s.pair}>
               <View style={s.col}>
                 <AvatarView sex={sex} {...nowBody} width={two} badge="지금" live yawGroup="my" />
@@ -217,6 +245,10 @@ const s = themed(() => StyleSheet.create({
   stage: { alignItems: 'center', marginTop: 10 },
   pair: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
   col: { alignItems: 'center' },
+  morphRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 6 },
+  morphTxt: { fontSize: 12.5, color: colors.muted, fontWeight: '700' },
+  morphOn: { color: colors.ink },
+  morphArrow: { fontSize: 12.5, color: colors.muted },
   colTxt: { fontSize: 12.5, color: colors.mid, marginTop: 6, fontWeight: '700', textAlign: 'center' },
   hint: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 4 },
   fitRow: { alignItems: 'center' },
