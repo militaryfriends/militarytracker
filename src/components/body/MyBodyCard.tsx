@@ -126,7 +126,8 @@ export function MyBodyCard({ onWeigh }: { onWeigh: () => void }) {
                   {steps.map((x, k) => (
                     <View key={x.when} style={[s.morphCell, k === stage && s.morphCellOn]}>
                       <Text style={[s.morphWhen, k === stage && s.morphOn]}>{x.when}</Text>
-                      <Text style={[s.morphTxt, k === stage && s.morphOn]}>{kg(x.w)}kg · {pct0(x.bf)}%</Text>
+                      <Text style={[s.morphTxt, k === stage && s.morphOn]} numberOfLines={1}>{kg(x.w)}kg</Text>
+                      <Text style={[s.morphSub, k === stage && s.morphOn]} numberOfLines={1}>체지방 {pct0(x.bf)}%</Text>
                     </View>
                   ))}
                 </View>
@@ -269,6 +270,7 @@ const s = themed(() => StyleSheet.create({
   morphCellOn: { borderColor: colors.line2, backgroundColor: colors.panel2 },
   morphWhen: { fontSize: 11, color: colors.muted, fontWeight: '700' },
   morphTxt: { fontSize: 12, color: colors.muted, fontWeight: '700', marginTop: 2 },
+  morphSub: { fontSize: 11, color: colors.muted, fontWeight: '600', marginTop: 1 },
   morphOn: { color: colors.ink },
   morphNote: { fontSize: 11, color: colors.muted, marginTop: 6, textAlign: 'center' },
   colTxt: { fontSize: 12.5, color: colors.mid, marginTop: 6, fontWeight: '700', textAlign: 'center' },
