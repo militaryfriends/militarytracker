@@ -240,6 +240,22 @@ export const EX: Exercise[] = [
   { id: 'woodchop',         n: '우드찹',            part: 'abs', g: '복사근',     eq: ['db', 'band'], pl: ['gym', 'home'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'core' },
   { id: 'pallofpress',      n: '팔로프 프레스',     part: 'abs', g: '안티로테이션', eq: ['cb', 'band'], pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'core' },
   { id: 'cablewoodchop',    n: '케이블 우드찹',     part: 'abs', g: '복사근',     eq: ['cb'],         pl: ['gym'],         s: 3, r: '12-15', rest: 60, lv: 2, ppl: 'core' },
+  // ─── 2026-11-28 Twice 새 클립으로 자리를 만든 종목(맨 뒤에 붙여 부위별 번호를 밀지 않는다) ───
+  { id: 'assistedpullup',    n: '어시스티드 풀업',       part: 'back', g: '광배',      eq: ['mc', 'band'], pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 90, lv: 1, ppl: 'pull' },
+  { id: 'ezcurl', n: 'EZ바 컬', part: 'biceps', g: '이두 전체', eq: ['bb'], pl: ['gym'], s: 3, r: '8-12', rest: 75, lv: 1, ppl: 'pull' },
+  { id: 'machinepreacher', n: '머신 프리처컬', part: 'biceps', g: '이두 단두', eq: ['mc'], pl: ['gym'], s: 3, r: '10-12', rest: 60, lv: 1, ppl: 'pull' },
+  { id: 'onearmpushdown', n: '원암 케이블 푸시다운', part: 'triceps', g: '삼두 외측', eq: ['cb'], pl: ['gym'], s: 3, r: '10-12', rest: 60, lv: 1, ppl: 'push' },
+  { id: 'dipmachine', n: '시티드 딥 머신', part: 'triceps', g: '삼두 전체', eq: ['mc'], pl: ['gym'], s: 3, r: '10-12', rest: 75, lv: 1, ppl: 'push' },
+  { id: 'cablekickback', n: '케이블 킥백', part: 'triceps', g: '삼두 외측', eq: ['cb'], pl: ['gym'], s: 3, r: '12-15', rest: 60, lv: 1, ppl: 'push' },
+  { id: 'abcrunchmc', n: '앱크런치 머신', part: 'abs', g: '상복부', eq: ['mc'], pl: ['gym'], s: 3, r: '12-15', rest: 45, lv: 1, ppl: 'core' },
+  { id: 'declinesitup', n: '디클라인 싯업', part: 'abs', g: '상복부', eq: ['bw'], pl: ['gym'], s: 3, r: '10-15', rest: 45, lv: 2, ppl: 'core' },
+  { id: 'hangingkneeraise', n: '행잉 니레이즈', part: 'abs', g: '하복부', eq: ['bw'], pl: ['gym', 'home'], s: 3, r: '10-15', rest: 45, lv: 2, ppl: 'core' },
+  { id: 'captainschair', n: '캡틴스 체어 니레이즈', part: 'abs', g: '하복부', eq: ['mc'], pl: ['gym'], s: 3, r: '10-15', rest: 45, lv: 1, ppl: 'core' },
+  { id: 'onearmlatpull', n: '원암 랫풀다운', part: 'back', g: '광배', eq: ['cb'], pl: ['gym'], s: 3, r: '10-12', rest: 60, lv: 1, ppl: 'pull' },
+  { id: 'seatedrowmc', n: '시티드 로우 머신', part: 'back', g: '등 중부', eq: ['mc'], pl: ['gym'], s: 3, r: '10-12', rest: 75, lv: 1, ppl: 'pull' },
+  { id: 'highrowmc', n: '하이 로우 머신', part: 'back', g: '광배·등 상부', eq: ['mc'], pl: ['gym'], s: 3, r: '10-12', rest: 75, lv: 1, ppl: 'pull' },
+  { id: 'inclinechestpressmc', n: '인클라인 체스트프레스 머신', part: 'chest', g: '가슴 상부', eq: ['mc'], pl: ['gym'], s: 3, r: '8-12', rest: 90, lv: 1, ppl: 'push' },
+  { id: 'seatedhipabd', n: '시티드 힙 어브덕션 머신', part: 'legs', g: '중둔근', eq: ['mc'], pl: ['gym'], s: 3, r: '15-20', rest: 60, lv: 1, ppl: 'legs' },
 ];
 
 // ─── 조회 헬퍼 ──────────────────────────────────────────────────────────────
@@ -249,7 +265,6 @@ export const EX: Exercise[] = [
  * 할로우락 자리는 할로우홀드, 다이아몬드 푸시업(삼두)은 가슴 다이아몬드 푸시업 영상을 같이 쓴다.
  */
 const RETIRED: Exercise[] = [
-  { id: 'assistedpullup',    n: '어시스티드 풀업',       part: 'back', g: '광배',      eq: ['mc', 'band'], pl: ['gym', 'home'], s: 3, r: '8-12',  rest: 90, lv: 1, ppl: 'pull' },
   { id: 'curl21s',           n: '21s 컬',            part: 'biceps', g: '이두 전체', eq: ['bb'],        pl: ['gym'],         s: 3, r: '21',    rest: 75, lv: 2, ppl: 'pull' },
   { id: 'dragcurl',          n: '드래그컬',          part: 'biceps', g: '이두 장두',  eq: ['bb'],        pl: ['gym'],         s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },
   { id: 'zottman',           n: '조트만컬',          part: 'biceps', g: '이두·전완',  eq: ['db'],        pl: ['gym', 'home'], s: 3, r: '10-12', rest: 60, lv: 2, ppl: 'pull' },

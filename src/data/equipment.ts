@@ -34,6 +34,7 @@ const NEEDS: Record<string, ('bar' | 'bench')[]> = {
   inclinereardelt: ['bench'], benchdip: ['bench'], seateddbpress: ['bench'], hipthrust: ['bench'],
   bulgarian: ['bench'], stepup: ['bench'], boxsquat: ['bench'], lyingext: ['bench'], dragonflag: ['bench'],
   declinepushup: ['bench'], inclinepushup: ['bench'], concentrationcurl: ['bench'],
+  hangingkneeraise: ['bar'], declinesitup: ['bench'],
 };
 
 /** 이 사람이 가진 기구(맨몸 포함) */
