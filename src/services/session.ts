@@ -18,6 +18,7 @@
  */
 import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { router } from 'expo-router';
 import { auth, db } from './firebase';
 import {
   normalizeUser, ensureUserDoc, touchLastLogin, fetchPlan, logout, deleteAccount,
@@ -30,6 +31,7 @@ import { fetchActiveProject, fetchCheckins, fetchLatestAnalysis, saveAnalysis } 
 import { useAuthStore } from '../stores/authStore';
 import { useAppStore, waitForHydration } from '../stores/appStore';
 import { isProSub } from '../utils/subscription';
+import { OFFER_LABEL, waitlistOffer } from '../utils/waitlistOffer';
 import { showAlert } from '../utils/alert';
 import { latestServerCreatedAt, mergeByCreatedAt, replaceWithFresh, userSignature } from '../utils/merge';
 import type { User } from '../types';
@@ -242,13 +244,24 @@ function greet(u: User) {
     touchLastLogin(u.uid).catch(() => {});
   }
   const sub = u.sub;
-  // 대기자 명단 — 인증된 가입 이메일이 명단에 있으면 서버가 프리미엄을 준다(계정당 한 번 확인)
+  // 대기자 명단 — 인증된 가입 이메일이 명단에 있으면 서버가 무료 자격을 건다(계정당 한 번 확인).
+  // 무료 기간은 결제 수단을 등록하면 시작된다(2026-11-28 대표 결정 · 문구) — 알림에서 바로 구독 화면으로
   if (!sub?.waitlist && auth.currentUser?.uid === u.uid && auth.currentUser.emailVerified) {
     refreshSub({ claim: true })
       .then((next) => {
         if (!next || useAuthStore.getState().user?.uid !== u.uid) return;
         useAuthStore.getState().patchUser({ sub: next });
-        if (next.waitlist === 'claimed') {
+        const w = isProSub(next) ? null : waitlistOffer(next);
+        if (w) {
+          showAlert(
+            '대기자 명단에 있으시네요!',
+            `결제 수단을 등록하시면 ${OFFER_LABEL[w]}이 무료로 지급됩니다. 언제든 취소하실 수 있습니다.`,
+            [
+              { text: '나중에', style: 'cancel' },
+              { text: `${OFFER_LABEL[w]} 무료 받기`, onPress: () => router.push('/subscribe') },
+            ],
+          );
+        } else if (next.waitlist === 'claimed') {
           showAlert('대기자 명단 혜택', '사전 신청해 주셔서 감사합니다. 프리미엄이 적용되었습니다.');
         }
       })

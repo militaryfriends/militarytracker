@@ -211,7 +211,7 @@ export default function SettingsScreen() {
               accessibilityRole="button" accessibilityLabel="대기자 명단 등록">
               <View style={{ flex: 1 }}>
                 <Text style={s.subTitle}>대기자 명단 등록</Text>
-                <Text style={s.subSub}>Tally CSV → 3개월 · 1개월 프리미엄 자동 지급</Text>
+                <Text style={s.subSub}>Tally CSV → 3개월 · 1개월 무료(결제 수단 등록 뒤) · iOS 혜택 코드</Text>
               </View>
               <Text style={s.subChev}>›</Text>
             </PressableScale>

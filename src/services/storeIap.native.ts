@@ -6,6 +6,7 @@
  */
 import { Platform } from 'react-native';
 import { REVENUECAT } from '../config/revenuecat';
+import { WAITLIST_TAGS } from '../utils/waitlistOffer';
 
 export interface StorePackage { id: string; productId: string; price: string; raw: unknown; /** 무료 체험 기간(예: '1개월') — 없으면 체험 없음 */ trial?: string }
 
@@ -52,8 +53,24 @@ export async function loadPackages(uid: string): Promise<StorePackage[]> {
     productId: k.product.identifier,
     price: k.product.priceString,
     raw: k,
-    trial: eligible && !eligible[k.product.identifier] ? undefined : trialOf(k.product),
+    trial: eligible && !eligible[k.product.identifier] ? undefined : trialOf({ ...k.product, defaultOption: normalOption(k.product) }),
   }));
+}
+
+type Opt = NonNullable<RcPackage['product']['subscriptionOptions']>[number];
+type RcPackage = Parameters<RC['purchasePackage']>[0];
+const isWaitlistOpt = (o: { tags?: string[] | null }): boolean => (o.tags ?? []).some((t) => WAITLIST_TAGS.includes(t));
+
+/**
+ * Android 일반 구매에 쓸 옵션 — 대기자 전용 혜택(개발자 지정, 3개월 · 1개월 무료)은 빼고 고른다.
+ * RevenueCat 은 무료 기간이 가장 긴 옵션을 기본으로 고르므로, 콘솔에서 rc-ignore-offer 태그를 빠뜨리면
+ * 일반 구독도 3개월 무료가 된다 — 그 실수가 있어도 그런 일이 없게 여기서 한 번 더 거른다. iOS 는 null(옵션 없음).
+ */
+function normalOption(product: RcPackage['product']): Opt | null {
+  const def = product.defaultOption;
+  if (!def || !isWaitlistOpt(def)) return def ?? null;
+  const rest = (product.subscriptionOptions ?? []).filter((o) => !isWaitlistOpt(o));
+  return rest.find((o) => o.freePhase) ?? rest.find((o) => o.isBasePlan) ?? rest[0] ?? null;
 }
 
 const UNIT: Record<string, string> = { DAY: '일', WEEK: '주', MONTH: '개월', YEAR: '년' };
@@ -72,13 +89,52 @@ function trialOf(p: { introPrice?: { price: number; periodUnit: string; periodNu
 
 export async function buyPackage(uid: string, pkg: StorePackage): Promise<'done' | 'cancelled'> {
   const p = await ensure(uid);
+  const k = pkg.raw as RcPackage;
   try {
-    await p.purchasePackage(pkg.raw as Parameters<RC['purchasePackage']>[0]);
+    // Android 에서 기본 옵션이 대기자 전용 혜택으로 잡혔으면 일반 옵션을 직접 산다(normalOption)
+    const def = k.product.defaultOption;
+    const pick = Platform.OS === 'android' && def && isWaitlistOpt(def) ? normalOption(k.product) : null;
+    if (pick) await p.purchaseSubscriptionOption(pick);
+    else await p.purchasePackage(k);
     return 'done';
   } catch (e) {
     if ((e as { userCancelled?: boolean })?.userCancelled) return 'cancelled';
     throw e;
   }
+}
+
+/**
+ * Android 대기자 혜택 — 개발자 지정 혜택(태그)으로 스토어 결제창을 연다. 결제 수단 등록 · 확인은 구글이 한다.
+ * 콘솔에 그 혜택이 아직 없으면 'missing'(일반 구매로 넘어가지 않는다 — 대기자가 돈을 내거나 7일만 받게 되므로).
+ */
+export async function buyWaitlistOffer(uid: string, productId: string, tag: string): Promise<'done' | 'cancelled' | 'missing'> {
+  if (Platform.OS !== 'android') return 'missing';
+  const p = await ensure(uid);
+  const off = await p.getOfferings();
+  const pkgs = off.current?.availablePackages ?? [];
+  const pkg = pkgs.find((k) => k.product.identifier === productId || k.product.identifier.startsWith(`${productId}:`)) ?? pkgs[0];
+  const opt = pkg?.product.subscriptionOptions?.find((o) => o.tags.includes(tag));
+  if (!opt) return 'missing';
+  try {
+    await p.purchaseSubscriptionOption(opt);
+    return 'done';
+  } catch (e) {
+    if ((e as { userCancelled?: boolean })?.userCancelled) return 'cancelled';
+    throw e;
+  }
+}
+
+/** iOS — App Store 에서 쓴 오퍼 코드는 앱 밖에서 생긴 구매라, 앱으로 돌아오면 RevenueCat 에 다시 올린다 */
+export async function syncStorePurchases(uid: string): Promise<void> {
+  const p = await ensure(uid);
+  await p.syncPurchasesForResult();
+}
+
+/** iOS — 애플의 코드 입력 시트(코드를 직접 넣는 예비 길) */
+export async function presentRedeemSheet(uid: string): Promise<void> {
+  if (Platform.OS !== 'ios') return;
+  const p = await ensure(uid);
+  await p.presentCodeRedemptionSheet();
 }
 
 export async function restoreStore(uid: string): Promise<void> {

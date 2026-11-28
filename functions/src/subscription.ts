@@ -15,12 +15,19 @@ import {
 } from './entitlement';
 import { syncStore } from './revenuecat';
 import { claimByEmail, claimByPhone, importWaitlist, isPhone, normPhone } from './waitlist';
+import { assignOfferCode, importOfferCodes, offerCodeStats } from './offerCodes';
 
 /** index.ts 의 setGlobalOptions 가 먼저 돌지만, 순서에 기대지 않도록 명시한다 */
 const REGION = 'asia-northeast3';
 const MAX_INSTANCES = 10;
 /** src/config/entitlements.ts 의 TRIAL_DAYS 와 같은 값이어야 한다 */
 const TRIAL_DAYS = 7;
+/**
+ * 카드 없는 서버 체험(subStartTrial) — 2026-11-28 대표 결정으로 닫았다: 무료 기간도 결제 수단을 등록해야 시작한다.
+ * 무료 체험은 앱의 스토어 결제창(등록 → 끝나면 자동 결제, 그 전에 언제든 해지)으로만 준다.
+ * 다시 열려면 true + 앱 src/config/entitlements.ts 의 NO_CARD_TRIAL.
+ */
+const NO_CARD_TRIAL: boolean = false;
 /** 프로모션 코드 1개가 줄 수 있는 최대 일수 — 실수로 365000 을 넣는 사고 방지 */
 const MAX_PROMO_DAYS = 400;
 /** 프로모 코드 규격. 콘솔에서 만들 때도 이 규격을 지킬 것 (짧은 코드는 추측된다) */
@@ -40,14 +47,21 @@ const kstDay = (): string =>
   new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 // ─── 현재 상태 ─────────────────────────────────────────────────────────────
-export const subStatus = onCall(opts, async (req: CallableRequest<{ claim?: boolean }>) => {
+export const subStatus = onCall(opts, async (req: CallableRequest<{ claim?: boolean; offerCode?: boolean }>) => {
   const uid = requireAuth(req);
   const acc = await loadAccount(uid, hasAdminClaim(req));
 
-  // 대기자 명단 — 인증된 가입 이메일이 명단에 있으면 프리미엄 지급 (계정당 한 번 확인)
+  // iOS 대기자 혜택 — App Store 오퍼 코드 하나를 이 계정에 묶어 돌려준다(offerCodes.ts).
+  // 콜러블을 새로 만들면 공개 호출 설정을 콘솔에서 따로 켜야 해서 여기에 붙였다(subGrant 의 명단 가져오기와 같은 이유)
+  if (req.data?.offerCode === true) {
+    const offerCode = await assignOfferCode(uid, acc.sub);
+    return { sub: acc.sub, pro: acc.pro, offerCode };
+  }
+
+  // 대기자 명단 — 인증된 가입 이메일이 명단에 있으면 무료 자격을 건다(결제 수단을 등록하면 시작, 계정당 한 번 확인)
   if (req.data?.claim === true && !acc.sub.waitlist) {
     const got = await claimByEmail(uid, req.auth?.token?.email, req.auth?.token?.email_verified === true, acc.sub);
-    if (got) return { sub: got, pro: true, waitlist: true };
+    if (got) return { sub: got, pro: acc.isAdmin || isProSub(got), waitlist: got.waitlist };
   }
 
   // 스토어 구독의 기간이 지났으면 자동 갱신됐는지 RevenueCat 에 묻는다
@@ -71,7 +85,13 @@ export const subStatus = onCall(opts, async (req: CallableRequest<{ claim?: bool
 // ─── 무료 체험 ─────────────────────────────────────────────────────────────
 export const subStartTrial = onCall(opts, async (req) => {
   const uid = requireAuth(req);
-  if (TRIAL_DAYS <= 0) throw new HttpsError('failed-precondition', '무료 체험을 제공하지 않습니다.');
+  if (TRIAL_DAYS <= 0 || !NO_CARD_TRIAL) {
+    throw new HttpsError(
+      'failed-precondition',
+      '무료 체험은 앱에서 결제 수단을 등록한 뒤 시작할 수 있습니다. 무료 기간에 해지하면 결제되지 않습니다.',
+      { reason: 'card_required' }
+    );
+  }
 
   // 일회용 메일로 계정을 찍어내 체험을 반복하는 것을 막는다.
   // 앱은 이 reason 을 보고 "인증 메일 다시 보내기" 를 띄운다.
@@ -153,7 +173,8 @@ export const subRedeemPromo = onCall(
       });
       const sub = await claimByPhone(uid, phone);
       if (!sub) throw new HttpsError('failed-precondition', '대기자 명단에서 이 번호를 찾지 못했습니다.');
-      return { sub, pro: true, waitlist: true };
+      // 무료 자격만 건다 — 무료 기간은 앱에서 결제 수단을 등록하면 시작된다(waitlist.ts)
+      return { sub, pro: isProSub(sub), waitlist: sub.waitlist };
     }
     if (!PROMO_CODE.test(code)) throw new HttpsError('failed-precondition', PROMO_FAIL);
 
@@ -217,7 +238,9 @@ export const subRedeemPromo = onCall(
 // ─── 관리자 지급 ───────────────────────────────────────────────────────────
 export const subGrant = onCall(
   { ...opts, timeoutSeconds: 30 },
-  async (req: CallableRequest<{ uid?: string; days?: number | null; note?: string; waitlist?: unknown }>) => {
+  async (req: CallableRequest<{
+    uid?: string; days?: number | null; note?: string; waitlist?: unknown; offerCodes?: unknown; offerCodeStats?: boolean;
+  }>) => {
     const caller = requireAuth(req);
     const me = await loadAccount(caller, hasAdminClaim(req));
     if (!me.isAdmin) throw new HttpsError('permission-denied', '관리자만 사용할 수 있습니다.');
@@ -228,6 +251,13 @@ export const subGrant = onCall(
       logger.info('waitlist import', { by: caller, ...r });
       return r;
     }
+    // iOS 대기자 혜택 코드(App Store 일회용 오퍼 코드) 가져오기 · 남은 수 — 같은 이유로 여기에
+    if (req.data?.offerCodes !== undefined) {
+      const r = await importOfferCodes(req.data.offerCodes);
+      logger.info('offer codes import', { by: caller, ...r });
+      return r;
+    }
+    if (req.data?.offerCodeStats === true) return offerCodeStats();
 
     const target = String(req.data?.uid ?? '').trim();
     if (!target || target.length > 128) throw new HttpsError('invalid-argument', '대상 uid 가 필요합니다.');

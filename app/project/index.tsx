@@ -18,6 +18,7 @@ import { useAppStore } from '../../src/stores/appStore';
 import { useOnboardDraft } from '../../src/stores/onboardDraft';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { PRODUCTS, TRIAL_DAYS } from '../../src/config/entitlements';
+import { OFFER_LABEL, waitlistOffer } from '../../src/utils/waitlistOffer';
 import { saveOnboarding, saveProfile } from '../../src/services/authService';
 import { saveAnalysis, setAnalysisDecision } from '../../src/services/bodyService';
 import { buildLocalPlan } from '../../src/utils/planner';
@@ -86,10 +87,14 @@ export default function ProjectsScreen() {
   const colW = Math.floor((Math.min(width, 520) - 36 - 10) / 2);
   const running = !!project && project.analysisId === a.id && project.status === 'active';
   const trial = TRIAL_DAYS > 0 && !sub.trialUsed && !pro;
+  // 사전 신청(대기자) 무료 자격 — 결제 수단을 등록하면 그 기간만큼 무료(2026-11-28)
+  const wl = pro ? null : waitlistOffer(sub);
   const monthly = PRODUCTS.find((p) => p.id === 'mt_pro_monthly') ?? PRODUCTS[0];
   const yearly = PRODUCTS.find((p) => p.id === 'mt_pro_yearly');
   const priceLine = pro
     ? '구독 중이라 추가 결제 없이 시작해요'
+    : wl
+    ? `대기자 혜택 ${OFFER_LABEL[wl]} 무료 후 월 ${monthly.price.replace('₩', '')}원`
     : trial
     ? `${TRIAL_DAYS}일 무료 체험 후 월 ${monthly.price.replace('₩', '')}원`
     : `월 ${monthly.price.replace('₩', '')}원${yearly ? ` · 연 ${yearly.price.replace('₩', '')}원` : ''}`;

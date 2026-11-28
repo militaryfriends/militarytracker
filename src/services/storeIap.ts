@@ -10,3 +10,8 @@ export async function buyPackage(_uid: string, _pkg: StorePackage): Promise<'don
 }
 export async function restoreStore(_uid: string): Promise<void> {}
 export async function logOutStore(): Promise<void> {}
+export async function buyWaitlistOffer(_uid: string, _productId: string, _tag: string): Promise<'done' | 'cancelled' | 'missing'> {
+  return 'missing';
+}
+export async function syncStorePurchases(_uid: string): Promise<void> {}
+export async function presentRedeemSheet(_uid: string): Promise<void> {}

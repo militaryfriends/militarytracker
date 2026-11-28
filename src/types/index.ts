@@ -27,8 +27,13 @@ export interface Subscription {
   /** 무료 체험을 이미 사용했는지 — 재발급 방지 */
   trialUsed: boolean;
   updatedAt: string;
-  /** 대기자 명단 확인 — claimed(혜택 받음) · none(명단에 없음) · 없음(확인 전). 서버만 쓴다 */
-  waitlist?: 'claimed' | 'none';
+  /**
+   * 대기자 명단 확인 — 없음(확인 전) · eligible(무료 자격: 결제 수단을 등록하면 스토어 무료 기간 시작, 2026-11-28부터)
+   * · claimed(그 무료 기간을 시작함, 또는 11/28 전 방식으로 바로 받음) · none(명단에 없음). 서버만 쓴다
+   */
+  waitlist?: 'eligible' | 'claimed' | 'none';
+  /** 대기자 무료 일수(90 = 3개월, 30 = 1개월) */
+  waitlistDays?: number;
 }
 
 /**

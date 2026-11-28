@@ -62,6 +62,9 @@ export async function syncStore(uid: string): Promise<{ sub: Subscription; chang
     : rs.unsubscribe_detected_at ? 'canceled'
     : rs.period_type === 'trial' ? 'trial'
     : 'active';
+  // 대기자 무료 자격(eligible)은 스토어 구독이 생기면 다 쓴 것 — 대기자 혜택(오퍼 코드 · 개발자 지정 혜택)으로
+  // 무료 기간을 시작했든 일반 구독을 했든, 결제 수단이 등록된 구독이 됐다(waitlist.ts)
+  const waitlist = live && cur.waitlist === 'eligible' ? 'claimed' as const : cur.waitlist;
   const next = {
     tier: live ? 'pro' as const : 'free' as const,
     status,
@@ -69,12 +72,16 @@ export async function syncStore(uid: string): Promise<{ sub: Subscription; chang
     source: source as Subscription['source'],
     productId: ent.product_identifier,
     trialUsed: cur.trialUsed,
-    ...(cur.waitlist ? { waitlist: cur.waitlist } : {}),
+    ...(waitlist ? { waitlist } : {}),
+    ...(cur.waitlistDays ? { waitlistDays: cur.waitlistDays } : {}),
   };
   const same = cur.tier === next.tier && cur.status === next.status && cur.expiresAt === next.expiresAt
-    && cur.source === next.source && cur.productId === next.productId;
+    && cur.source === next.source && cur.productId === next.productId && cur.waitlist === waitlist;
   if (same) return { sub: cur, changed: false };
   const sub = await writeSub(uid, next);
-  await logGrant(uid, 'store', { status, expires, product: ent.product_identifier, store: rs.store ?? null });
+  await logGrant(uid, 'store', {
+    status, expires, product: ent.product_identifier, store: rs.store ?? null,
+    ...(waitlist !== cur.waitlist ? { waitlist } : {}),
+  });
   return { sub, changed: true };
 }

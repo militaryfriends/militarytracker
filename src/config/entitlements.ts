@@ -83,6 +83,12 @@ export const PRODUCTS: readonly SubProduct[] = [
 /** 무료 체험 일수. 0 이면 체험 없음 */
 export const TRIAL_DAYS = 7;
 
+/**
+ * 카드 없는 서버 체험(웹 · 결제 키 전) — 2026-11-28 대표 결정으로 닫았다: 무료 기간도 결제 수단을 등록해야 시작한다.
+ * 무료 체험은 앱의 스토어 결제창(등록 → 끝나면 자동 결제, 그 전에 언제든 해지)으로만 준다. 서버 subscription.ts 와 같은 값.
+ */
+export const NO_CARD_TRIAL = false;
+
 export const PRO_NAME = 'MILITARY TRACKER PRO';
 
 // ─── 법적 고지 링크 ─────────────────────────────────────────────────────────

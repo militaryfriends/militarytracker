@@ -1,16 +1,22 @@
 /**
- * 대기자 명단 혜택 — 출시 전 신청자(Tally 폼: 이름 · 이메일 · 휴대폰)에게 프리미엄을 준다.
+ * 대기자 명단 혜택 — 출시 전 신청자(Tally 폼: 이름 · 이메일 · 휴대폰)에게 무료 기간(3개월 · 1개월)을 준다.
+ *
+ * 2026-11-28 대표 결정: 무료 기간도 결제 수단을 등록해야 시작한다 — 스토어 결제창에서 등록하고,
+ * 무료 기간이 끝나면 월 구독으로 자동 결제, 그 전에 언제든 해지. 그래서 명단 확인만으로는 프리미엄을 켜지 않고
+ * sub.waitlist = 'eligible' + waitlistDays(무료 자격)만 적는다. 무료 기간 자체는 스토어가 준다:
+ *  · iOS: App Store 일회용 오퍼 코드(offerCodes.ts) · Android: 개발자 지정 혜택(태그 waitlist-3m · waitlist-1m)
+ * 스토어 구독이 생기면 revenuecat.ts 가 'claimed' 로 바꾼다. (11/28 전에 바로 받은 계정은 'claimed' 그대로)
  *
  * 명단은 waitlist/{해시} 문서로만 둔다. 이메일 · 번호 원문은 저장하지 않는다(해시만 — 신청 목적인
  * "출시 알림" 밖으로 개인정보를 늘리지 않으려고). 문서 { kind, days, claimedBy?, claimedAt? }.
- *  · 이메일: 인증된 가입 이메일이 명단에 있으면 subStatus({ claim: true }) 때 자동 지급
- *  · 휴대폰: 앱 "코드 입력" 칸에 번호를 넣으면 subRedeemPromo 가 여기로 넘긴다(시도 횟수 제한 공유)
- * 한 항목은 한 계정만, 한 계정은 한 번만 받는다. 기간은 max(지금 남은 기간, 오늘 + days) — 체험과 겹쳐 쌓이지 않는다.
- * 명단 넣기: 관리자가 subGrant({ waitlist: [{ email?, phone?, days }] }) (앱 MY › 관리자 · 대기자 명단).
+ *  · 이메일: 인증된 가입 이메일이 명단에 있으면 subStatus({ claim: true }) 때 자동 확인
+ *  · 휴대폰: 웹 "코드 입력" 칸에 번호를 넣으면 subRedeemPromo 가 여기로 넘긴다(시도 횟수 제한 공유)
+ * 한 항목은 한 계정만, 한 계정은 한 번만 받는다.
+ * 명단 넣기: 관리자가 subGrant({ waitlist: [{ email?, phone?, days }] }) (앱 MY › 설정 › 관리자 · 대기자 명단).
  */
 import { createHash } from 'crypto';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { db, normalizeSub, isProSub, Subscription, addDays, logGrant } from './entitlement';
+import { db, normalizeSub, Subscription, logGrant } from './entitlement';
 
 /** 명단 한 줄이 줄 수 있는 최대 일수 */
 const MAX_WAITLIST_DAYS = 400;
@@ -58,8 +64,9 @@ export async function importWaitlist(rows: unknown): Promise<{ added: number; sk
 }
 
 /**
- * 명단 항목 하나로 지급. 없는 항목이면 null.
- * 같은 사람이 이메일 · 번호 두 항목을 갖고 있어도 계정의 sub.waitlist === 'claimed' 라 한 번만 받는다.
+ * 명단 항목 하나로 무료 자격(eligible)을 건다. 없는 항목이면 null.
+ * 프리미엄은 여기서 켜지 않는다 — 결제 수단을 등록하고 스토어 무료 기간을 시작해야 켜진다(위 머리말).
+ * 같은 사람이 이메일 · 번호 두 항목을 갖고 있어도 계정의 sub.waitlist 가 이미 eligible · claimed 라 한 번만 받는다.
  */
 async function claim(uid: string, kind: 'email' | 'phone', value: string): Promise<Subscription | null> {
   const ref = db.collection('waitlist').doc(key(kind, value));
@@ -69,28 +76,18 @@ async function claim(uid: string, kind: 'email' | 'phone', value: string): Promi
     const cur = normalizeSub(u.data()?.sub);
     if (!w.exists) return null;
     const d = w.data() as { days?: number; claimedBy?: string };
-    if (cur.waitlist === 'claimed') throw new HttpsError('already-exists', '대기자 혜택은 이미 받았습니다.');
+    if (cur.waitlist === 'claimed' || cur.waitlist === 'eligible') {
+      throw new HttpsError('already-exists', '대기자 혜택은 이미 확인된 계정입니다.');
+    }
     if (d.claimedBy && d.claimedBy !== uid) throw new HttpsError('already-exists', '이미 다른 계정에서 받은 혜택입니다.');
     const days = Math.min(MAX_WAITLIST_DAYS, Math.max(1, Math.round(Number(d.days ?? 90))));
-    const target = Date.parse(addDays(days));
-    const curEnd = isProSub(cur) && cur.expiresAt ? Date.parse(cur.expiresAt) : 0;
-    const next: Subscription = {
-      tier: 'pro',
-      // 스토어 구독 중이면 그 상태 · 기간을 그대로 둔다(스토어가 갱신한다)
-      status: cur.source === 'ios' || cur.source === 'android' ? cur.status : 'active',
-      expiresAt: cur.expiresAt === null && isProSub(cur) ? null : new Date(Math.max(target, curEnd)).toISOString(),
-      source: cur.source === 'ios' || cur.source === 'android' ? cur.source : 'promo',
-      productId: cur.source === 'ios' || cur.source === 'android' ? cur.productId : 'waitlist',
-      trialUsed: cur.trialUsed,
-      updatedAt: new Date().toISOString(),
-      waitlist: 'claimed',
-    };
+    const next: Subscription = { ...cur, updatedAt: new Date().toISOString(), waitlist: 'eligible', waitlistDays: days };
     tx.set(userRef, { sub: next }, { merge: true });
     tx.set(ref, { claimedBy: uid, claimedAt: new Date().toISOString() }, { merge: true });
     return { sub: next, days };
   });
   if (!out) return null;
-  await logGrant(uid, 'waitlist', { kind, days: out.days });
+  await logGrant(uid, 'waitlist_eligible', { kind, days: out.days });
   return out.sub;
 }
 

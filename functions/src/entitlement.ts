@@ -37,8 +37,14 @@ export interface Subscription {
   productId: string | null;
   trialUsed: boolean;
   updatedAt: string;
-  /** 대기자 명단 확인 결과 — claimed(혜택 받음) · none(명단에 없음). 없으면 아직 확인 전 */
-  waitlist?: 'claimed' | 'none';
+  /**
+   * 대기자 명단 확인 결과. 없으면 아직 확인 전.
+   *  eligible = 무료 자격(결제 수단을 등록하면 스토어가 무료 기간을 준다 — 2026-11-28부터)
+   *  claimed  = 그 무료 기간을 시작함(또는 11/28 전 방식으로 바로 받음) · none = 명단에 없음
+   */
+  waitlist?: 'eligible' | 'claimed' | 'none';
+  /** 대기자 무료 일수(명단 값 — 90 = 3개월, 30 = 1개월) */
+  waitlistDays?: number;
 }
 
 /** 형식이 깨진 expiresAt 에 쓰는 "이미 만료" 값 */
@@ -79,7 +85,9 @@ export function normalizeSub(raw: unknown): Subscription {
     productId: typeof d.productId === 'string' ? d.productId : null,
     trialUsed: d.trialUsed === true,
     updatedAt: typeof d.updatedAt === 'string' ? d.updatedAt : '',
-    ...(d.waitlist === 'claimed' || d.waitlist === 'none' ? { waitlist: d.waitlist } : {}),
+    ...(d.waitlist === 'eligible' || d.waitlist === 'claimed' || d.waitlist === 'none' ? { waitlist: d.waitlist } : {}),
+    ...(typeof d.waitlistDays === 'number' && Number.isFinite(d.waitlistDays) && d.waitlistDays > 0
+      ? { waitlistDays: Math.round(d.waitlistDays) } : {}),
   };
 }
 

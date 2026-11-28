@@ -2,6 +2,7 @@ import { prescription, rxText } from '../../src/utils/prescription';
 import { LoadingSkeleton } from '../../src/components/LoadingSkeleton';
 import { hasHydrated } from '../../src/stores/appStore';
 import { RemeasureNote } from '../../src/components/body/RemeasureNote';
+import { WaitlistNote } from '../../src/components/WaitlistNote';
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -119,6 +120,7 @@ export default function HomeScreen() {
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollInner} showsVerticalScrollIndicator={false}>
         <HomeHero avatarW={Math.round(Math.min(168, (Math.min(width, 480) - 40) * 0.44))} />
         <RemeasureNote />
+        <WaitlistNote />
 
         {/* 오늘 할 일 */}
         <View style={s.sheet}>

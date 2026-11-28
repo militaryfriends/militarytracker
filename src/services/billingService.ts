@@ -14,15 +14,18 @@
  *   구매 영수증을 subApplyReceipt 콜러블로 넘겨 서버가 검증·기록하게 한다.
  *   클라이언트가 users/{uid}.sub 를 직접 쓰는 길은 보안 규칙이 막아 두었다.
  */
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { httpsCallable, FunctionsError } from 'firebase/functions';
 import { functions } from './firebase';
 import { refreshIdToken } from './authService';
 import type { Subscription } from '../types';
-import { normalizeSub } from '../utils/subscription';
+import { isProSub, normalizeSub } from '../utils/subscription';
 import { PRODUCTS, SubProduct } from '../config/entitlements';
 import { auth } from './firebase';
-import { storeIapReady, loadPackages, buyPackage, restoreStore, StorePackage } from './storeIap';
+import {
+  storeIapReady, loadPackages, buyPackage, restoreStore, buyWaitlistOffer, syncStorePurchases, presentRedeemSheet, StorePackage,
+} from './storeIap';
+import { OFFER_TAG, offerOf } from '../utils/waitlistOffer';
 
 export class BillingUnavailable extends Error {}
 export class PromoError extends Error {}
@@ -158,6 +161,79 @@ export async function restore(): Promise<Subscription | null> {
     throw new BillingUnavailable(msg(e, '스토어에서 구매 내역을 불러오지 못했습니다.'));
   }
   return applyStore();
+}
+
+// ─── 대기자 무료 시작 ──────────────────────────────────────────────────────
+/**
+ * 2026-11-28 대표 결정: 대기자도 결제 수단을 등록해야 무료 기간(3개월 · 1개월)이 시작된다.
+ * 등록 · 확인은 스토어 결제창이 하고, 무료 기간이 끝나면 월 구독으로 자동 결제, 그 전에 언제든 해지할 수 있다.
+ *  · Android: 개발자 지정 혜택(태그 waitlist-3m · waitlist-1m)으로 결제창 → 끝나면 서버에 기록 → done
+ *  · iOS: 서버가 이 계정에 묶어 준 App Store 오퍼 코드로 코드 사용 화면을 연다 → redirected
+ *         (앱으로 돌아오면 구독 화면이 finishWaitlistRedeem() 으로 확인한다)
+ */
+export type WaitlistStart =
+  | { kind: 'done'; sub: Subscription }
+  | { kind: 'cancelled' }
+  | { kind: 'redirected'; code: string };
+
+const WAITLIST_NOT_READY = '대기자 혜택을 준비하고 있습니다. 잠시 후 다시 시도해주세요.';
+
+export async function startWaitlistOffer(sub: Subscription): Promise<WaitlistStart> {
+  if (!canPurchase()) {
+    throw new BillingUnavailable(
+      Platform.OS === 'web'
+        ? '대기자 혜택은 앱에서 시작할 수 있습니다. iOS·Android 앱의 구독 화면에서 진행해주세요.'
+        : '스토어 결제가 아직 연결되지 않았습니다.'
+    );
+  }
+  if (sub.waitlist !== 'eligible') throw new BillingUnavailable('대기자 혜택 대상이 아닙니다.');
+  const uid = uidOrThrow();
+  if (Platform.OS === 'android') {
+    let r: 'done' | 'cancelled' | 'missing';
+    try {
+      r = await buyWaitlistOffer(uid, PRODUCTS[0].id, OFFER_TAG[offerOf(sub.waitlistDays)]);
+    } catch (e) {
+      throw new BillingUnavailable(msg(e, '결제를 완료하지 못했습니다.'));
+    }
+    if (r === 'missing') throw new BillingUnavailable(WAITLIST_NOT_READY);
+    if (r === 'cancelled') return { kind: 'cancelled' };
+    const next = await applyStore();
+    if (!next) throw new BillingUnavailable('구독 정보를 확인하지 못했습니다. 잠시 후 구매 복원을 눌러주세요.');
+    return { kind: 'done', sub: next };
+  }
+  // iOS — 코드는 서버가 고른다(앱이 아무 코드나 고를 수 없게)
+  let code = '';
+  let url = '';
+  try {
+    const call = httpsCallable(functions, 'subStatus', { timeout: 20_000 });
+    const res = await call({ offerCode: true });
+    const oc = (res.data as { offerCode?: { code?: string; url?: string } })?.offerCode;
+    code = String(oc?.code ?? '');
+    url = String(oc?.url ?? '');
+  } catch (e) {
+    throw new BillingUnavailable(msg(e, WAITLIST_NOT_READY));
+  }
+  if (!code || !url) throw new BillingUnavailable(WAITLIST_NOT_READY);
+  await Linking.openURL(url);
+  return { kind: 'redirected', code };
+}
+
+/** iOS — App Store 에서 코드를 쓰고 돌아왔을 때. 구독이 생겼으면 서버 기록까지 마친 sub, 아직이면 null */
+export async function finishWaitlistRedeem(): Promise<Subscription | null> {
+  if (!canPurchase()) return null;
+  try {
+    await syncStorePurchases(uidOrThrow());
+  } catch {
+    /* 아직 기기에 거래가 안 왔을 수 있다 — 서버 확인은 한다 */
+  }
+  const next = await applyStore();
+  return next && isProSub(next) ? next : null;
+}
+
+/** iOS — 코드 사용 화면이 안 열렸을 때, 애플의 코드 입력 시트에 직접 넣는 예비 길 */
+export async function openRedeemSheet(): Promise<void> {
+  if (Platform.OS !== 'ios' || !canPurchase()) return;
+  await presentRedeemSheet(uidOrThrow());
 }
 
 /** 기기의 구독 관리(해지) 화면 — 앱 안에서 해지할 수는 없고 스토어로 보낸다 */

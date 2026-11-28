@@ -1,7 +1,7 @@
 import { analyzeBody } from '../src/utils/bodyAnalysis';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking,
+  View, Text, TextInput, StyleSheet, ActivityIndicator, Platform, Linking, AppState,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { targetPlanOf } from '../src/components/body/TargetPanel';
@@ -10,13 +10,15 @@ import { Screen, TopBar, Body, SectionLabel, PrimaryBtn, useSafeBack } from '../
 import { showAlert } from '../src/utils/alert';
 import { useAuthStore } from '../src/stores/authStore';
 import { useEntitlement } from '../src/hooks/useEntitlement';
-import { PRODUCTS, TRIAL_DAYS, PRO_NAME, LEGAL } from '../src/config/entitlements';
+import { PRODUCTS, TRIAL_DAYS, NO_CARD_TRIAL, PRO_NAME, LEGAL } from '../src/config/entitlements';
 import {
   purchase, restore, startTrial, redeemPromo, canPurchase, getOfferings, manageSubscriptionUrl,
+  startWaitlistOffer, finishWaitlistRedeem, openRedeemSheet,
   BillingUnavailable, PromoError, EmailUnverified, STORE_BILLING_READY,
 } from '../src/services/billingService';
 import { resendVerification } from '../src/services/authService';
-import { SUB_STATUS_LABEL } from '../src/utils/subscription';
+import { SUB_STATUS_LABEL, isProSub } from '../src/utils/subscription';
+import { OFFER_LABEL, waitlistOffer } from '../src/utils/waitlistOffer';
 import type { Subscription } from '../src/types';
 import { useAppStore } from '../src/stores/appStore';
 import { AvatarView } from '../src/components/body/AvatarView';
@@ -27,7 +29,7 @@ import { calcBodyStats } from '../src/utils/body';
 import { PressableScale, PRESS_SCALE } from '../src/ui';
 import { useScreenSize } from '../src/ui/screenSize';
 
-type Busy = null | 'buy' | 'trial' | 'promo' | 'restore';
+type Busy = null | 'buy' | 'trial' | 'promo' | 'restore' | 'waitlist';
 
 /** 구독하면 열리는 것 — 한 줄씩, 그 사람의 숫자로(검수 3-1). 코치 하루 10번은 서버 한도(quota.ts)와 같아야 한다 */
 const PITCH = (days?: number, kcal?: number): [string, string][] => [
@@ -101,11 +103,25 @@ export default function SubscribeScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
 
-  // 카드 없는 서버 체험은 스토어 결제가 없을 때(웹 · 키 전)만 — 앱 결제가 열리면 스토어 무료 체험이 대신한다
-  const trialAvailable = TRIAL_DAYS > 0 && !sub.trialUsed && !pro && !storeReady;
+  // 카드 없는 서버 체험은 스토어 결제가 없을 때(웹 · 키 전)만 — 앱 결제가 열리면 스토어 무료 체험이 대신한다.
+  // 2026-11-28 부터는 그것도 닫았다(NO_CARD_TRIAL) — 무료 기간도 결제 수단을 등록해야 시작한다
+  const trialAvailable = NO_CARD_TRIAL && TRIAL_DAYS > 0 && !sub.trialUsed && !pro && !storeReady;
   const pickedProduct = products.find((p) => p.id === picked) ?? products[0];
   const storeTrial = pickedProduct?.trial;
   const manageUrl = manageSubscriptionUrl(sub.source, sub.productId);
+  // 사전 신청(대기자) 무료 자격 — 스토어 결제창에서 결제 수단을 등록해야 무료 기간이 시작된다(2026-11-28)
+  const wl = pro ? null : waitlistOffer(sub);
+  const wlLabel = wl ? OFFER_LABEL[wl] : '';
+  // iOS — App Store 코드 사용 화면으로 보낸 코드. 앱으로 돌아오면 구독이 생겼는지 확인한다
+  const [redeemCode, setRedeemCode] = useState<string | null>(null);
+  const checkRef = useRef<(how: 'auto' | 'retry' | 'manual') => void>(() => {});
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const on = AppState.addEventListener('change', (st) => {
+      if (st === 'active') checkRef.current('auto');
+    });
+    return () => on.remove();
+  }, []);
 
   function fail(e: unknown, fallback: string) {
     if (e instanceof EmailUnverified) {
@@ -124,19 +140,33 @@ export default function SubscribeScreen() {
     showAlert('안내', m);
   }
 
+  /** 서버가 돌려준 새 sub 를 반영한다 */
+  function applied(next: Subscription, done: string) {
+    patchUser({ sub: next });
+    // 웹에서 휴대폰 번호로 대기자 확인만 된 경우 — 무료 기간은 앱에서 결제 수단을 등록하면 시작된다
+    const w = isProSub(next) ? null : waitlistOffer(next);
+    if (w) {
+      showAlert(
+        '대기자 명단 확인',
+        `${OFFER_LABEL[w]} 무료 혜택이 확인됐어요. iOS·Android 앱의 구독 화면에서 결제 수단을 등록하면 시작되고, 무료 기간에 해지하면 결제되지 않아요.`,
+      );
+      return;
+    }
+    if (chosen) {
+      // 결제(체험)되면 바로 맞춤형 프로젝트 진행
+      router.replace(`/project/start?${startQ}`);
+      return;
+    }
+    showAlert('완료', done, [{ text: '확인', onPress: () => router.back() }]);
+  }
+
   async function run(kind: Busy, fn: () => Promise<Subscription | null>, done: string, none?: string) {
     if (busy) return;
     setBusy(kind);
     try {
       const next = await fn();
       if (next) {
-        patchUser({ sub: next });
-        if (chosen) {
-          // 결제(체험)되면 바로 맞춤형 프로젝트 진행
-          router.replace(`/project/start?${startQ}`);
-          return;
-        }
-        showAlert('완료', done, [{ text: '확인', onPress: () => router.back() }]);
+        applied(next, done);
       } else if (none) {
         // 예전엔 복원 실패가 무반응이었다 — 버튼이 눌리지 않았다고 느낀다
         showAlert('안내', none);
@@ -147,6 +177,46 @@ export default function SubscribeScreen() {
       setBusy(null);
     }
   }
+
+  /** 대기자 무료 시작 — Android 는 결제창에서 끝, iOS 는 App Store 코드 사용 화면으로 보낸다 */
+  async function onWaitlist() {
+    if (busy) return;
+    setBusy('waitlist');
+    try {
+      const r = await startWaitlistOffer(sub);
+      if (r.kind === 'redirected') setRedeemCode(r.code);
+      else if (r.kind === 'done') applied(r.sub, `${wlLabel} 무료 기간이 시작되었습니다.`);
+    } catch (e) {
+      fail(e, '처리하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * iOS — App Store 에서 돌아왔을 때(auto) · '적용 확인'(manual). 돌아온 직후엔 반영이 늦을 수 있어
+   * auto 가 비면 4초 뒤 한 번 더 본다(retry).
+   */
+  async function checkRedeem(how: 'auto' | 'retry' | 'manual') {
+    if (!redeemCode || busy) return;
+    setBusy('waitlist');
+    try {
+      const next = await finishWaitlistRedeem();
+      if (next) {
+        setRedeemCode(null);
+        applied(next, `${wlLabel} 무료 기간이 시작되었습니다.`);
+      } else if (how === 'manual') {
+        showAlert('안내', 'App Store에서 코드 사용을 마친 뒤 다시 눌러주세요. 방금 마치셨다면 몇 초 뒤에 반영됩니다.');
+      } else if (how === 'auto') {
+        setTimeout(() => checkRef.current('retry'), 4000);
+      }
+    } catch (e) {
+      if (how === 'manual') fail(e, '구독 정보를 확인하지 못했습니다. 잠시 후 다시 눌러주세요.');
+    } finally {
+      setBusy(null);
+    }
+  }
+  checkRef.current = (how) => { void checkRedeem(how); };
 
   return (
     <Screen>
@@ -203,7 +273,48 @@ export default function SubscribeScreen() {
           <Text style={s.trialLine}>무료 체험 {left ?? 0}일 남음</Text>
         ) : null}
 
-        {!pro && storeReady && (
+        {/* 사전 신청(대기자) 무료 자격 — 결제 수단을 등록해야 무료 기간이 시작된다(2026-11-28 대표 결정 · 문구) */}
+        {wl ? (
+          <View style={s.wlBox}>
+            <Text style={s.wlTitle}>대기자 명단에 있으시네요!</Text>
+            <Text style={s.wlTxt}>
+              {storeReady
+                ? `결제 수단을 등록하시면 ${wlLabel}이 무료로 지급됩니다. 언제든 취소하실 수 있습니다.`
+                : `iOS·Android 앱에서 결제 수단을 등록하시면 ${wlLabel}이 무료로 지급됩니다. 언제든 취소하실 수 있습니다.`}
+            </Text>
+            {storeReady ? (
+              <>
+                <PrimaryBtn
+                  label={`${wlLabel} 무료 받기`}
+                  loading={busy === 'waitlist'}
+                  disabled={!!busy}
+                  onPress={onWaitlist}
+                  style={{ marginTop: 14 }}
+                />
+                {/* 무료 기간 뒤 가격 · 자동 결제는 버튼 가까이 꼭 적는다(스토어 심사 — Apple 3.1.2) */}
+                <Text style={s.trialNote}>
+                  {`${wlLabel} 무료 후 매월 ${pickedProduct.price} 자동 결제 · 무료 기간에 취소하면 결제되지 않습니다`}
+                </Text>
+              </>
+            ) : null}
+            {redeemCode ? (
+              <View style={s.redeemBox}>
+                <Text style={s.redeemTxt}>App Store에서 &apos;코드 사용&apos;을 마치고 돌아오시면 바로 적용됩니다.</Text>
+                <Text style={s.redeemCode} selectable>{redeemCode}</Text>
+                <View style={s.redeemRow}>
+                  <PressableScale onPress={() => checkRef.current('manual')} disabled={!!busy} hitSlop={8} accessibilityRole="button">
+                    <Text style={s.manageTxt}>적용 확인</Text>
+                  </PressableScale>
+                  <PressableScale onPress={() => { openRedeemSheet().catch(() => {}); }} hitSlop={8} accessibilityRole="button">
+                    <Text style={s.manageTxt}>코드 직접 넣기</Text>
+                  </PressableScale>
+                </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {!pro && !wl && storeReady && (
           <>
             <SectionLabel>플랜 선택</SectionLabel>
             {products.map((p) => {
@@ -256,7 +367,7 @@ export default function SubscribeScreen() {
           </PressableScale>
         )}
 
-        {!pro && !storeReady && (
+        {!pro && !wl && !storeReady && (
           <Text style={s.comingSoon}>
             {Platform.OS === 'web'
               ? '구독 결제는 iOS·Android 앱에서 진행할 수 있습니다.'
@@ -264,10 +375,10 @@ export default function SubscribeScreen() {
           </Text>
         )}
 
-        {!pro && codeOpen && (
+        {!pro && !wl && codeOpen && (
           <>
             <SectionLabel>코드 · 대기자 명단 휴대폰 번호</SectionLabel>
-            <Text style={s.codeHint}>휴대폰 번호로 대기자 명단을 신청했다면 그 번호를 넣으면 프리미엄이 적용됩니다.</Text>
+            <Text style={s.codeHint}>휴대폰 번호로 대기자 명단을 신청하셨다면 그 번호를 넣어 주세요. 확인되면 앱에서 결제 수단을 등록하시고 무료 기간을 받으실 수 있습니다.</Text>
             <View style={s.codeRow}>
               <TextInput
                 style={s.codeInput}
@@ -394,6 +505,16 @@ const s = themed(() => StyleSheet.create({
   codeRow: { flexDirection: 'row', gap: 8 },
   trialNote: { fontSize: 12, color: colors.mid, lineHeight: 18, textAlign: 'center', marginTop: 8 },
   manageTxt: { fontSize: 13, color: colors.ink, fontWeight: '600', textDecorationLine: 'underline', marginTop: 10 },
+  wlBox: {
+    backgroundColor: colors.panel, borderRadius: 18, padding: 18, marginTop: 18,
+    borderWidth: 1, borderColor: colors.line,
+  },
+  wlTitle: { fontSize: 19, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },
+  wlTxt: { fontSize: 14, color: colors.mid, lineHeight: 21, marginTop: 8 },
+  redeemBox: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.line },
+  redeemTxt: { fontSize: 13, color: colors.mid, lineHeight: 19 },
+  redeemCode: { fontSize: 16, fontWeight: '800', color: colors.ink, letterSpacing: 1.5, marginTop: 8 },
+  redeemRow: { flexDirection: 'row', gap: 18 },
   codeHint: { fontSize: 12, color: colors.mid, lineHeight: 18, marginBottom: 8 },
   codeInput: {
     flex: 1, backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.line2,
