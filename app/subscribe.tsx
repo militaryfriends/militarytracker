@@ -299,7 +299,7 @@ export default function SubscribeScreen() {
           <View style={s.wlBox}>
             <Text style={s.wlTitle}>대기자 명단에 있으시네요!</Text>
             <Text style={s.wlTxt}>{`결제 수단을 등록하시면 ${wlLabel}이 무료로 지급됩니다. 언제든 취소하실 수 있습니다.`}</Text>
-            {!storeReady ? <Text style={s.wlSub}>결제 수단 등록은 iOS·Android 앱의 구독 화면에서 할 수 있어요.</Text> : null}
+            {!storeReady ? <Text style={s.wlSub}>결제 수단 등록은 iOS·Android 앱에서 할 수 있어요.</Text> : null}
             {storeReady ? (
               <>
                 <PrimaryBtn
