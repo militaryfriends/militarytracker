@@ -64,6 +64,16 @@ export const subStatus = onCall(opts, async (req: CallableRequest<{ claim?: bool
     if (got) return { sub: got, pro: acc.isAdmin || isProSub(got), waitlist: got.waitlist };
   }
 
+  // 대기자 자격자 — App Store 에서 코드를 썼는데 앱이 기록 전에 꺼졌을 수 있다. 스토어 구독이 생겼으면 여기서 적는다
+  if (acc.sub.waitlist === 'eligible') {
+    try {
+      const { sub, changed } = await syncStore(uid);
+      if (changed) return { sub, pro: acc.isAdmin || isProSub(sub) };
+    } catch (e) {
+      logger.warn('store sync (waitlist) failed', { uid, e: String(e) });
+    }
+  }
+
   // 스토어 구독의 기간이 지났으면 자동 갱신됐는지 RevenueCat 에 묻는다
   if ((acc.sub.source === 'ios' || acc.sub.source === 'android') && !isProSub(acc.sub)) {
     try {

@@ -52,8 +52,10 @@ export async function importWaitlist(rows: unknown): Promise<{ added: number; sk
     if (isEmail(email)) targets.push(['email', email]);
     if (isPhone(phone)) targets.push(['phone', phone]);
     if (!targets.length || !Number.isFinite(days)) { skipped++; continue; }
+    // 같은 신청 줄의 이메일 · 번호 항목을 한 묶음(row)으로 — 한 사람이 두 계정으로 두 번 받지 않게(claim)
+    const row = createHash('sha256').update(`${SALT}row:${isEmail(email) ? email : ''}|${isPhone(phone) ? phone : ''}`).digest('hex');
     for (const [kind, v] of targets) {
-      batch.set(db.collection('waitlist').doc(key(kind, v)), { kind, days, at: new Date().toISOString() }, { merge: true });
+      batch.set(db.collection('waitlist').doc(key(kind, v)), { kind, days, row, at: new Date().toISOString() }, { merge: true });
       n++;
       if (n >= 400) { await batch.commit(); batch = db.batch(); n = 0; }
     }
@@ -73,17 +75,24 @@ async function claim(uid: string, kind: 'email' | 'phone', value: string): Promi
   const userRef = db.collection('users').doc(uid);
   const out = await db.runTransaction(async (tx) => {
     const [w, u] = await Promise.all([tx.get(ref), tx.get(userRef)]);
-    const cur = normalizeSub(u.data()?.sub);
     if (!w.exists) return null;
-    const d = w.data() as { days?: number; claimedBy?: string };
+    const d = w.data() as { days?: number; claimedBy?: string; row?: string };
+    // 같은 신청 줄의 다른 항목(이메일 ↔ 번호) — 같이 묶어, 다른 계정이 나머지 항목으로 또 받지 못하게 한다
+    // (row 는 11/28 이후 가져온 명단에만 있다 — 그 전 명단은 한 번 더 넣으면 생긴다)
+    const sibs = d.row
+      ? (await tx.get(db.collection('waitlist').where('row', '==', d.row).limit(4))).docs.filter((s) => s.id !== ref.id)
+      : [];
+    const cur = normalizeSub(u.data()?.sub);
     if (cur.waitlist === 'claimed' || cur.waitlist === 'eligible') {
       throw new HttpsError('already-exists', '대기자 혜택은 이미 확인된 계정입니다.');
     }
-    if (d.claimedBy && d.claimedBy !== uid) throw new HttpsError('already-exists', '이미 다른 계정에서 받은 혜택입니다.');
+    const taken = [w, ...sibs].map((s) => (s.data() as { claimedBy?: string } | undefined)?.claimedBy).find((c) => c && c !== uid);
+    if (taken) throw new HttpsError('already-exists', '이미 다른 계정에서 받은 혜택입니다.');
     const days = Math.min(MAX_WAITLIST_DAYS, Math.max(1, Math.round(Number(d.days ?? 90))));
-    const next: Subscription = { ...cur, updatedAt: new Date().toISOString(), waitlist: 'eligible', waitlistDays: days };
+    const at = new Date().toISOString();
+    const next: Subscription = { ...cur, updatedAt: at, waitlist: 'eligible', waitlistDays: days };
     tx.set(userRef, { sub: next }, { merge: true });
-    tx.set(ref, { claimedBy: uid, claimedAt: new Date().toISOString() }, { merge: true });
+    for (const s of [w, ...sibs]) tx.set(s.ref, { claimedBy: uid, claimedAt: at }, { merge: true });
     return { sub: next, days };
   });
   if (!out) return null;
@@ -98,8 +107,9 @@ export async function claimByEmail(uid: string, email: unknown, verified: boolea
   if (!verified || !isEmail(e)) return null;
   const sub = await claim(uid, 'email', e);
   if (sub) return sub;
-  // 명단에 없음 — 다시 보지 않게 표시만 (번호로는 나중에 받을 수 있다)
-  await db.collection('users').doc(uid).set({ sub: { ...cur, waitlist: 'none' } }, { merge: true });
+  // 명단에 없음 — 다시 보지 않게 표시만 (번호로는 나중에 받을 수 있다).
+  // sub.waitlist 한 칸만 쓴다 — 예전엔 읽어 둔 sub 전체를 다시 써서, 그 사이 바뀐 구독 값을 옛 값으로 덮을 수 있었다
+  await db.collection('users').doc(uid).set({ sub: { waitlist: 'none' } }, { merge: true });
   return null;
 }
 

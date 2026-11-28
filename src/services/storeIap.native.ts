@@ -53,7 +53,10 @@ export async function loadPackages(uid: string): Promise<StorePackage[]> {
     productId: k.product.identifier,
     price: k.product.priceString,
     raw: k,
-    trial: eligible && !eligible[k.product.identifier] ? undefined : trialOf({ ...k.product, defaultOption: normalOption(k.product) }),
+    trial: eligible && !eligible[k.product.identifier]
+      ? undefined
+      // Android 는 실제로 살 옵션(normalOption)의 무료 단계로만 — introPrice 는 RevenueCat 기본 옵션에서 오므로 대기자 혜택이 섞일 수 있다
+      : trialOf({ ...k.product, defaultOption: normalOption(k.product) }, Platform.OS === 'android'),
   }));
 }
 
@@ -69,7 +72,8 @@ const isWaitlistOpt = (o: { tags?: string[] | null }): boolean => (o.tags ?? [])
 function normalOption(product: RcPackage['product']): Opt | null {
   const def = product.defaultOption;
   if (!def || !isWaitlistOpt(def)) return def ?? null;
-  const rest = (product.subscriptionOptions ?? []).filter((o) => !isWaitlistOpt(o));
+  // 대기자 혜택도, 기본으로 고르지 말라고 표시한 혜택(rc-ignore-offer)도 아닌 것 중에서
+  const rest = (product.subscriptionOptions ?? []).filter((o) => !isWaitlistOpt(o) && !(o.tags ?? []).includes('rc-ignore-offer'));
   return rest.find((o) => o.freePhase) ?? rest.find((o) => o.isBasePlan) ?? rest[0] ?? null;
 }
 
@@ -77,10 +81,10 @@ const UNIT: Record<string, string> = { DAY: '일', WEEK: '주', MONTH: '개월',
 /** '1주' 대신 '7일' — 체험 안내 문구가 일 단위(무료 체험 7일, 10/31 결정) */
 const span = (n: number, unit: string) => (unit === 'WEEK' ? `${n * 7}일` : `${n}${UNIT[unit] ?? ''}`);
 
-/** 스토어 상품의 무료 체험 기간 — iOS 는 introPrice(가격 0), Android 는 기본 옵션의 무료 단계 */
+/** 스토어 상품의 무료 체험 기간 — iOS 는 introPrice(가격 0), Android 는 (실제로 살) 옵션의 무료 단계 */
 function trialOf(p: { introPrice?: { price: number; periodUnit: string; periodNumberOfUnits: number } | null;
-  defaultOption?: { freePhase?: { billingPeriod?: { unit: string; value: number } } | null } | null }): string | undefined {
-  if (p.introPrice && p.introPrice.price === 0) {
+  defaultOption?: { freePhase?: { billingPeriod?: { unit: string; value: number } } | null } | null }, android = false): string | undefined {
+  if (!android && p.introPrice && p.introPrice.price === 0) {
     return span(p.introPrice.periodNumberOfUnits, p.introPrice.periodUnit);
   }
   const f = p.defaultOption?.freePhase?.billingPeriod;

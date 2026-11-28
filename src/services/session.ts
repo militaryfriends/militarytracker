@@ -24,7 +24,7 @@ import {
   normalizeUser, ensureUserDoc, touchLastLogin, fetchPlan, logout, deleteAccount,
 } from './authService';
 import { getWorkoutLogs, getWorkoutLogsSince, getWeights, getWeightsSince } from './workoutService';
-import { refreshSub } from './billingService';
+import { refreshSub, syncWaitlistIfEligible } from './billingService';
 import { logOutStore } from './storeIap';
 import { flushPendingLogs, mergePendingIntoLogs } from './sync';
 import { fetchActiveProject, fetchCheckins, fetchLatestAnalysis, saveAnalysis } from './bodyService';
@@ -136,6 +136,18 @@ export function resumeSession(): void {
   if (l.dead) listen(l);
   flushPendingLogs(l.uid).catch(() => {});
   void refreshData(l.uid);
+  syncWaitlist(l.uid);
+}
+
+/** 대기자 자격자 — App Store 에서 코드를 쓰고 돌아왔으면(앱이 꺼졌다 켜졌어도) 구독을 적는다(billingService) */
+function syncWaitlist(uid: string) {
+  const sub = useAuthStore.getState().user?.sub;
+  if (sub?.waitlist !== 'eligible') return;
+  syncWaitlistIfEligible(sub)
+    .then((next) => {
+      if (next && useAuthStore.getState().user?.uid === uid) useAuthStore.getState().patchUser({ sub: next });
+    })
+    .catch(() => {});
 }
 
 /** 로그아웃 — 구독을 먼저 끊는다(로그아웃 뒤 권한 오류가 구독으로 날아오지 않게) */
@@ -268,6 +280,7 @@ function greet(u: User) {
       .catch(() => {});
     return;
   }
+  if (sub?.waitlist === 'eligible') syncWaitlist(u.uid);
   if (sub && sub.tier === 'pro' && !isProSub(sub) && sub.status !== 'expired') {
     // 서버가 정리하면 새 sub 가 구독으로 들어온다. 콜러블 응답도 바로 반영한다.
     refreshSub()

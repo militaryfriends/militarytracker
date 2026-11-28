@@ -18,13 +18,22 @@ export const redeemUrl = (code: string): string =>
 
 /**
  * App Store Connect 에서 내려받은 일회용 코드 목록(CSV · 줄바꿈 · 쉼표 아무거나) → 코드만, 중복 없이.
- * 코드는 대문자 · 숫자 8~64자. 소문자가 섞인 머리글('Offer Code' 등)은 빠진다.
+ * 코드는 대문자 · 숫자 8~64자이고 대문자가 하나는 있다 — 소문자가 섞인 머리글('Offer Code')과
+ * 숫자만인 칸(날짜 20270630 · 번호)은 빠진다.
  */
 export function parseOfferCodes(raw: unknown): string[] {
   const text = Array.isArray(raw) ? raw.map((v) => String(v ?? '')).join('\n') : String(raw ?? '');
   const out = new Set<string>();
   for (const tok of text.split(/[\s,;"']+/)) {
-    if (/^[A-Z0-9]{8,64}$/.test(tok)) out.add(tok);
+    if (/^(?=.*[A-Z])[A-Z0-9]{8,64}$/.test(tok)) out.add(tok);
   }
   return [...out];
+}
+
+/** 'YYYY-MM-DD' → 그날 23:59:59(한국 시각)의 ISO. 형식이 아니면 null */
+export function kstEndOfDay(v: unknown): string | null {
+  const s = String(v ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const t = Date.parse(`${s}T23:59:59+09:00`);
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
 }

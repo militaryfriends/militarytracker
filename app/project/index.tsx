@@ -7,7 +7,7 @@
  * 거절해도 분석은 저장되고 홈의 "내 변화 프로젝트" 카드에서 이 화면으로 다시 온다.
  */
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -86,7 +86,8 @@ export default function ProjectsScreen() {
   const splitName = splitLabel(a.input.env, a.input.days as 2 | 3 | 4 | 5 | 6, a.input.level as 1 | 2 | 3);
   const colW = Math.floor((Math.min(width, 520) - 36 - 10) / 2);
   const running = !!project && project.analysisId === a.id && project.status === 'active';
-  const trial = TRIAL_DAYS > 0 && !sub.trialUsed && !pro;
+  // 무료 체험은 앱의 스토어 결제창에서만(결제 수단 등록 뒤) — 웹에는 체험이 없다(2026-11-28 카드 없는 체험 닫음)
+  const trial = TRIAL_DAYS > 0 && !sub.trialUsed && !pro && Platform.OS !== 'web';
   // 사전 신청(대기자) 무료 자격 — 결제 수단을 등록하면 그 기간만큼 무료(2026-11-28)
   const wl = pro ? null : waitlistOffer(sub);
   const monthly = PRODUCTS.find((p) => p.id === 'mt_pro_monthly') ?? PRODUCTS[0];
