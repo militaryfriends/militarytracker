@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   NUDGE_DEFAULT, isNudgeHour, isNudgeLevel, nudgePlan, nudgeTimes, type NudgeHour, type NudgeLevel,
 } from '../utils/nudge';
+import { keepWords } from '../utils/keepWords';
 
 type N = typeof import('expo-notifications');
 let mod: N | null | undefined;
@@ -106,7 +107,8 @@ export async function scheduleComeback(lastWorkoutIso: string | null, askPermiss
       const p = plan.find((x) => x.days === days);
       if (!p) continue;
       await n.scheduleNotificationAsync({
-        content: { title: p.title, body: p.body, data: { tag: TAG, url: '/tabs/home' } },
+        // 알림 글자는 OS 가 그린다 — 단어 중간 줄바꿈을 여기서 막는다(src/components/Text 와 같은 방법)
+        content: { title: keepWords(p.title), body: keepWords(p.body), data: { tag: TAG, url: '/tabs/home' } },
         trigger: { type: n.SchedulableTriggerInputTypes.DATE, date: at, channelId: 'reminders' },
       });
     }
