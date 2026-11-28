@@ -20,7 +20,7 @@ export function WaitlistNote() {
     <PressableScale onPress={() => router.push('/subscribe')} style={s.box} accessibilityRole="button"
       accessibilityLabel={`대기자 명단 혜택 ${label} 무료 받기`}>
       <Text style={s.title}>대기자 명단에 있으시네요! {label} 무료 혜택이 있어요</Text>
-      <Text style={s.sub}>결제 수단을 등록하시면 바로 지급됩니다 · 언제든 취소하실 수 있어요 ›</Text>
+      <Text style={s.sub}>결제 수단을 등록하시면 바로 지급 · 언제든 취소 가능 ›</Text>
     </PressableScale>
   );
 }
